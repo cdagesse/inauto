@@ -1,2729 +1,2700 @@
 {
- "make": {
-  "name": "Porsche",
-  "slug": "porsche"
- },
- "model": {
-  "name": "911 GT3 RS",
-  "slug": "911-gt3-rs",
-  "shortName": "GT3 RS",
-  "parentLine": "Porsche 911"
- },
- "dataThrough": "2026-09-19",
- "dealerSince": "2026-02-17",
- "auctionSince": "2025-12-01",
- "totals": {
-  "dealerSales": 562,
-  "auctionSales": 14,
-  "activeNow": 202
- },
- "order": [
-  "992",
-  "991.2",
-  "991.1",
-  "997.2",
-  "997.1"
- ],
- "chartSeries": [
-  "992",
-  "991.2",
-  "991.1"
- ],
- "years": {
-  "992": [
-   2026,
-   2025,
-   2024,
-   2023
+  "make": {
+    "name": "Porsche",
+    "slug": "porsche"
+  },
+  "model": {
+    "name": "911 GT3 RS",
+    "slug": "911-gt3-rs",
+    "shortName": "GT3 RS",
+    "parentLine": "Porsche 911"
+  },
+  "dataThrough": "2026-09-19",
+  "dealerSince": "2026-02-17",
+  "auctionSince": "2025-12-01",
+  "totals": {
+    "dealerSales": 562,
+    "auctionSales": 14,
+    "activeNow": 202
+  },
+  "order": ["992", "991.2", "991.1", "997.2", "997.1"],
+  "chartSeries": ["992", "991.2", "991.1"],
+  "years": {
+    "992": [2026, 2025, 2024, 2023],
+    "991.2": [2019],
+    "991.1": [2016],
+    "997.2": [2010, 2011],
+    "997.1": [2008, 2007]
+  },
+  "generations": {
+    "992": {
+      "code": "992",
+      "name": "992",
+      "years": "2023 to 2026",
+      "sold": 307,
+      "active": 114,
+      "median": 459984,
+      "lo": 394990,
+      "hi": 664991,
+      "medianMiles": 1458,
+      "msrp": 253600,
+      "multiple": 1.75,
+      "daysToSell": 16,
+      "activeMedian": 520646,
+      "activeMedianMiles": 2018,
+      "last90": 519498,
+      "prior90": 439995,
+      "n90": 106,
+      "nPrior90": 134,
+      "thin": false,
+      "engine": "4.0 L flat-six",
+      "hp": "518 hp",
+      "gearbox": "7-speed PDK, DRS",
+      "extra": null,
+      "packages": ["weissach"]
+    },
+    "991.2": {
+      "code": "991.2",
+      "name": "991.2",
+      "years": "2019",
+      "sold": 137,
+      "active": 42,
+      "median": 267995,
+      "lo": 234900,
+      "hi": 315195,
+      "medianMiles": 11541,
+      "msrp": 192970,
+      "multiple": 1.33,
+      "daysToSell": 28,
+      "activeMedian": 275413,
+      "activeMedianMiles": 16159,
+      "last90": 270423,
+      "prior90": 261999,
+      "n90": 45,
+      "nPrior90": 61,
+      "thin": false,
+      "engine": "4.0 L flat-six",
+      "hp": "520 hp",
+      "gearbox": "7-speed PDK",
+      "extra": null,
+      "packages": ["weissach"]
+    },
+    "991.1": {
+      "code": "991.1",
+      "name": "991.1",
+      "years": "2016",
+      "sold": 79,
+      "active": 32,
+      "median": 219984,
+      "lo": 197000,
+      "hi": 240000,
+      "medianMiles": 11279,
+      "msrp": 180090,
+      "multiple": 1.22,
+      "daysToSell": 27,
+      "activeMedian": 242592,
+      "activeMedianMiles": 14789,
+      "last90": 230044,
+      "prior90": 215950,
+      "n90": 22,
+      "nPrior90": 40,
+      "thin": false,
+      "engine": "4.0 L flat-six",
+      "hp": "500 hp",
+      "gearbox": "7-speed PDK only",
+      "extra": null,
+      "packages": []
+    },
+    "997.2": {
+      "code": "997.2",
+      "name": "997.2",
+      "years": "2010 to 2011",
+      "sold": 29,
+      "active": 12,
+      "median": 299948,
+      "lo": 162996,
+      "hi": 800312,
+      "medianMiles": 17462,
+      "msrp": 135500,
+      "multiple": 2.24,
+      "daysToSell": 20,
+      "activeMedian": 659999,
+      "activeMedianMiles": 7001,
+      "last90": 390106,
+      "prior90": 257445,
+      "n90": 8,
+      "nPrior90": 6,
+      "thin": true,
+      "engine": "3.8 L flat-six",
+      "hp": "450 hp",
+      "gearbox": "6-speed manual",
+      "extra": "RS 4.0 (2011): 4.0 L, 500 hp, 600 built",
+      "packages": []
+    },
+    "997.1": {
+      "code": "997.1",
+      "name": "997.1",
+      "years": "2007 to 2008",
+      "sold": 10,
+      "active": 2,
+      "median": 359900,
+      "lo": 133000,
+      "hi": 429999,
+      "medianMiles": 13794,
+      "msrp": 128310,
+      "multiple": 2.58,
+      "daysToSell": 13,
+      "activeMedian": 314949,
+      "activeMedianMiles": 29203,
+      "last90": 317488,
+      "prior90": 349995,
+      "n90": 2,
+      "nPrior90": 3,
+      "thin": true,
+      "engine": "3.6 L flat-six",
+      "hp": "415 hp",
+      "gearbox": "6-speed manual",
+      "extra": null,
+      "packages": []
+    }
+  },
+  "monthly": [
+    {
+      "month": "2026-02",
+      "partial": true,
+      "series": {
+        "992": {
+          "n": 6,
+          "median": 414896
+        },
+        "991.2": {
+          "n": 3,
+          "median": 264881
+        },
+        "991.1": {
+          "n": 2,
+          "median": 221884
+        }
+      }
+    },
+    {
+      "month": "2026-03",
+      "partial": false,
+      "series": {
+        "992": {
+          "n": 42,
+          "median": 413491
+        },
+        "991.2": {
+          "n": 15,
+          "median": 269999
+        },
+        "991.1": {
+          "n": 8,
+          "median": 214389
+        }
+      }
+    },
+    {
+      "month": "2026-04",
+      "partial": false,
+      "series": {
+        "992": {
+          "n": 53,
+          "median": 425995
+        },
+        "991.2": {
+          "n": 24,
+          "median": 263284
+        },
+        "991.1": {
+          "n": 18,
+          "median": 215950
+        }
+      }
+    },
+    {
+      "month": "2026-05",
+      "partial": false,
+      "series": {
+        "992": {
+          "n": 46,
+          "median": 432473
+        },
+        "991.2": {
+          "n": 13,
+          "median": 249990
+        },
+        "991.1": {
+          "n": 11,
+          "median": 219900
+        }
+      }
+    },
+    {
+      "month": "2026-06",
+      "partial": false,
+      "series": {
+        "992": {
+          "n": 33,
+          "median": 461293
+        },
+        "991.2": {
+          "n": 24,
+          "median": 267443
+        },
+        "991.1": {
+          "n": 13,
+          "median": 229888
+        }
+      }
+    },
+    {
+      "month": "2026-07",
+      "partial": false,
+      "series": {
+        "992": {
+          "n": 32,
+          "median": 489598
+        },
+        "991.2": {
+          "n": 16,
+          "median": 260356
+        },
+        "991.1": {
+          "n": 11,
+          "median": 229813
+        }
+      }
+    },
+    {
+      "month": "2026-08",
+      "partial": false,
+      "series": {
+        "992": {
+          "n": 36,
+          "median": 550394
+        },
+        "991.2": {
+          "n": 16,
+          "median": 272712
+        },
+        "991.1": {
+          "n": 6,
+          "median": 231493
+        }
+      }
+    },
+    {
+      "month": "2026-09",
+      "partial": true,
+      "series": {
+        "992": {
+          "n": 32,
+          "median": 499995
+        },
+        "991.2": {
+          "n": 11,
+          "median": 279000
+        },
+        "991.1": {
+          "n": 1,
+          "median": 188595
+        }
+      }
+    }
   ],
-  "991.2": [
-   2019
+  "byYear": [
+    {
+      "year": 2025,
+      "n": 127,
+      "median": 459800,
+      "medianMiles": 1322,
+      "generation": "992"
+    },
+    {
+      "year": 2024,
+      "n": 127,
+      "median": 488800,
+      "medianMiles": 1336,
+      "generation": "992"
+    },
+    {
+      "year": 2023,
+      "n": 26,
+      "median": 400495,
+      "medianMiles": 2930,
+      "generation": "992"
+    },
+    {
+      "year": 2019,
+      "n": 122,
+      "median": 267995,
+      "medianMiles": 11541,
+      "generation": "991.2"
+    },
+    {
+      "year": 2016,
+      "n": 70,
+      "median": 219984,
+      "medianMiles": 11279,
+      "generation": "991.1"
+    },
+    {
+      "year": 2011,
+      "n": 5,
+      "median": 624991,
+      "medianMiles": 9528,
+      "generation": "997.2"
+    },
+    {
+      "year": 2010,
+      "n": 11,
+      "median": 259900,
+      "medianMiles": 19156,
+      "generation": "997.2"
+    },
+    {
+      "year": 2008,
+      "n": 3,
+      "median": 379991,
+      "medianMiles": 13065,
+      "generation": "997.1"
+    },
+    {
+      "year": 2007,
+      "n": 4,
+      "median": 287494,
+      "medianMiles": 18053,
+      "generation": "997.1"
+    }
   ],
-  "991.1": [
-   2016
+  "colors": [
+    {
+      "color": "White",
+      "n": 45,
+      "median": 434995
+    },
+    {
+      "color": "Black",
+      "n": 35,
+      "median": 466080
+    },
+    {
+      "color": "Ice Grey Metallic",
+      "n": 27,
+      "median": 450542
+    },
+    {
+      "color": "Shark Blue",
+      "n": 22,
+      "median": 641944
+    },
+    {
+      "color": "Arctic Grey",
+      "n": 21,
+      "median": 414990
+    },
+    {
+      "color": "GT Silver Metallic",
+      "n": 15,
+      "median": 444999
+    },
+    {
+      "color": "Guards Red",
+      "n": 13,
+      "median": 405998
+    },
+    {
+      "color": "Paint to Sample",
+      "n": 12,
+      "median": 590295
+    }
   ],
-  "997.2": [
-   2010,
-   2011
+  "milesBands": {
+    "992": [
+      {
+        "from": 0,
+        "to": 500,
+        "n": 68,
+        "median": 599997
+      },
+      {
+        "from": 500,
+        "to": 1000,
+        "n": 47,
+        "median": 500590
+      },
+      {
+        "from": 1000,
+        "to": 2500,
+        "n": 70,
+        "median": 453830
+      },
+      {
+        "from": 2500,
+        "to": 5000,
+        "n": 56,
+        "median": 449495
+      },
+      {
+        "from": 5000,
+        "to": 10000,
+        "n": 31,
+        "median": 401685
+      },
+      {
+        "from": 10000,
+        "to": null,
+        "n": 8,
+        "median": 417895
+      }
+    ],
+    "991.2": [
+      {
+        "from": 0,
+        "to": 2500,
+        "n": 7,
+        "median": 279999
+      },
+      {
+        "from": 2500,
+        "to": 5000,
+        "n": 17,
+        "median": 272888
+      },
+      {
+        "from": 5000,
+        "to": 10000,
+        "n": 30,
+        "median": 271956
+      },
+      {
+        "from": 10000,
+        "to": 15000,
+        "n": 21,
+        "median": 264988
+      },
+      {
+        "from": 15000,
+        "to": 20000,
+        "n": 21,
+        "median": 259813
+      },
+      {
+        "from": 20000,
+        "to": null,
+        "n": 25,
+        "median": 245990
+      }
+    ],
+    "991.1": [
+      {
+        "from": 0,
+        "to": 5000,
+        "n": 9,
+        "median": 232000
+      },
+      {
+        "from": 5000,
+        "to": 10000,
+        "n": 14,
+        "median": 220000
+      },
+      {
+        "from": 10000,
+        "to": 15000,
+        "n": 12,
+        "median": 224500
+      },
+      {
+        "from": 15000,
+        "to": 20000,
+        "n": 10,
+        "median": 215000
+      },
+      {
+        "from": 20000,
+        "to": null,
+        "n": 15,
+        "median": 200000
+      }
+    ]
+  },
+  "states": [
+    {
+      "state": "CA",
+      "n": 115
+    },
+    {
+      "state": "FL",
+      "n": 98
+    },
+    {
+      "state": "TX",
+      "n": 60
+    },
+    {
+      "state": "IL",
+      "n": 37
+    },
+    {
+      "state": "AZ",
+      "n": 29
+    },
+    {
+      "state": "NC",
+      "n": 24
+    },
+    {
+      "state": "NJ",
+      "n": 21
+    },
+    {
+      "state": "NY",
+      "n": 21
+    }
   ],
-  "997.1": [
-   2008,
-   2007
+  "recentDealerSales": [
+    {
+      "soldDate": "2026-09-18",
+      "year": 2019,
+      "color": "Lizard Green",
+      "miles": null,
+      "price": 270598,
+      "state": "UT",
+      "generation": "991.2"
+    },
+    {
+      "soldDate": "2026-09-18",
+      "year": 2025,
+      "color": null,
+      "miles": 391,
+      "price": 450426,
+      "state": "NY",
+      "generation": "992"
+    },
+    {
+      "soldDate": "2026-09-18",
+      "year": 2024,
+      "color": "Shark Blue",
+      "miles": 2500,
+      "price": 475991,
+      "state": "AZ",
+      "generation": "992"
+    },
+    {
+      "soldDate": "2026-09-17",
+      "year": 2025,
+      "color": "White",
+      "miles": 583,
+      "price": 527603,
+      "state": "FL",
+      "generation": "992"
+    },
+    {
+      "soldDate": "2026-09-17",
+      "year": 2011,
+      "color": null,
+      "miles": 4608,
+      "price": 800312,
+      "state": "IL",
+      "generation": "997.2"
+    },
+    {
+      "soldDate": "2026-09-17",
+      "year": 2024,
+      "color": "Black",
+      "miles": 788,
+      "price": 500699,
+      "state": "NC",
+      "generation": "992"
+    },
+    {
+      "soldDate": "2026-09-17",
+      "year": 2025,
+      "color": "Arctic Grey",
+      "miles": 2083,
+      "price": 441700,
+      "state": "MO",
+      "generation": "992"
+    },
+    {
+      "soldDate": "2026-09-17",
+      "year": 2019,
+      "color": "White",
+      "miles": 24000,
+      "price": 272800,
+      "state": "NV",
+      "generation": "991.2"
+    },
+    {
+      "soldDate": "2026-09-16",
+      "year": 2025,
+      "color": "Guards Red",
+      "miles": 1200,
+      "price": 639995,
+      "state": "UT",
+      "generation": "992"
+    },
+    {
+      "soldDate": "2026-09-15",
+      "year": 2019,
+      "color": "Lizard Green",
+      "miles": 6100,
+      "price": 319980,
+      "state": "FL",
+      "generation": "991.2"
+    },
+    {
+      "soldDate": "2026-09-15",
+      "year": 2019,
+      "color": "White",
+      "miles": 17132,
+      "price": 269999,
+      "state": "NV",
+      "generation": "991.2"
+    },
+    {
+      "soldDate": "2026-09-14",
+      "year": 2025,
+      "color": null,
+      "miles": 1311,
+      "price": 495970,
+      "state": "NY",
+      "generation": "992"
+    },
+    {
+      "soldDate": "2026-09-14",
+      "year": 2007,
+      "color": null,
+      "miles": 12122,
+      "price": 409984,
+      "state": "CA",
+      "generation": "997.1"
+    },
+    {
+      "soldDate": "2026-09-14",
+      "year": 2019,
+      "color": null,
+      "miles": 15904,
+      "price": 269899,
+      "state": "AL",
+      "generation": "991.2"
+    }
+  ],
+  "dealerSales": {
+    "992": [
+      {
+        "miles": 279,
+        "price": 400000
+      },
+      {
+        "miles": 608,
+        "price": 501000
+      },
+      {
+        "miles": 3629,
+        "price": 410000
+      },
+      {
+        "miles": 45,
+        "price": 426000
+      },
+      {
+        "miles": 1930,
+        "price": 519000
+      },
+      {
+        "miles": 216,
+        "price": 560000
+      },
+      {
+        "miles": 550,
+        "price": 599000
+      },
+      {
+        "miles": 310,
+        "price": 412000
+      },
+      {
+        "miles": 77,
+        "price": 490000
+      },
+      {
+        "miles": 1500,
+        "price": 413000
+      },
+      {
+        "miles": 4464,
+        "price": 449000
+      },
+      {
+        "miles": 2585,
+        "price": 410000
+      },
+      {
+        "miles": 745,
+        "price": 534000
+      },
+      {
+        "miles": 5467,
+        "price": 393000
+      },
+      {
+        "miles": 1743,
+        "price": 389000
+      },
+      {
+        "miles": 1494,
+        "price": 415000
+      },
+      {
+        "miles": 2029,
+        "price": 425000
+      },
+      {
+        "miles": 409,
+        "price": 459000
+      },
+      {
+        "miles": 1781,
+        "price": 475000
+      },
+      {
+        "miles": 1793,
+        "price": 452000
+      },
+      {
+        "miles": 7445,
+        "price": 389000
+      },
+      {
+        "miles": 3270,
+        "price": 460000
+      },
+      {
+        "miles": 2727,
+        "price": 525000
+      },
+      {
+        "miles": 193,
+        "price": 577000
+      },
+      {
+        "miles": 2503,
+        "price": 440000
+      },
+      {
+        "miles": 2858,
+        "price": 395000
+      },
+      {
+        "miles": 1554,
+        "price": 424000
+      },
+      {
+        "miles": 4956,
+        "price": 451000
+      },
+      {
+        "miles": 2673,
+        "price": 449000
+      },
+      {
+        "miles": 12538,
+        "price": 416000
+      },
+      {
+        "miles": 4372,
+        "price": 516000
+      },
+      {
+        "miles": 732,
+        "price": 550000
+      },
+      {
+        "miles": 6897,
+        "price": 385000
+      },
+      {
+        "miles": 327,
+        "price": 510000
+      },
+      {
+        "miles": 1093,
+        "price": 699000
+      },
+      {
+        "miles": 0,
+        "price": 540000
+      },
+      {
+        "miles": 1266,
+        "price": 450000
+      },
+      {
+        "miles": 121,
+        "price": 510000
+      },
+      {
+        "miles": 1247,
+        "price": 616000
+      },
+      {
+        "miles": 2240,
+        "price": 420000
+      },
+      {
+        "miles": 852,
+        "price": 450000
+      },
+      {
+        "miles": 2982,
+        "price": 442000
+      },
+      {
+        "miles": 1164,
+        "price": 644000
+      },
+      {
+        "miles": 5673,
+        "price": 623000
+      },
+      {
+        "miles": 757,
+        "price": 420000
+      },
+      {
+        "miles": 1972,
+        "price": 416000
+      },
+      {
+        "miles": 2315,
+        "price": 571000
+      },
+      {
+        "miles": 1913,
+        "price": 385000
+      },
+      {
+        "miles": 2382,
+        "price": 700000
+      },
+      {
+        "miles": 583,
+        "price": 528000
+      },
+      {
+        "miles": 136,
+        "price": 666000
+      },
+      {
+        "miles": 1100,
+        "price": 559000
+      },
+      {
+        "miles": 3711,
+        "price": 450000
+      },
+      {
+        "miles": 676,
+        "price": 400000
+      },
+      {
+        "miles": 12278,
+        "price": 484000
+      },
+      {
+        "miles": 2608,
+        "price": 420000
+      },
+      {
+        "miles": 121,
+        "price": 670000
+      },
+      {
+        "miles": 1311,
+        "price": 496000
+      },
+      {
+        "miles": 452,
+        "price": 405000
+      },
+      {
+        "miles": 3790,
+        "price": 480000
+      },
+      {
+        "miles": 1615,
+        "price": 540000
+      },
+      {
+        "miles": 5656,
+        "price": 380000
+      },
+      {
+        "miles": 13195,
+        "price": 420000
+      },
+      {
+        "miles": 1105,
+        "price": 450000
+      },
+      {
+        "miles": 1527,
+        "price": 426000
+      },
+      {
+        "miles": 5133,
+        "price": 600000
+      },
+      {
+        "miles": 3627,
+        "price": 380000
+      },
+      {
+        "miles": 225,
+        "price": 400000
+      },
+      {
+        "miles": 703,
+        "price": 430000
+      },
+      {
+        "miles": 2560,
+        "price": 430000
+      },
+      {
+        "miles": 3703,
+        "price": 380000
+      },
+      {
+        "miles": 64,
+        "price": 630000
+      },
+      {
+        "miles": 4625,
+        "price": 455000
+      },
+      {
+        "miles": 48,
+        "price": 690000
+      },
+      {
+        "miles": 1864,
+        "price": 500000
+      },
+      {
+        "miles": 63,
+        "price": 640000
+      },
+      {
+        "miles": 60,
+        "price": 490000
+      },
+      {
+        "miles": 3183,
+        "price": 430000
+      },
+      {
+        "miles": 2339,
+        "price": 400000
+      },
+      {
+        "miles": 138,
+        "price": 610000
+      },
+      {
+        "miles": 806,
+        "price": 480000
+      },
+      {
+        "miles": 2400,
+        "price": 476000
+      },
+      {
+        "miles": 1432,
+        "price": 470000
+      },
+      {
+        "miles": 450,
+        "price": 401000
+      },
+      {
+        "miles": 8479,
+        "price": 386000
+      },
+      {
+        "miles": 878,
+        "price": 672000
+      },
+      {
+        "miles": 1293,
+        "price": 400000
+      },
+      {
+        "miles": 573,
+        "price": 440000
+      },
+      {
+        "miles": 26,
+        "price": 473000
+      },
+      {
+        "miles": 765,
+        "price": 526000
+      },
+      {
+        "miles": 896,
+        "price": 523000
+      },
+      {
+        "miles": 533,
+        "price": 656000
+      },
+      {
+        "miles": 4620,
+        "price": 433000
+      },
+      {
+        "miles": 736,
+        "price": 400000
+      },
+      {
+        "miles": 4908,
+        "price": 455000
+      },
+      {
+        "miles": 3324,
+        "price": 470000
+      },
+      {
+        "miles": 5710,
+        "price": 380000
+      },
+      {
+        "miles": 1528,
+        "price": 600000
+      },
+      {
+        "miles": 318,
+        "price": 449000
+      },
+      {
+        "miles": 210,
+        "price": 520000
+      },
+      {
+        "miles": 993,
+        "price": 380000
+      },
+      {
+        "miles": 1939,
+        "price": 600000
+      },
+      {
+        "miles": 788,
+        "price": 501000
+      },
+      {
+        "miles": 1209,
+        "price": 489000
+      },
+      {
+        "miles": 499,
+        "price": 420000
+      },
+      {
+        "miles": 4163,
+        "price": 400000
+      },
+      {
+        "miles": 3740,
+        "price": 456000
+      },
+      {
+        "miles": 89,
+        "price": 470000
+      },
+      {
+        "miles": 85,
+        "price": 500000
+      },
+      {
+        "miles": 4516,
+        "price": 500000
+      },
+      {
+        "miles": 1791,
+        "price": 460000
+      },
+      {
+        "miles": 0,
+        "price": 400000
+      },
+      {
+        "miles": 570,
+        "price": 445000
+      },
+      {
+        "miles": 2049,
+        "price": 420000
+      },
+      {
+        "miles": 785,
+        "price": 450000
+      },
+      {
+        "miles": 1641,
+        "price": 660000
+      },
+      {
+        "miles": 3188,
+        "price": 451000
+      },
+      {
+        "miles": 33,
+        "price": 408000
+      },
+      {
+        "miles": 582,
+        "price": 600000
+      },
+      {
+        "miles": 1446,
+        "price": 500000
+      },
+      {
+        "miles": 380,
+        "price": 625000
+      },
+      {
+        "miles": 1322,
+        "price": 470000
+      },
+      {
+        "miles": 2507,
+        "price": 446000
+      },
+      {
+        "miles": 29,
+        "price": 700000
+      },
+      {
+        "miles": 1250,
+        "price": 380000
+      },
+      {
+        "miles": 2159,
+        "price": 651000
+      },
+      {
+        "miles": 4250,
+        "price": 480000
+      },
+      {
+        "miles": 3672,
+        "price": 419000
+      },
+      {
+        "miles": 2259,
+        "price": 451000
+      },
+      {
+        "miles": 1544,
+        "price": 422000
+      },
+      {
+        "miles": 7663,
+        "price": 500000
+      },
+      {
+        "miles": 3870,
+        "price": 428000
+      },
+      {
+        "miles": 549,
+        "price": 451000
+      },
+      {
+        "miles": 1140,
+        "price": 650000
+      },
+      {
+        "miles": 750,
+        "price": 430000
+      },
+      {
+        "miles": 6189,
+        "price": 390000
+      },
+      {
+        "miles": 2176,
+        "price": 423000
+      },
+      {
+        "miles": 115,
+        "price": 650000
+      },
+      {
+        "miles": 1041,
+        "price": 508000
+      },
+      {
+        "miles": 698,
+        "price": 426000
+      },
+      {
+        "miles": 3056,
+        "price": 630000
+      },
+      {
+        "miles": 824,
+        "price": 641000
+      },
+      {
+        "miles": 1948,
+        "price": 412000
+      },
+      {
+        "miles": 863,
+        "price": 540000
+      },
+      {
+        "miles": 5150,
+        "price": 469000
+      },
+      {
+        "miles": 500,
+        "price": 668000
+      },
+      {
+        "miles": 514,
+        "price": 471000
+      },
+      {
+        "miles": 1102,
+        "price": 499000
+      },
+      {
+        "miles": 1902,
+        "price": 410000
+      },
+      {
+        "miles": 2909,
+        "price": 410000
+      },
+      {
+        "miles": 26,
+        "price": 455000
+      },
+      {
+        "miles": 2110,
+        "price": 411000
+      },
+      {
+        "miles": 665,
+        "price": 600000
+      },
+      {
+        "miles": 156,
+        "price": 648000
+      },
+      {
+        "miles": 479,
+        "price": 631000
+      },
+      {
+        "miles": 2299,
+        "price": 400000
+      },
+      {
+        "miles": 638,
+        "price": 445000
+      },
+      {
+        "miles": 1445,
+        "price": 498000
+      },
+      {
+        "miles": 5417,
+        "price": 402000
+      },
+      {
+        "miles": 682,
+        "price": 551000
+      },
+      {
+        "miles": 317,
+        "price": 395000
+      },
+      {
+        "miles": 1813,
+        "price": 436000
+      },
+      {
+        "miles": 519,
+        "price": 680000
+      },
+      {
+        "miles": 26,
+        "price": 670000
+      },
+      {
+        "miles": 692,
+        "price": 470000
+      },
+      {
+        "miles": 5267,
+        "price": 444000
+      },
+      {
+        "miles": 55,
+        "price": 700000
+      },
+      {
+        "miles": 62,
+        "price": 551000
+      },
+      {
+        "miles": 144,
+        "price": 670000
+      },
+      {
+        "miles": 596,
+        "price": 599000
+      },
+      {
+        "miles": 8035,
+        "price": 390000
+      },
+      {
+        "miles": 2083,
+        "price": 442000
+      },
+      {
+        "miles": 1774,
+        "price": 429000
+      },
+      {
+        "miles": 479,
+        "price": 600000
+      },
+      {
+        "miles": 2615,
+        "price": 480000
+      },
+      {
+        "miles": 5020,
+        "price": 407000
+      },
+      {
+        "miles": 261,
+        "price": 692000
+      },
+      {
+        "miles": 123,
+        "price": 471000
+      },
+      {
+        "miles": 2589,
+        "price": 450000
+      },
+      {
+        "miles": 3435,
+        "price": 460000
+      },
+      {
+        "miles": 1328,
+        "price": 435000
+      },
+      {
+        "miles": 4445,
+        "price": 409000
+      },
+      {
+        "miles": 3037,
+        "price": 415000
+      },
+      {
+        "miles": 462,
+        "price": 461000
+      },
+      {
+        "miles": 424,
+        "price": 550000
+      },
+      {
+        "miles": 2750,
+        "price": 650000
+      },
+      {
+        "miles": 1180,
+        "price": 436000
+      },
+      {
+        "miles": 399,
+        "price": 600000
+      },
+      {
+        "miles": 3759,
+        "price": 530000
+      },
+      {
+        "miles": 1827,
+        "price": 456000
+      },
+      {
+        "miles": 951,
+        "price": 660000
+      },
+      {
+        "miles": 9209,
+        "price": 386000
+      },
+      {
+        "miles": 819,
+        "price": 418000
+      },
+      {
+        "miles": 1109,
+        "price": 446000
+      },
+      {
+        "miles": 6666,
+        "price": 405000
+      },
+      {
+        "miles": 4450,
+        "price": 410000
+      },
+      {
+        "miles": 5903,
+        "price": 530000
+      },
+      {
+        "miles": 1266,
+        "price": 530000
+      },
+      {
+        "miles": 2358,
+        "price": 450000
+      },
+      {
+        "miles": 0,
+        "price": 650000
+      },
+      {
+        "miles": 8273,
+        "price": 470000
+      },
+      {
+        "miles": 456,
+        "price": 640000
+      },
+      {
+        "miles": 5081,
+        "price": 386000
+      },
+      {
+        "miles": 3159,
+        "price": 403000
+      },
+      {
+        "miles": 1520,
+        "price": 530000
+      },
+      {
+        "miles": 1789,
+        "price": 430000
+      },
+      {
+        "miles": 6621,
+        "price": 481000
+      },
+      {
+        "miles": 765,
+        "price": 490000
+      },
+      {
+        "miles": 3968,
+        "price": 402000
+      },
+      {
+        "miles": 14491,
+        "price": 389000
+      },
+      {
+        "miles": 3405,
+        "price": 585000
+      },
+      {
+        "miles": 3754,
+        "price": 700000
+      },
+      {
+        "miles": 5250,
+        "price": 466000
+      },
+      {
+        "miles": 1076,
+        "price": 650000
+      },
+      {
+        "miles": 3829,
+        "price": 600000
+      },
+      {
+        "miles": 592,
+        "price": 444000
+      },
+      {
+        "miles": 2044,
+        "price": 489000
+      },
+      {
+        "miles": 1200,
+        "price": 640000
+      },
+      {
+        "miles": 307,
+        "price": 750000
+      },
+      {
+        "miles": 12775,
+        "price": 420000
+      },
+      {
+        "miles": 370,
+        "price": 651000
+      },
+      {
+        "miles": 730,
+        "price": 411000
+      },
+      {
+        "miles": 12,
+        "price": 450000
+      },
+      {
+        "miles": 326,
+        "price": 445000
+      },
+      {
+        "miles": 50,
+        "price": 670000
+      },
+      {
+        "miles": 50,
+        "price": 390000
+      },
+      {
+        "miles": 3484,
+        "price": 385000
+      },
+      {
+        "miles": 7725,
+        "price": 385000
+      },
+      {
+        "miles": 1750,
+        "price": 590000
+      },
+      {
+        "miles": 3610,
+        "price": 610000
+      },
+      {
+        "miles": 592,
+        "price": 660000
+      },
+      {
+        "miles": 750,
+        "price": 419000
+      },
+      {
+        "miles": 91,
+        "price": 666000
+      },
+      {
+        "miles": 5816,
+        "price": 435000
+      },
+      {
+        "miles": 1200,
+        "price": 428000
+      },
+      {
+        "miles": 930,
+        "price": 629000
+      },
+      {
+        "miles": 57,
+        "price": 649000
+      },
+      {
+        "miles": 2781,
+        "price": 415000
+      },
+      {
+        "miles": 122,
+        "price": 656000
+      },
+      {
+        "miles": 11,
+        "price": 670000
+      },
+      {
+        "miles": 611,
+        "price": 390000
+      },
+      {
+        "miles": 391,
+        "price": 450000
+      },
+      {
+        "miles": 5324,
+        "price": 415000
+      },
+      {
+        "miles": 969,
+        "price": 670000
+      },
+      {
+        "miles": 57,
+        "price": 740000
+      },
+      {
+        "miles": 84,
+        "price": 630000
+      },
+      {
+        "miles": 14202,
+        "price": 397000
+      },
+      {
+        "miles": 57,
+        "price": 649000
+      },
+      {
+        "miles": 2103,
+        "price": 413000
+      },
+      {
+        "miles": 6406,
+        "price": 400000
+      },
+      {
+        "miles": 55,
+        "price": 700000
+      },
+      {
+        "miles": 7836,
+        "price": 440000
+      },
+      {
+        "miles": 2020,
+        "price": 520000
+      },
+      {
+        "miles": 3169,
+        "price": 600000
+      },
+      {
+        "miles": 15709,
+        "price": 430000
+      },
+      {
+        "miles": 786,
+        "price": 390000
+      },
+      {
+        "miles": 3129,
+        "price": 414000
+      },
+      {
+        "miles": 2424,
+        "price": 406000
+      },
+      {
+        "miles": 1336,
+        "price": 645000
+      },
+      {
+        "miles": 24,
+        "price": 649000
+      },
+      {
+        "miles": 2500,
+        "price": 476000
+      },
+      {
+        "miles": 488,
+        "price": 666000
+      },
+      {
+        "miles": 5064,
+        "price": 421000
+      },
+      {
+        "miles": 72,
+        "price": 660000
+      },
+      {
+        "miles": 4321,
+        "price": 630000
+      },
+      {
+        "miles": 1470,
+        "price": 415000
+      },
+      {
+        "miles": 2533,
+        "price": 660000
+      },
+      {
+        "miles": 502,
+        "price": 665000
+      },
+      {
+        "miles": 4958,
+        "price": 397000
+      },
+      {
+        "miles": 3002,
+        "price": 406000
+      }
+    ],
+    "991.2": [
+      {
+        "miles": 22655,
+        "price": 235000
+      },
+      {
+        "miles": 7427,
+        "price": 270000
+      },
+      {
+        "miles": 3709,
+        "price": 250000
+      },
+      {
+        "miles": 6004,
+        "price": 280000
+      },
+      {
+        "miles": 6661,
+        "price": 270000
+      },
+      {
+        "miles": 2259,
+        "price": 261000
+      },
+      {
+        "miles": 10029,
+        "price": 320000
+      },
+      {
+        "miles": 13569,
+        "price": 280000
+      },
+      {
+        "miles": 15751,
+        "price": 269000
+      },
+      {
+        "miles": 25168,
+        "price": 248000
+      },
+      {
+        "miles": 14685,
+        "price": 290000
+      },
+      {
+        "miles": 4233,
+        "price": 222000
+      },
+      {
+        "miles": 0,
+        "price": 280000
+      },
+      {
+        "miles": 2370,
+        "price": 340000
+      },
+      {
+        "miles": 4649,
+        "price": 330000
+      },
+      {
+        "miles": 9959,
+        "price": 282000
+      },
+      {
+        "miles": 7623,
+        "price": 285000
+      },
+      {
+        "miles": 20285,
+        "price": 329000
+      },
+      {
+        "miles": 12609,
+        "price": 280000
+      },
+      {
+        "miles": 1650,
+        "price": 270000
+      },
+      {
+        "miles": 4414,
+        "price": 269000
+      },
+      {
+        "miles": 11541,
+        "price": 260000
+      },
+      {
+        "miles": 5057,
+        "price": 240000
+      },
+      {
+        "miles": 13321,
+        "price": 260000
+      },
+      {
+        "miles": 16338,
+        "price": 255000
+      },
+      {
+        "miles": 7666,
+        "price": 265000
+      },
+      {
+        "miles": 27430,
+        "price": 246000
+      },
+      {
+        "miles": 5709,
+        "price": 230000
+      },
+      {
+        "miles": 9345,
+        "price": 250000
+      },
+      {
+        "miles": 3015,
+        "price": 289000
+      },
+      {
+        "miles": 29528,
+        "price": 249000
+      },
+      {
+        "miles": 11817,
+        "price": 220000
+      },
+      {
+        "miles": 11283,
+        "price": 276000
+      },
+      {
+        "miles": 5959,
+        "price": 300000
+      },
+      {
+        "miles": 8797,
+        "price": 275000
+      },
+      {
+        "miles": 17505,
+        "price": 262000
+      },
+      {
+        "miles": 16088,
+        "price": 278000
+      },
+      {
+        "miles": 6562,
+        "price": 275000
+      },
+      {
+        "miles": 16364,
+        "price": 271000
+      },
+      {
+        "miles": 4658,
+        "price": 325000
+      },
+      {
+        "miles": 11941,
+        "price": 279000
+      },
+      {
+        "miles": 15904,
+        "price": 270000
+      },
+      {
+        "miles": 14410,
+        "price": 259000
+      },
+      {
+        "miles": 26141,
+        "price": 245000
+      },
+      {
+        "miles": 12623,
+        "price": 265000
+      },
+      {
+        "miles": 11562,
+        "price": 267000
+      },
+      {
+        "miles": 15164,
+        "price": 256000
+      },
+      {
+        "miles": 2943,
+        "price": 340000
+      },
+      {
+        "miles": 36788,
+        "price": 205000
+      },
+      {
+        "miles": 10076,
+        "price": 259000
+      },
+      {
+        "miles": 1929,
+        "price": 280000
+      },
+      {
+        "miles": 6100,
+        "price": 320000
+      },
+      {
+        "miles": 7286,
+        "price": 300000
+      },
+      {
+        "miles": 3526,
+        "price": 350000
+      },
+      {
+        "miles": 20643,
+        "price": 261000
+      },
+      {
+        "miles": 4756,
+        "price": 270000
+      },
+      {
+        "miles": 2936,
+        "price": 270000
+      },
+      {
+        "miles": 13562,
+        "price": 278000
+      },
+      {
+        "miles": 17499,
+        "price": 232000
+      },
+      {
+        "miles": 24405,
+        "price": 267000
+      },
+      {
+        "miles": 14302,
+        "price": 275000
+      },
+      {
+        "miles": 17541,
+        "price": 285000
+      },
+      {
+        "miles": 8370,
+        "price": 270000
+      },
+      {
+        "miles": 25250,
+        "price": 222000
+      },
+      {
+        "miles": 10386,
+        "price": 244000
+      },
+      {
+        "miles": 19546,
+        "price": 249000
+      },
+      {
+        "miles": 29427,
+        "price": 245000
+      },
+      {
+        "miles": 18044,
+        "price": 288000
+      },
+      {
+        "miles": 5030,
+        "price": 280000
+      },
+      {
+        "miles": 9100,
+        "price": 273000
+      },
+      {
+        "miles": 8089,
+        "price": 280000
+      },
+      {
+        "miles": 7962,
+        "price": 255000
+      },
+      {
+        "miles": 26149,
+        "price": 300000
+      },
+      {
+        "miles": 19111,
+        "price": 217000
+      },
+      {
+        "miles": 25177,
+        "price": 257000
+      },
+      {
+        "miles": 20453,
+        "price": 235000
+      },
+      {
+        "miles": 26740,
+        "price": 255000
+      },
+      {
+        "miles": 6236,
+        "price": 315000
+      },
+      {
+        "miles": 3174,
+        "price": 300000
+      },
+      {
+        "miles": 9454,
+        "price": 268000
+      },
+      {
+        "miles": 15627,
+        "price": 252000
+      },
+      {
+        "miles": 18510,
+        "price": 260000
+      },
+      {
+        "miles": 19500,
+        "price": 250000
+      },
+      {
+        "miles": 25817,
+        "price": 255000
+      },
+      {
+        "miles": 8888,
+        "price": 269000
+      },
+      {
+        "miles": 5277,
+        "price": 283000
+      },
+      {
+        "miles": 7404,
+        "price": 265000
+      },
+      {
+        "miles": 4514,
+        "price": 273000
+      },
+      {
+        "miles": 14450,
+        "price": 260000
+      },
+      {
+        "miles": 13091,
+        "price": 268000
+      },
+      {
+        "miles": 23552,
+        "price": 270000
+      },
+      {
+        "miles": 8234,
+        "price": 270000
+      },
+      {
+        "miles": 10387,
+        "price": 236000
+      },
+      {
+        "miles": 21742,
+        "price": 243000
+      },
+      {
+        "miles": 16060,
+        "price": 260000
+      },
+      {
+        "miles": 16806,
+        "price": 250000
+      },
+      {
+        "miles": 20805,
+        "price": 245000
+      },
+      {
+        "miles": 2687,
+        "price": 290000
+      },
+      {
+        "miles": 2969,
+        "price": 270000
+      },
+      {
+        "miles": 24000,
+        "price": 273000
+      },
+      {
+        "miles": 8648,
+        "price": 251000
+      },
+      {
+        "miles": 18311,
+        "price": 278000
+      },
+      {
+        "miles": 28970,
+        "price": 246000
+      },
+      {
+        "miles": 9591,
+        "price": 254000
+      },
+      {
+        "miles": 15189,
+        "price": 239000
+      },
+      {
+        "miles": 14011,
+        "price": 229000
+      },
+      {
+        "miles": 5382,
+        "price": 320000
+      },
+      {
+        "miles": 1345,
+        "price": 370000
+      },
+      {
+        "miles": 25167,
+        "price": 245000
+      },
+      {
+        "miles": 7928,
+        "price": 259000
+      },
+      {
+        "miles": 17132,
+        "price": 270000
+      },
+      {
+        "miles": 21279,
+        "price": 228000
+      },
+      {
+        "miles": 24417,
+        "price": 232000
+      },
+      {
+        "miles": 6094,
+        "price": 290000
+      },
+      {
+        "miles": 4286,
+        "price": 256000
+      },
+      {
+        "miles": 4313,
+        "price": 265000
+      },
+      {
+        "miles": 11531,
+        "price": 240000
+      }
+    ],
+    "991.1": [
+      {
+        "miles": 7036,
+        "price": 216000
+      },
+      {
+        "miles": 17282,
+        "price": 210000
+      },
+      {
+        "miles": 10918,
+        "price": 228000
+      },
+      {
+        "miles": 20995,
+        "price": 196000
+      },
+      {
+        "miles": 3334,
+        "price": 232000
+      },
+      {
+        "miles": 13250,
+        "price": 220000
+      },
+      {
+        "miles": 8579,
+        "price": 240000
+      },
+      {
+        "miles": 14479,
+        "price": 229000
+      },
+      {
+        "miles": 6077,
+        "price": 199000
+      },
+      {
+        "miles": 6209,
+        "price": 219000
+      },
+      {
+        "miles": 14162,
+        "price": 240000
+      },
+      {
+        "miles": 9421,
+        "price": 215000
+      },
+      {
+        "miles": 3151,
+        "price": 240000
+      },
+      {
+        "miles": 9951,
+        "price": 220000
+      },
+      {
+        "miles": 12024,
+        "price": 200000
+      },
+      {
+        "miles": 20064,
+        "price": 226000
+      },
+      {
+        "miles": 17532,
+        "price": 217000
+      },
+      {
+        "miles": 19209,
+        "price": 197000
+      },
+      {
+        "miles": 16949,
+        "price": 213000
+      },
+      {
+        "miles": 32165,
+        "price": 196000
+      },
+      {
+        "miles": 15554,
+        "price": 220000
+      },
+      {
+        "miles": 6578,
+        "price": 200000
+      },
+      {
+        "miles": 602,
+        "price": 190000
+      },
+      {
+        "miles": 27538,
+        "price": 240000
+      },
+      {
+        "miles": 15745,
+        "price": 190000
+      },
+      {
+        "miles": 10810,
+        "price": 224000
+      },
+      {
+        "miles": 4292,
+        "price": 215000
+      },
+      {
+        "miles": 12117,
+        "price": 230000
+      },
+      {
+        "miles": 7117,
+        "price": 230000
+      },
+      {
+        "miles": 18452,
+        "price": 220000
+      },
+      {
+        "miles": 9705,
+        "price": 240000
+      },
+      {
+        "miles": 19419,
+        "price": 230000
+      },
+      {
+        "miles": 21307,
+        "price": 200000
+      },
+      {
+        "miles": 11640,
+        "price": 225000
+      },
+      {
+        "miles": 23166,
+        "price": 200000
+      },
+      {
+        "miles": 8675,
+        "price": 225000
+      },
+      {
+        "miles": 9377,
+        "price": 240000
+      },
+      {
+        "miles": 4995,
+        "price": 230000
+      },
+      {
+        "miles": 27688,
+        "price": 209000
+      },
+      {
+        "miles": 21362,
+        "price": 197000
+      },
+      {
+        "miles": 26350,
+        "price": 205000
+      },
+      {
+        "miles": 20015,
+        "price": 210000
+      },
+      {
+        "miles": 8172,
+        "price": 220000
+      },
+      {
+        "miles": 42909,
+        "price": 200000
+      },
+      {
+        "miles": 14880,
+        "price": 212000
+      },
+      {
+        "miles": 24500,
+        "price": 200000
+      },
+      {
+        "miles": 30698,
+        "price": 192000
+      },
+      {
+        "miles": 1447,
+        "price": 245000
+      },
+      {
+        "miles": 6916,
+        "price": 213000
+      },
+      {
+        "miles": 13935,
+        "price": 210000
+      },
+      {
+        "miles": 15922,
+        "price": 235000
+      },
+      {
+        "miles": 20240,
+        "price": 220000
+      },
+      {
+        "miles": 85,
+        "price": 316000
+      },
+      {
+        "miles": 7480,
+        "price": 238000
+      },
+      {
+        "miles": 3569,
+        "price": 245000
+      },
+      {
+        "miles": 11727,
+        "price": 225000
+      },
+      {
+        "miles": 4500,
+        "price": 220000
+      },
+      {
+        "miles": 17668,
+        "price": 208000
+      },
+      {
+        "miles": 34397,
+        "price": 189000
+      },
+      {
+        "miles": 10332,
+        "price": 215000
+      }
+    ]
+  },
+  "auctions": [
+    {
+      "id": "fx-0",
+      "endedAt": "2026-09-12",
+      "platform": "Barrett-Jackson",
+      "status": "sold",
+      "price": 495000,
+      "year": 2025,
+      "miles": 0,
+      "weissach": false,
+      "url": "https://www.barrett-jackson.com/2026-las-vegas/docket/vehicle/2025-porsche-911-gt3-rs-weissach-303111?origin=results",
+      "generation": "992"
+    },
+    {
+      "id": "fx-1",
+      "endedAt": "2026-07-20",
+      "platform": "Bring a Trailer",
+      "status": "sold",
+      "price": 249000,
+      "year": 2019,
+      "miles": 9000,
+      "weissach": false,
+      "url": "https://bringatrailer.com/listing/2019-porsche-911-gt3-rs-71/",
+      "generation": "991.2"
+    },
+    {
+      "id": "fx-2",
+      "endedAt": "2026-07-13",
+      "platform": "Bring a Trailer",
+      "status": "sold",
+      "price": 280000,
+      "year": 2016,
+      "miles": 86,
+      "weissach": false,
+      "url": "https://bringatrailer.com/listing/2016-porsche-911-gt3-rs-113/",
+      "generation": "991.1"
+    },
+    {
+      "id": "fx-3",
+      "endedAt": "2026-07-02",
+      "platform": "Sotheby's Motorsport",
+      "status": "sold",
+      "price": 435000,
+      "year": 2025,
+      "miles": 100,
+      "weissach": true,
+      "url": "https://www.sothebysmotorsport.com/auction/2025-porsche-911gt3rsweissach-10347",
+      "generation": "992"
+    },
+    {
+      "id": "fx-4",
+      "endedAt": "2026-06-24",
+      "platform": "Bring a Trailer",
+      "status": "sold",
+      "price": 260000,
+      "year": 2016,
+      "miles": 5000,
+      "weissach": false,
+      "url": "https://bringatrailer.com/listing/2016-porsche-911-gt3-rs-112/",
+      "generation": "991.1"
+    },
+    {
+      "id": "fx-5",
+      "endedAt": "2026-06-05",
+      "platform": "Sotheby's Motorsport",
+      "status": "sold",
+      "price": 342500,
+      "year": 2023,
+      "miles": 12750,
+      "weissach": true,
+      "url": "https://www.sothebysmotorsport.com/auction/2023-porsche-911gt3rsweissach-10081",
+      "generation": "992"
+    },
+    {
+      "id": "fx-6",
+      "endedAt": "2026-05-31",
+      "platform": "Bonhams",
+      "status": "sold",
+      "price": 237440,
+      "year": 2007,
+      "miles": 33780,
+      "weissach": false,
+      "url": "https://cars.bonhams.com/auction/32391/lot/10/2007-porsche-911-gt3-rs-38-chassis-no-wp0ac299x7s793248/",
+      "generation": "997.1"
+    },
+    {
+      "id": "fx-7",
+      "endedAt": "2026-05-29",
+      "platform": "Bring a Trailer",
+      "status": "sold",
+      "price": 274000,
+      "year": 2019,
+      "miles": 1200,
+      "weissach": true,
+      "url": "https://bringatrailer.com/listing/2019-porsche-911-gt3-rs-weissach-100/",
+      "generation": "991.2"
+    },
+    {
+      "id": "fx-8",
+      "endedAt": "2026-05-28",
+      "platform": "Bring a Trailer",
+      "status": "sold",
+      "price": 212000,
+      "year": 2016,
+      "miles": 16000,
+      "weissach": false,
+      "url": "https://bringatrailer.com/listing/2016-porsche-911-gt3-rs-107/",
+      "generation": "991.1"
+    },
+    {
+      "id": "fx-9",
+      "endedAt": "2026-03-27",
+      "platform": "Bring a Trailer",
+      "status": "rnm",
+      "price": 189000,
+      "year": 2016,
+      "miles": 11000,
+      "weissach": false,
+      "url": "https://bringatrailer.com/listing/2016-porsche-911-gt3-rs-103/",
+      "generation": "991.1"
+    },
+    {
+      "id": "fx-10",
+      "endedAt": "2026-03-11",
+      "platform": "Hagerty Marketplace",
+      "status": "rnm",
+      "price": 186000,
+      "year": 2007,
+      "miles": 18700,
+      "weissach": false,
+      "url": "https://www.hagerty.com/marketplace/auction/2007-Porsche-911/47GuEcfq8iBJiSNjJtQufJ",
+      "generation": "997.1"
+    },
+    {
+      "id": "fx-11",
+      "endedAt": "2026-01-22",
+      "platform": "Bring a Trailer",
+      "status": "sold",
+      "price": 208000,
+      "year": 2016,
+      "miles": 6000,
+      "weissach": false,
+      "url": "https://bringatrailer.com/listing/2016-porsche-911-gt3-rs-98/",
+      "generation": "991.1"
+    },
+    {
+      "id": "fx-12",
+      "endedAt": "2026-01-06",
+      "platform": "Sotheby's Motorsport",
+      "status": "rnm",
+      "price": 377500,
+      "year": 2025,
+      "miles": 62,
+      "weissach": true,
+      "url": "https://www.sothebysmotorsport.com/auction/2025-porsche-911gt3rsweissach62miles-8177",
+      "generation": "992"
+    },
+    {
+      "id": "fx-13",
+      "endedAt": "2025-12-30",
+      "platform": "Bring a Trailer",
+      "status": "sold",
+      "price": 457500,
+      "year": 2024,
+      "miles": 1900,
+      "weissach": true,
+      "url": "https://bringatrailer.com/listing/2024-porsche-911-gt3-rs-58/",
+      "generation": "992"
+    },
+    {
+      "id": "fx-14",
+      "endedAt": "2025-12-30",
+      "platform": "Bring a Trailer",
+      "status": "sold",
+      "price": 169991,
+      "year": 2016,
+      "miles": 28000,
+      "weissach": false,
+      "url": "https://bringatrailer.com/listing/2016-porsche-911-gt3-rs-99/",
+      "generation": "991.1"
+    },
+    {
+      "id": "fx-15",
+      "endedAt": "2025-12-22",
+      "platform": "Bring a Trailer",
+      "status": "rnm",
+      "price": 300000,
+      "year": 2007,
+      "miles": 11000,
+      "weissach": false,
+      "url": "https://bringatrailer.com/listing/2007-porsche-911-gt3-rs-31/",
+      "generation": "997.1"
+    },
+    {
+      "id": "fx-16",
+      "endedAt": "2025-12-16",
+      "platform": "Bring a Trailer",
+      "status": "sold",
+      "price": 190000,
+      "year": 2019,
+      "miles": 44000,
+      "weissach": false,
+      "url": "https://bringatrailer.com/listing/2019-porsche-911-gt3-rs-60/",
+      "generation": "991.2"
+    },
+    {
+      "id": "fx-17",
+      "endedAt": "2025-12-10",
+      "platform": "Bring a Trailer",
+      "status": "sold",
+      "price": 182281,
+      "year": 2016,
+      "miles": 22000,
+      "weissach": false,
+      "url": "https://bringatrailer.com/listing/2016-porsche-911-gt3-rs-96/",
+      "generation": "991.1"
+    }
   ]
- },
- "generations": {
-  "992": {
-   "code": "992",
-   "name": "992",
-   "years": "2023 to 2026",
-   "sold": 307,
-   "active": 114,
-   "median": 459984,
-   "lo": 394990,
-   "hi": 664991,
-   "medianMiles": 1458,
-   "msrp": 253600,
-   "multiple": 1.75,
-   "daysToSell": 16,
-   "activeMedian": 520646,
-   "activeMedianMiles": 2018,
-   "last90": 519498,
-   "prior90": 439995,
-   "n90": 106,
-   "nPrior90": 134,
-   "thin": false,
-   "engine": "4.0 L flat-six",
-   "hp": "518 hp",
-   "gearbox": "7-speed PDK, DRS",
-   "extra": null,
-   "packages": [
-    "weissach"
-   ]
-  },
-  "991.2": {
-   "code": "991.2",
-   "name": "991.2",
-   "years": "2019",
-   "sold": 137,
-   "active": 42,
-   "median": 267995,
-   "lo": 234900,
-   "hi": 315195,
-   "medianMiles": 11541,
-   "msrp": 192970,
-   "multiple": 1.33,
-   "daysToSell": 28,
-   "activeMedian": 275413,
-   "activeMedianMiles": 16159,
-   "last90": 270423,
-   "prior90": 261999,
-   "n90": 45,
-   "nPrior90": 61,
-   "thin": false,
-   "engine": "4.0 L flat-six",
-   "hp": "520 hp",
-   "gearbox": "7-speed PDK",
-   "extra": null,
-   "packages": [
-    "weissach"
-   ]
-  },
-  "991.1": {
-   "code": "991.1",
-   "name": "991.1",
-   "years": "2016",
-   "sold": 79,
-   "active": 32,
-   "median": 219984,
-   "lo": 197000,
-   "hi": 240000,
-   "medianMiles": 11279,
-   "msrp": 180090,
-   "multiple": 1.22,
-   "daysToSell": 27,
-   "activeMedian": 242592,
-   "activeMedianMiles": 14789,
-   "last90": 230044,
-   "prior90": 215950,
-   "n90": 22,
-   "nPrior90": 40,
-   "thin": false,
-   "engine": "4.0 L flat-six",
-   "hp": "500 hp",
-   "gearbox": "7-speed PDK only",
-   "extra": null,
-   "packages": []
-  },
-  "997.2": {
-   "code": "997.2",
-   "name": "997.2",
-   "years": "2010 to 2011",
-   "sold": 29,
-   "active": 12,
-   "median": 299948,
-   "lo": 162996,
-   "hi": 800312,
-   "medianMiles": 17462,
-   "msrp": 135500,
-   "multiple": 2.24,
-   "daysToSell": 20,
-   "activeMedian": 659999,
-   "activeMedianMiles": 7001,
-   "last90": 390106,
-   "prior90": 257445,
-   "n90": 8,
-   "nPrior90": 6,
-   "thin": true,
-   "engine": "3.8 L flat-six",
-   "hp": "450 hp",
-   "gearbox": "6-speed manual",
-   "extra": "RS 4.0 (2011): 4.0 L, 500 hp, 600 built",
-   "packages": []
-  },
-  "997.1": {
-   "code": "997.1",
-   "name": "997.1",
-   "years": "2007 to 2008",
-   "sold": 10,
-   "active": 2,
-   "median": 359900,
-   "lo": 133000,
-   "hi": 429999,
-   "medianMiles": 13794,
-   "msrp": 128310,
-   "multiple": 2.58,
-   "daysToSell": 13,
-   "activeMedian": 314949,
-   "activeMedianMiles": 29203,
-   "last90": 317488,
-   "prior90": 349995,
-   "n90": 2,
-   "nPrior90": 3,
-   "thin": true,
-   "engine": "3.6 L flat-six",
-   "hp": "415 hp",
-   "gearbox": "6-speed manual",
-   "extra": null,
-   "packages": []
-  }
- },
- "monthly": [
-  {
-   "month": "2026-02",
-   "partial": true,
-   "series": {
-    "992": {
-     "n": 6,
-     "median": 414896
-    },
-    "991.2": {
-     "n": 3,
-     "median": 264881
-    },
-    "991.1": {
-     "n": 2,
-     "median": 221884
-    }
-   }
-  },
-  {
-   "month": "2026-03",
-   "partial": false,
-   "series": {
-    "992": {
-     "n": 42,
-     "median": 413491
-    },
-    "991.2": {
-     "n": 15,
-     "median": 269999
-    },
-    "991.1": {
-     "n": 8,
-     "median": 214389
-    }
-   }
-  },
-  {
-   "month": "2026-04",
-   "partial": false,
-   "series": {
-    "992": {
-     "n": 53,
-     "median": 425995
-    },
-    "991.2": {
-     "n": 24,
-     "median": 263284
-    },
-    "991.1": {
-     "n": 18,
-     "median": 215950
-    }
-   }
-  },
-  {
-   "month": "2026-05",
-   "partial": false,
-   "series": {
-    "992": {
-     "n": 46,
-     "median": 432473
-    },
-    "991.2": {
-     "n": 13,
-     "median": 249990
-    },
-    "991.1": {
-     "n": 11,
-     "median": 219900
-    }
-   }
-  },
-  {
-   "month": "2026-06",
-   "partial": false,
-   "series": {
-    "992": {
-     "n": 33,
-     "median": 461293
-    },
-    "991.2": {
-     "n": 24,
-     "median": 267443
-    },
-    "991.1": {
-     "n": 13,
-     "median": 229888
-    }
-   }
-  },
-  {
-   "month": "2026-07",
-   "partial": false,
-   "series": {
-    "992": {
-     "n": 32,
-     "median": 489598
-    },
-    "991.2": {
-     "n": 16,
-     "median": 260356
-    },
-    "991.1": {
-     "n": 11,
-     "median": 229813
-    }
-   }
-  },
-  {
-   "month": "2026-08",
-   "partial": false,
-   "series": {
-    "992": {
-     "n": 36,
-     "median": 550394
-    },
-    "991.2": {
-     "n": 16,
-     "median": 272712
-    },
-    "991.1": {
-     "n": 6,
-     "median": 231493
-    }
-   }
-  },
-  {
-   "month": "2026-09",
-   "partial": true,
-   "series": {
-    "992": {
-     "n": 32,
-     "median": 499995
-    },
-    "991.2": {
-     "n": 11,
-     "median": 279000
-    },
-    "991.1": {
-     "n": 1,
-     "median": 188595
-    }
-   }
-  }
- ],
- "byYear": [
-  {
-   "year": 2025,
-   "n": 127,
-   "median": 459800,
-   "medianMiles": 1322,
-   "generation": "992"
-  },
-  {
-   "year": 2024,
-   "n": 127,
-   "median": 488800,
-   "medianMiles": 1336,
-   "generation": "992"
-  },
-  {
-   "year": 2023,
-   "n": 26,
-   "median": 400495,
-   "medianMiles": 2930,
-   "generation": "992"
-  },
-  {
-   "year": 2019,
-   "n": 122,
-   "median": 267995,
-   "medianMiles": 11541,
-   "generation": "991.2"
-  },
-  {
-   "year": 2016,
-   "n": 70,
-   "median": 219984,
-   "medianMiles": 11279,
-   "generation": "991.1"
-  },
-  {
-   "year": 2011,
-   "n": 5,
-   "median": 624991,
-   "medianMiles": 9528,
-   "generation": "997.2"
-  },
-  {
-   "year": 2010,
-   "n": 11,
-   "median": 259900,
-   "medianMiles": 19156,
-   "generation": "997.2"
-  },
-  {
-   "year": 2008,
-   "n": 3,
-   "median": 379991,
-   "medianMiles": 13065,
-   "generation": "997.1"
-  },
-  {
-   "year": 2007,
-   "n": 4,
-   "median": 287494,
-   "medianMiles": 18053,
-   "generation": "997.1"
-  }
- ],
- "colors": [
-  {
-   "color": "White",
-   "n": 45,
-   "median": 434995
-  },
-  {
-   "color": "Black",
-   "n": 35,
-   "median": 466080
-  },
-  {
-   "color": "Ice Grey Metallic",
-   "n": 27,
-   "median": 450542
-  },
-  {
-   "color": "Shark Blue",
-   "n": 22,
-   "median": 641944
-  },
-  {
-   "color": "Arctic Grey",
-   "n": 21,
-   "median": 414990
-  },
-  {
-   "color": "GT Silver Metallic",
-   "n": 15,
-   "median": 444999
-  },
-  {
-   "color": "Guards Red",
-   "n": 13,
-   "median": 405998
-  },
-  {
-   "color": "Paint to Sample",
-   "n": 12,
-   "median": 590295
-  }
- ],
- "milesBands": {
-  "992": [
-   {
-    "from": 0,
-    "to": 500,
-    "n": 68,
-    "median": 599997
-   },
-   {
-    "from": 500,
-    "to": 1000,
-    "n": 47,
-    "median": 500590
-   },
-   {
-    "from": 1000,
-    "to": 2500,
-    "n": 70,
-    "median": 453830
-   },
-   {
-    "from": 2500,
-    "to": 5000,
-    "n": 56,
-    "median": 449495
-   },
-   {
-    "from": 5000,
-    "to": 10000,
-    "n": 31,
-    "median": 401685
-   },
-   {
-    "from": 10000,
-    "to": null,
-    "n": 8,
-    "median": 417895
-   }
-  ],
-  "991.2": [
-   {
-    "from": 0,
-    "to": 2500,
-    "n": 7,
-    "median": 279999
-   },
-   {
-    "from": 2500,
-    "to": 5000,
-    "n": 17,
-    "median": 272888
-   },
-   {
-    "from": 5000,
-    "to": 10000,
-    "n": 30,
-    "median": 271956
-   },
-   {
-    "from": 10000,
-    "to": 15000,
-    "n": 21,
-    "median": 264988
-   },
-   {
-    "from": 15000,
-    "to": 20000,
-    "n": 21,
-    "median": 259813
-   },
-   {
-    "from": 20000,
-    "to": null,
-    "n": 25,
-    "median": 245990
-   }
-  ],
-  "991.1": [
-   {
-    "from": 0,
-    "to": 5000,
-    "n": 9,
-    "median": 232000
-   },
-   {
-    "from": 5000,
-    "to": 10000,
-    "n": 14,
-    "median": 220000
-   },
-   {
-    "from": 10000,
-    "to": 15000,
-    "n": 12,
-    "median": 224500
-   },
-   {
-    "from": 15000,
-    "to": 20000,
-    "n": 10,
-    "median": 215000
-   },
-   {
-    "from": 20000,
-    "to": null,
-    "n": 15,
-    "median": 200000
-   }
-  ]
- },
- "states": [
-  {
-   "state": "CA",
-   "n": 115
-  },
-  {
-   "state": "FL",
-   "n": 98
-  },
-  {
-   "state": "TX",
-   "n": 60
-  },
-  {
-   "state": "IL",
-   "n": 37
-  },
-  {
-   "state": "AZ",
-   "n": 29
-  },
-  {
-   "state": "NC",
-   "n": 24
-  },
-  {
-   "state": "NJ",
-   "n": 21
-  },
-  {
-   "state": "NY",
-   "n": 21
-  }
- ],
- "recentDealerSales": [
-  {
-   "soldDate": "2026-09-18",
-   "year": 2019,
-   "color": "Lizard Green",
-   "miles": null,
-   "price": 270598,
-   "state": "UT",
-   "generation": "991.2"
-  },
-  {
-   "soldDate": "2026-09-18",
-   "year": 2025,
-   "color": null,
-   "miles": 391,
-   "price": 450426,
-   "state": "NY",
-   "generation": "992"
-  },
-  {
-   "soldDate": "2026-09-18",
-   "year": 2024,
-   "color": "Shark Blue",
-   "miles": 2500,
-   "price": 475991,
-   "state": "AZ",
-   "generation": "992"
-  },
-  {
-   "soldDate": "2026-09-17",
-   "year": 2025,
-   "color": "White",
-   "miles": 583,
-   "price": 527603,
-   "state": "FL",
-   "generation": "992"
-  },
-  {
-   "soldDate": "2026-09-17",
-   "year": 2011,
-   "color": null,
-   "miles": 4608,
-   "price": 800312,
-   "state": "IL",
-   "generation": "997.2"
-  },
-  {
-   "soldDate": "2026-09-17",
-   "year": 2024,
-   "color": "Black",
-   "miles": 788,
-   "price": 500699,
-   "state": "NC",
-   "generation": "992"
-  },
-  {
-   "soldDate": "2026-09-17",
-   "year": 2025,
-   "color": "Arctic Grey",
-   "miles": 2083,
-   "price": 441700,
-   "state": "MO",
-   "generation": "992"
-  },
-  {
-   "soldDate": "2026-09-17",
-   "year": 2019,
-   "color": "White",
-   "miles": 24000,
-   "price": 272800,
-   "state": "NV",
-   "generation": "991.2"
-  },
-  {
-   "soldDate": "2026-09-16",
-   "year": 2025,
-   "color": "Guards Red",
-   "miles": 1200,
-   "price": 639995,
-   "state": "UT",
-   "generation": "992"
-  },
-  {
-   "soldDate": "2026-09-15",
-   "year": 2019,
-   "color": "Lizard Green",
-   "miles": 6100,
-   "price": 319980,
-   "state": "FL",
-   "generation": "991.2"
-  },
-  {
-   "soldDate": "2026-09-15",
-   "year": 2019,
-   "color": "White",
-   "miles": 17132,
-   "price": 269999,
-   "state": "NV",
-   "generation": "991.2"
-  },
-  {
-   "soldDate": "2026-09-14",
-   "year": 2025,
-   "color": null,
-   "miles": 1311,
-   "price": 495970,
-   "state": "NY",
-   "generation": "992"
-  },
-  {
-   "soldDate": "2026-09-14",
-   "year": 2007,
-   "color": null,
-   "miles": 12122,
-   "price": 409984,
-   "state": "CA",
-   "generation": "997.1"
-  },
-  {
-   "soldDate": "2026-09-14",
-   "year": 2019,
-   "color": null,
-   "miles": 15904,
-   "price": 269899,
-   "state": "AL",
-   "generation": "991.2"
-  }
- ],
- "dealerSales": {
-  "992": [
-   {
-    "miles": 279,
-    "price": 400000
-   },
-   {
-    "miles": 608,
-    "price": 501000
-   },
-   {
-    "miles": 3629,
-    "price": 410000
-   },
-   {
-    "miles": 45,
-    "price": 426000
-   },
-   {
-    "miles": 1930,
-    "price": 519000
-   },
-   {
-    "miles": 216,
-    "price": 560000
-   },
-   {
-    "miles": 550,
-    "price": 599000
-   },
-   {
-    "miles": 310,
-    "price": 412000
-   },
-   {
-    "miles": 77,
-    "price": 490000
-   },
-   {
-    "miles": 1500,
-    "price": 413000
-   },
-   {
-    "miles": 4464,
-    "price": 449000
-   },
-   {
-    "miles": 2585,
-    "price": 410000
-   },
-   {
-    "miles": 745,
-    "price": 534000
-   },
-   {
-    "miles": 5467,
-    "price": 393000
-   },
-   {
-    "miles": 1743,
-    "price": 389000
-   },
-   {
-    "miles": 1494,
-    "price": 415000
-   },
-   {
-    "miles": 2029,
-    "price": 425000
-   },
-   {
-    "miles": 409,
-    "price": 459000
-   },
-   {
-    "miles": 1781,
-    "price": 475000
-   },
-   {
-    "miles": 1793,
-    "price": 452000
-   },
-   {
-    "miles": 7445,
-    "price": 389000
-   },
-   {
-    "miles": 3270,
-    "price": 460000
-   },
-   {
-    "miles": 2727,
-    "price": 525000
-   },
-   {
-    "miles": 193,
-    "price": 577000
-   },
-   {
-    "miles": 2503,
-    "price": 440000
-   },
-   {
-    "miles": 2858,
-    "price": 395000
-   },
-   {
-    "miles": 1554,
-    "price": 424000
-   },
-   {
-    "miles": 4956,
-    "price": 451000
-   },
-   {
-    "miles": 2673,
-    "price": 449000
-   },
-   {
-    "miles": 12538,
-    "price": 416000
-   },
-   {
-    "miles": 4372,
-    "price": 516000
-   },
-   {
-    "miles": 732,
-    "price": 550000
-   },
-   {
-    "miles": 6897,
-    "price": 385000
-   },
-   {
-    "miles": 327,
-    "price": 510000
-   },
-   {
-    "miles": 1093,
-    "price": 699000
-   },
-   {
-    "miles": 0,
-    "price": 540000
-   },
-   {
-    "miles": 1266,
-    "price": 450000
-   },
-   {
-    "miles": 121,
-    "price": 510000
-   },
-   {
-    "miles": 1247,
-    "price": 616000
-   },
-   {
-    "miles": 2240,
-    "price": 420000
-   },
-   {
-    "miles": 852,
-    "price": 450000
-   },
-   {
-    "miles": 2982,
-    "price": 442000
-   },
-   {
-    "miles": 1164,
-    "price": 644000
-   },
-   {
-    "miles": 5673,
-    "price": 623000
-   },
-   {
-    "miles": 757,
-    "price": 420000
-   },
-   {
-    "miles": 1972,
-    "price": 416000
-   },
-   {
-    "miles": 2315,
-    "price": 571000
-   },
-   {
-    "miles": 1913,
-    "price": 385000
-   },
-   {
-    "miles": 2382,
-    "price": 700000
-   },
-   {
-    "miles": 583,
-    "price": 528000
-   },
-   {
-    "miles": 136,
-    "price": 666000
-   },
-   {
-    "miles": 1100,
-    "price": 559000
-   },
-   {
-    "miles": 3711,
-    "price": 450000
-   },
-   {
-    "miles": 676,
-    "price": 400000
-   },
-   {
-    "miles": 12278,
-    "price": 484000
-   },
-   {
-    "miles": 2608,
-    "price": 420000
-   },
-   {
-    "miles": 121,
-    "price": 670000
-   },
-   {
-    "miles": 1311,
-    "price": 496000
-   },
-   {
-    "miles": 452,
-    "price": 405000
-   },
-   {
-    "miles": 3790,
-    "price": 480000
-   },
-   {
-    "miles": 1615,
-    "price": 540000
-   },
-   {
-    "miles": 5656,
-    "price": 380000
-   },
-   {
-    "miles": 13195,
-    "price": 420000
-   },
-   {
-    "miles": 1105,
-    "price": 450000
-   },
-   {
-    "miles": 1527,
-    "price": 426000
-   },
-   {
-    "miles": 5133,
-    "price": 600000
-   },
-   {
-    "miles": 3627,
-    "price": 380000
-   },
-   {
-    "miles": 225,
-    "price": 400000
-   },
-   {
-    "miles": 703,
-    "price": 430000
-   },
-   {
-    "miles": 2560,
-    "price": 430000
-   },
-   {
-    "miles": 3703,
-    "price": 380000
-   },
-   {
-    "miles": 64,
-    "price": 630000
-   },
-   {
-    "miles": 4625,
-    "price": 455000
-   },
-   {
-    "miles": 48,
-    "price": 690000
-   },
-   {
-    "miles": 1864,
-    "price": 500000
-   },
-   {
-    "miles": 63,
-    "price": 640000
-   },
-   {
-    "miles": 60,
-    "price": 490000
-   },
-   {
-    "miles": 3183,
-    "price": 430000
-   },
-   {
-    "miles": 2339,
-    "price": 400000
-   },
-   {
-    "miles": 138,
-    "price": 610000
-   },
-   {
-    "miles": 806,
-    "price": 480000
-   },
-   {
-    "miles": 2400,
-    "price": 476000
-   },
-   {
-    "miles": 1432,
-    "price": 470000
-   },
-   {
-    "miles": 450,
-    "price": 401000
-   },
-   {
-    "miles": 8479,
-    "price": 386000
-   },
-   {
-    "miles": 878,
-    "price": 672000
-   },
-   {
-    "miles": 1293,
-    "price": 400000
-   },
-   {
-    "miles": 573,
-    "price": 440000
-   },
-   {
-    "miles": 26,
-    "price": 473000
-   },
-   {
-    "miles": 765,
-    "price": 526000
-   },
-   {
-    "miles": 896,
-    "price": 523000
-   },
-   {
-    "miles": 533,
-    "price": 656000
-   },
-   {
-    "miles": 4620,
-    "price": 433000
-   },
-   {
-    "miles": 736,
-    "price": 400000
-   },
-   {
-    "miles": 4908,
-    "price": 455000
-   },
-   {
-    "miles": 3324,
-    "price": 470000
-   },
-   {
-    "miles": 5710,
-    "price": 380000
-   },
-   {
-    "miles": 1528,
-    "price": 600000
-   },
-   {
-    "miles": 318,
-    "price": 449000
-   },
-   {
-    "miles": 210,
-    "price": 520000
-   },
-   {
-    "miles": 993,
-    "price": 380000
-   },
-   {
-    "miles": 1939,
-    "price": 600000
-   },
-   {
-    "miles": 788,
-    "price": 501000
-   },
-   {
-    "miles": 1209,
-    "price": 489000
-   },
-   {
-    "miles": 499,
-    "price": 420000
-   },
-   {
-    "miles": 4163,
-    "price": 400000
-   },
-   {
-    "miles": 3740,
-    "price": 456000
-   },
-   {
-    "miles": 89,
-    "price": 470000
-   },
-   {
-    "miles": 85,
-    "price": 500000
-   },
-   {
-    "miles": 4516,
-    "price": 500000
-   },
-   {
-    "miles": 1791,
-    "price": 460000
-   },
-   {
-    "miles": 0,
-    "price": 400000
-   },
-   {
-    "miles": 570,
-    "price": 445000
-   },
-   {
-    "miles": 2049,
-    "price": 420000
-   },
-   {
-    "miles": 785,
-    "price": 450000
-   },
-   {
-    "miles": 1641,
-    "price": 660000
-   },
-   {
-    "miles": 3188,
-    "price": 451000
-   },
-   {
-    "miles": 33,
-    "price": 408000
-   },
-   {
-    "miles": 582,
-    "price": 600000
-   },
-   {
-    "miles": 1446,
-    "price": 500000
-   },
-   {
-    "miles": 380,
-    "price": 625000
-   },
-   {
-    "miles": 1322,
-    "price": 470000
-   },
-   {
-    "miles": 2507,
-    "price": 446000
-   },
-   {
-    "miles": 29,
-    "price": 700000
-   },
-   {
-    "miles": 1250,
-    "price": 380000
-   },
-   {
-    "miles": 2159,
-    "price": 651000
-   },
-   {
-    "miles": 4250,
-    "price": 480000
-   },
-   {
-    "miles": 3672,
-    "price": 419000
-   },
-   {
-    "miles": 2259,
-    "price": 451000
-   },
-   {
-    "miles": 1544,
-    "price": 422000
-   },
-   {
-    "miles": 7663,
-    "price": 500000
-   },
-   {
-    "miles": 3870,
-    "price": 428000
-   },
-   {
-    "miles": 549,
-    "price": 451000
-   },
-   {
-    "miles": 1140,
-    "price": 650000
-   },
-   {
-    "miles": 750,
-    "price": 430000
-   },
-   {
-    "miles": 6189,
-    "price": 390000
-   },
-   {
-    "miles": 2176,
-    "price": 423000
-   },
-   {
-    "miles": 115,
-    "price": 650000
-   },
-   {
-    "miles": 1041,
-    "price": 508000
-   },
-   {
-    "miles": 698,
-    "price": 426000
-   },
-   {
-    "miles": 3056,
-    "price": 630000
-   },
-   {
-    "miles": 824,
-    "price": 641000
-   },
-   {
-    "miles": 1948,
-    "price": 412000
-   },
-   {
-    "miles": 863,
-    "price": 540000
-   },
-   {
-    "miles": 5150,
-    "price": 469000
-   },
-   {
-    "miles": 500,
-    "price": 668000
-   },
-   {
-    "miles": 514,
-    "price": 471000
-   },
-   {
-    "miles": 1102,
-    "price": 499000
-   },
-   {
-    "miles": 1902,
-    "price": 410000
-   },
-   {
-    "miles": 2909,
-    "price": 410000
-   },
-   {
-    "miles": 26,
-    "price": 455000
-   },
-   {
-    "miles": 2110,
-    "price": 411000
-   },
-   {
-    "miles": 665,
-    "price": 600000
-   },
-   {
-    "miles": 156,
-    "price": 648000
-   },
-   {
-    "miles": 479,
-    "price": 631000
-   },
-   {
-    "miles": 2299,
-    "price": 400000
-   },
-   {
-    "miles": 638,
-    "price": 445000
-   },
-   {
-    "miles": 1445,
-    "price": 498000
-   },
-   {
-    "miles": 5417,
-    "price": 402000
-   },
-   {
-    "miles": 682,
-    "price": 551000
-   },
-   {
-    "miles": 317,
-    "price": 395000
-   },
-   {
-    "miles": 1813,
-    "price": 436000
-   },
-   {
-    "miles": 519,
-    "price": 680000
-   },
-   {
-    "miles": 26,
-    "price": 670000
-   },
-   {
-    "miles": 692,
-    "price": 470000
-   },
-   {
-    "miles": 5267,
-    "price": 444000
-   },
-   {
-    "miles": 55,
-    "price": 700000
-   },
-   {
-    "miles": 62,
-    "price": 551000
-   },
-   {
-    "miles": 144,
-    "price": 670000
-   },
-   {
-    "miles": 596,
-    "price": 599000
-   },
-   {
-    "miles": 8035,
-    "price": 390000
-   },
-   {
-    "miles": 2083,
-    "price": 442000
-   },
-   {
-    "miles": 1774,
-    "price": 429000
-   },
-   {
-    "miles": 479,
-    "price": 600000
-   },
-   {
-    "miles": 2615,
-    "price": 480000
-   },
-   {
-    "miles": 5020,
-    "price": 407000
-   },
-   {
-    "miles": 261,
-    "price": 692000
-   },
-   {
-    "miles": 123,
-    "price": 471000
-   },
-   {
-    "miles": 2589,
-    "price": 450000
-   },
-   {
-    "miles": 3435,
-    "price": 460000
-   },
-   {
-    "miles": 1328,
-    "price": 435000
-   },
-   {
-    "miles": 4445,
-    "price": 409000
-   },
-   {
-    "miles": 3037,
-    "price": 415000
-   },
-   {
-    "miles": 462,
-    "price": 461000
-   },
-   {
-    "miles": 424,
-    "price": 550000
-   },
-   {
-    "miles": 2750,
-    "price": 650000
-   },
-   {
-    "miles": 1180,
-    "price": 436000
-   },
-   {
-    "miles": 399,
-    "price": 600000
-   },
-   {
-    "miles": 3759,
-    "price": 530000
-   },
-   {
-    "miles": 1827,
-    "price": 456000
-   },
-   {
-    "miles": 951,
-    "price": 660000
-   },
-   {
-    "miles": 9209,
-    "price": 386000
-   },
-   {
-    "miles": 819,
-    "price": 418000
-   },
-   {
-    "miles": 1109,
-    "price": 446000
-   },
-   {
-    "miles": 6666,
-    "price": 405000
-   },
-   {
-    "miles": 4450,
-    "price": 410000
-   },
-   {
-    "miles": 5903,
-    "price": 530000
-   },
-   {
-    "miles": 1266,
-    "price": 530000
-   },
-   {
-    "miles": 2358,
-    "price": 450000
-   },
-   {
-    "miles": 0,
-    "price": 650000
-   },
-   {
-    "miles": 8273,
-    "price": 470000
-   },
-   {
-    "miles": 456,
-    "price": 640000
-   },
-   {
-    "miles": 5081,
-    "price": 386000
-   },
-   {
-    "miles": 3159,
-    "price": 403000
-   },
-   {
-    "miles": 1520,
-    "price": 530000
-   },
-   {
-    "miles": 1789,
-    "price": 430000
-   },
-   {
-    "miles": 6621,
-    "price": 481000
-   },
-   {
-    "miles": 765,
-    "price": 490000
-   },
-   {
-    "miles": 3968,
-    "price": 402000
-   },
-   {
-    "miles": 14491,
-    "price": 389000
-   },
-   {
-    "miles": 3405,
-    "price": 585000
-   },
-   {
-    "miles": 3754,
-    "price": 700000
-   },
-   {
-    "miles": 5250,
-    "price": 466000
-   },
-   {
-    "miles": 1076,
-    "price": 650000
-   },
-   {
-    "miles": 3829,
-    "price": 600000
-   },
-   {
-    "miles": 592,
-    "price": 444000
-   },
-   {
-    "miles": 2044,
-    "price": 489000
-   },
-   {
-    "miles": 1200,
-    "price": 640000
-   },
-   {
-    "miles": 307,
-    "price": 750000
-   },
-   {
-    "miles": 12775,
-    "price": 420000
-   },
-   {
-    "miles": 370,
-    "price": 651000
-   },
-   {
-    "miles": 730,
-    "price": 411000
-   },
-   {
-    "miles": 12,
-    "price": 450000
-   },
-   {
-    "miles": 326,
-    "price": 445000
-   },
-   {
-    "miles": 50,
-    "price": 670000
-   },
-   {
-    "miles": 50,
-    "price": 390000
-   },
-   {
-    "miles": 3484,
-    "price": 385000
-   },
-   {
-    "miles": 7725,
-    "price": 385000
-   },
-   {
-    "miles": 1750,
-    "price": 590000
-   },
-   {
-    "miles": 3610,
-    "price": 610000
-   },
-   {
-    "miles": 592,
-    "price": 660000
-   },
-   {
-    "miles": 750,
-    "price": 419000
-   },
-   {
-    "miles": 91,
-    "price": 666000
-   },
-   {
-    "miles": 5816,
-    "price": 435000
-   },
-   {
-    "miles": 1200,
-    "price": 428000
-   },
-   {
-    "miles": 930,
-    "price": 629000
-   },
-   {
-    "miles": 57,
-    "price": 649000
-   },
-   {
-    "miles": 2781,
-    "price": 415000
-   },
-   {
-    "miles": 122,
-    "price": 656000
-   },
-   {
-    "miles": 11,
-    "price": 670000
-   },
-   {
-    "miles": 611,
-    "price": 390000
-   },
-   {
-    "miles": 391,
-    "price": 450000
-   },
-   {
-    "miles": 5324,
-    "price": 415000
-   },
-   {
-    "miles": 969,
-    "price": 670000
-   },
-   {
-    "miles": 57,
-    "price": 740000
-   },
-   {
-    "miles": 84,
-    "price": 630000
-   },
-   {
-    "miles": 14202,
-    "price": 397000
-   },
-   {
-    "miles": 57,
-    "price": 649000
-   },
-   {
-    "miles": 2103,
-    "price": 413000
-   },
-   {
-    "miles": 6406,
-    "price": 400000
-   },
-   {
-    "miles": 55,
-    "price": 700000
-   },
-   {
-    "miles": 7836,
-    "price": 440000
-   },
-   {
-    "miles": 2020,
-    "price": 520000
-   },
-   {
-    "miles": 3169,
-    "price": 600000
-   },
-   {
-    "miles": 15709,
-    "price": 430000
-   },
-   {
-    "miles": 786,
-    "price": 390000
-   },
-   {
-    "miles": 3129,
-    "price": 414000
-   },
-   {
-    "miles": 2424,
-    "price": 406000
-   },
-   {
-    "miles": 1336,
-    "price": 645000
-   },
-   {
-    "miles": 24,
-    "price": 649000
-   },
-   {
-    "miles": 2500,
-    "price": 476000
-   },
-   {
-    "miles": 488,
-    "price": 666000
-   },
-   {
-    "miles": 5064,
-    "price": 421000
-   },
-   {
-    "miles": 72,
-    "price": 660000
-   },
-   {
-    "miles": 4321,
-    "price": 630000
-   },
-   {
-    "miles": 1470,
-    "price": 415000
-   },
-   {
-    "miles": 2533,
-    "price": 660000
-   },
-   {
-    "miles": 502,
-    "price": 665000
-   },
-   {
-    "miles": 4958,
-    "price": 397000
-   },
-   {
-    "miles": 3002,
-    "price": 406000
-   }
-  ],
-  "991.2": [
-   {
-    "miles": 22655,
-    "price": 235000
-   },
-   {
-    "miles": 7427,
-    "price": 270000
-   },
-   {
-    "miles": 3709,
-    "price": 250000
-   },
-   {
-    "miles": 6004,
-    "price": 280000
-   },
-   {
-    "miles": 6661,
-    "price": 270000
-   },
-   {
-    "miles": 2259,
-    "price": 261000
-   },
-   {
-    "miles": 10029,
-    "price": 320000
-   },
-   {
-    "miles": 13569,
-    "price": 280000
-   },
-   {
-    "miles": 15751,
-    "price": 269000
-   },
-   {
-    "miles": 25168,
-    "price": 248000
-   },
-   {
-    "miles": 14685,
-    "price": 290000
-   },
-   {
-    "miles": 4233,
-    "price": 222000
-   },
-   {
-    "miles": 0,
-    "price": 280000
-   },
-   {
-    "miles": 2370,
-    "price": 340000
-   },
-   {
-    "miles": 4649,
-    "price": 330000
-   },
-   {
-    "miles": 9959,
-    "price": 282000
-   },
-   {
-    "miles": 7623,
-    "price": 285000
-   },
-   {
-    "miles": 20285,
-    "price": 329000
-   },
-   {
-    "miles": 12609,
-    "price": 280000
-   },
-   {
-    "miles": 1650,
-    "price": 270000
-   },
-   {
-    "miles": 4414,
-    "price": 269000
-   },
-   {
-    "miles": 11541,
-    "price": 260000
-   },
-   {
-    "miles": 5057,
-    "price": 240000
-   },
-   {
-    "miles": 13321,
-    "price": 260000
-   },
-   {
-    "miles": 16338,
-    "price": 255000
-   },
-   {
-    "miles": 7666,
-    "price": 265000
-   },
-   {
-    "miles": 27430,
-    "price": 246000
-   },
-   {
-    "miles": 5709,
-    "price": 230000
-   },
-   {
-    "miles": 9345,
-    "price": 250000
-   },
-   {
-    "miles": 3015,
-    "price": 289000
-   },
-   {
-    "miles": 29528,
-    "price": 249000
-   },
-   {
-    "miles": 11817,
-    "price": 220000
-   },
-   {
-    "miles": 11283,
-    "price": 276000
-   },
-   {
-    "miles": 5959,
-    "price": 300000
-   },
-   {
-    "miles": 8797,
-    "price": 275000
-   },
-   {
-    "miles": 17505,
-    "price": 262000
-   },
-   {
-    "miles": 16088,
-    "price": 278000
-   },
-   {
-    "miles": 6562,
-    "price": 275000
-   },
-   {
-    "miles": 16364,
-    "price": 271000
-   },
-   {
-    "miles": 4658,
-    "price": 325000
-   },
-   {
-    "miles": 11941,
-    "price": 279000
-   },
-   {
-    "miles": 15904,
-    "price": 270000
-   },
-   {
-    "miles": 14410,
-    "price": 259000
-   },
-   {
-    "miles": 26141,
-    "price": 245000
-   },
-   {
-    "miles": 12623,
-    "price": 265000
-   },
-   {
-    "miles": 11562,
-    "price": 267000
-   },
-   {
-    "miles": 15164,
-    "price": 256000
-   },
-   {
-    "miles": 2943,
-    "price": 340000
-   },
-   {
-    "miles": 36788,
-    "price": 205000
-   },
-   {
-    "miles": 10076,
-    "price": 259000
-   },
-   {
-    "miles": 1929,
-    "price": 280000
-   },
-   {
-    "miles": 6100,
-    "price": 320000
-   },
-   {
-    "miles": 7286,
-    "price": 300000
-   },
-   {
-    "miles": 3526,
-    "price": 350000
-   },
-   {
-    "miles": 20643,
-    "price": 261000
-   },
-   {
-    "miles": 4756,
-    "price": 270000
-   },
-   {
-    "miles": 2936,
-    "price": 270000
-   },
-   {
-    "miles": 13562,
-    "price": 278000
-   },
-   {
-    "miles": 17499,
-    "price": 232000
-   },
-   {
-    "miles": 24405,
-    "price": 267000
-   },
-   {
-    "miles": 14302,
-    "price": 275000
-   },
-   {
-    "miles": 17541,
-    "price": 285000
-   },
-   {
-    "miles": 8370,
-    "price": 270000
-   },
-   {
-    "miles": 25250,
-    "price": 222000
-   },
-   {
-    "miles": 10386,
-    "price": 244000
-   },
-   {
-    "miles": 19546,
-    "price": 249000
-   },
-   {
-    "miles": 29427,
-    "price": 245000
-   },
-   {
-    "miles": 18044,
-    "price": 288000
-   },
-   {
-    "miles": 5030,
-    "price": 280000
-   },
-   {
-    "miles": 9100,
-    "price": 273000
-   },
-   {
-    "miles": 8089,
-    "price": 280000
-   },
-   {
-    "miles": 7962,
-    "price": 255000
-   },
-   {
-    "miles": 26149,
-    "price": 300000
-   },
-   {
-    "miles": 19111,
-    "price": 217000
-   },
-   {
-    "miles": 25177,
-    "price": 257000
-   },
-   {
-    "miles": 20453,
-    "price": 235000
-   },
-   {
-    "miles": 26740,
-    "price": 255000
-   },
-   {
-    "miles": 6236,
-    "price": 315000
-   },
-   {
-    "miles": 3174,
-    "price": 300000
-   },
-   {
-    "miles": 9454,
-    "price": 268000
-   },
-   {
-    "miles": 15627,
-    "price": 252000
-   },
-   {
-    "miles": 18510,
-    "price": 260000
-   },
-   {
-    "miles": 19500,
-    "price": 250000
-   },
-   {
-    "miles": 25817,
-    "price": 255000
-   },
-   {
-    "miles": 8888,
-    "price": 269000
-   },
-   {
-    "miles": 5277,
-    "price": 283000
-   },
-   {
-    "miles": 7404,
-    "price": 265000
-   },
-   {
-    "miles": 4514,
-    "price": 273000
-   },
-   {
-    "miles": 14450,
-    "price": 260000
-   },
-   {
-    "miles": 13091,
-    "price": 268000
-   },
-   {
-    "miles": 23552,
-    "price": 270000
-   },
-   {
-    "miles": 8234,
-    "price": 270000
-   },
-   {
-    "miles": 10387,
-    "price": 236000
-   },
-   {
-    "miles": 21742,
-    "price": 243000
-   },
-   {
-    "miles": 16060,
-    "price": 260000
-   },
-   {
-    "miles": 16806,
-    "price": 250000
-   },
-   {
-    "miles": 20805,
-    "price": 245000
-   },
-   {
-    "miles": 2687,
-    "price": 290000
-   },
-   {
-    "miles": 2969,
-    "price": 270000
-   },
-   {
-    "miles": 24000,
-    "price": 273000
-   },
-   {
-    "miles": 8648,
-    "price": 251000
-   },
-   {
-    "miles": 18311,
-    "price": 278000
-   },
-   {
-    "miles": 28970,
-    "price": 246000
-   },
-   {
-    "miles": 9591,
-    "price": 254000
-   },
-   {
-    "miles": 15189,
-    "price": 239000
-   },
-   {
-    "miles": 14011,
-    "price": 229000
-   },
-   {
-    "miles": 5382,
-    "price": 320000
-   },
-   {
-    "miles": 1345,
-    "price": 370000
-   },
-   {
-    "miles": 25167,
-    "price": 245000
-   },
-   {
-    "miles": 7928,
-    "price": 259000
-   },
-   {
-    "miles": 17132,
-    "price": 270000
-   },
-   {
-    "miles": 21279,
-    "price": 228000
-   },
-   {
-    "miles": 24417,
-    "price": 232000
-   },
-   {
-    "miles": 6094,
-    "price": 290000
-   },
-   {
-    "miles": 4286,
-    "price": 256000
-   },
-   {
-    "miles": 4313,
-    "price": 265000
-   },
-   {
-    "miles": 11531,
-    "price": 240000
-   }
-  ],
-  "991.1": [
-   {
-    "miles": 7036,
-    "price": 216000
-   },
-   {
-    "miles": 17282,
-    "price": 210000
-   },
-   {
-    "miles": 10918,
-    "price": 228000
-   },
-   {
-    "miles": 20995,
-    "price": 196000
-   },
-   {
-    "miles": 3334,
-    "price": 232000
-   },
-   {
-    "miles": 13250,
-    "price": 220000
-   },
-   {
-    "miles": 8579,
-    "price": 240000
-   },
-   {
-    "miles": 14479,
-    "price": 229000
-   },
-   {
-    "miles": 6077,
-    "price": 199000
-   },
-   {
-    "miles": 6209,
-    "price": 219000
-   },
-   {
-    "miles": 14162,
-    "price": 240000
-   },
-   {
-    "miles": 9421,
-    "price": 215000
-   },
-   {
-    "miles": 3151,
-    "price": 240000
-   },
-   {
-    "miles": 9951,
-    "price": 220000
-   },
-   {
-    "miles": 12024,
-    "price": 200000
-   },
-   {
-    "miles": 20064,
-    "price": 226000
-   },
-   {
-    "miles": 17532,
-    "price": 217000
-   },
-   {
-    "miles": 19209,
-    "price": 197000
-   },
-   {
-    "miles": 16949,
-    "price": 213000
-   },
-   {
-    "miles": 32165,
-    "price": 196000
-   },
-   {
-    "miles": 15554,
-    "price": 220000
-   },
-   {
-    "miles": 6578,
-    "price": 200000
-   },
-   {
-    "miles": 602,
-    "price": 190000
-   },
-   {
-    "miles": 27538,
-    "price": 240000
-   },
-   {
-    "miles": 15745,
-    "price": 190000
-   },
-   {
-    "miles": 10810,
-    "price": 224000
-   },
-   {
-    "miles": 4292,
-    "price": 215000
-   },
-   {
-    "miles": 12117,
-    "price": 230000
-   },
-   {
-    "miles": 7117,
-    "price": 230000
-   },
-   {
-    "miles": 18452,
-    "price": 220000
-   },
-   {
-    "miles": 9705,
-    "price": 240000
-   },
-   {
-    "miles": 19419,
-    "price": 230000
-   },
-   {
-    "miles": 21307,
-    "price": 200000
-   },
-   {
-    "miles": 11640,
-    "price": 225000
-   },
-   {
-    "miles": 23166,
-    "price": 200000
-   },
-   {
-    "miles": 8675,
-    "price": 225000
-   },
-   {
-    "miles": 9377,
-    "price": 240000
-   },
-   {
-    "miles": 4995,
-    "price": 230000
-   },
-   {
-    "miles": 27688,
-    "price": 209000
-   },
-   {
-    "miles": 21362,
-    "price": 197000
-   },
-   {
-    "miles": 26350,
-    "price": 205000
-   },
-   {
-    "miles": 20015,
-    "price": 210000
-   },
-   {
-    "miles": 8172,
-    "price": 220000
-   },
-   {
-    "miles": 42909,
-    "price": 200000
-   },
-   {
-    "miles": 14880,
-    "price": 212000
-   },
-   {
-    "miles": 24500,
-    "price": 200000
-   },
-   {
-    "miles": 30698,
-    "price": 192000
-   },
-   {
-    "miles": 1447,
-    "price": 245000
-   },
-   {
-    "miles": 6916,
-    "price": 213000
-   },
-   {
-    "miles": 13935,
-    "price": 210000
-   },
-   {
-    "miles": 15922,
-    "price": 235000
-   },
-   {
-    "miles": 20240,
-    "price": 220000
-   },
-   {
-    "miles": 85,
-    "price": 316000
-   },
-   {
-    "miles": 7480,
-    "price": 238000
-   },
-   {
-    "miles": 3569,
-    "price": 245000
-   },
-   {
-    "miles": 11727,
-    "price": 225000
-   },
-   {
-    "miles": 4500,
-    "price": 220000
-   },
-   {
-    "miles": 17668,
-    "price": 208000
-   },
-   {
-    "miles": 34397,
-    "price": 189000
-   },
-   {
-    "miles": 10332,
-    "price": 215000
-   }
-  ]
- },
- "auctions": [
-  {
-   "id": "fx-0",
-   "endedAt": "2026-09-12",
-   "platform": "Barrett-Jackson",
-   "status": "sold",
-   "price": 495000,
-   "year": 2025,
-   "miles": 0,
-   "weissach": false,
-   "url": "https://www.barrett-jackson.com/2026-las-vegas/docket/vehicle/2025-porsche-911-gt3-rs-weissach-303111?origin=results",
-   "generation": "992"
-  },
-  {
-   "id": "fx-1",
-   "endedAt": "2026-07-20",
-   "platform": "Bring a Trailer",
-   "status": "sold",
-   "price": 249000,
-   "year": 2019,
-   "miles": 9000,
-   "weissach": false,
-   "url": "https://bringatrailer.com/listing/2019-porsche-911-gt3-rs-71/",
-   "generation": "991.2"
-  },
-  {
-   "id": "fx-2",
-   "endedAt": "2026-07-13",
-   "platform": "Bring a Trailer",
-   "status": "sold",
-   "price": 280000,
-   "year": 2016,
-   "miles": 86,
-   "weissach": false,
-   "url": "https://bringatrailer.com/listing/2016-porsche-911-gt3-rs-113/",
-   "generation": "991.1"
-  },
-  {
-   "id": "fx-3",
-   "endedAt": "2026-07-02",
-   "platform": "Sotheby's Motorsport",
-   "status": "sold",
-   "price": 435000,
-   "year": 2025,
-   "miles": 100,
-   "weissach": true,
-   "url": "https://www.sothebysmotorsport.com/auction/2025-porsche-911gt3rsweissach-10347",
-   "generation": "992"
-  },
-  {
-   "id": "fx-4",
-   "endedAt": "2026-06-24",
-   "platform": "Bring a Trailer",
-   "status": "sold",
-   "price": 260000,
-   "year": 2016,
-   "miles": 5000,
-   "weissach": false,
-   "url": "https://bringatrailer.com/listing/2016-porsche-911-gt3-rs-112/",
-   "generation": "991.1"
-  },
-  {
-   "id": "fx-5",
-   "endedAt": "2026-06-05",
-   "platform": "Sotheby's Motorsport",
-   "status": "sold",
-   "price": 342500,
-   "year": 2023,
-   "miles": 12750,
-   "weissach": true,
-   "url": "https://www.sothebysmotorsport.com/auction/2023-porsche-911gt3rsweissach-10081",
-   "generation": "992"
-  },
-  {
-   "id": "fx-6",
-   "endedAt": "2026-05-31",
-   "platform": "Bonhams",
-   "status": "sold",
-   "price": 237440,
-   "year": 2007,
-   "miles": 33780,
-   "weissach": false,
-   "url": "https://cars.bonhams.com/auction/32391/lot/10/2007-porsche-911-gt3-rs-38-chassis-no-wp0ac299x7s793248/",
-   "generation": "997.1"
-  },
-  {
-   "id": "fx-7",
-   "endedAt": "2026-05-29",
-   "platform": "Bring a Trailer",
-   "status": "sold",
-   "price": 274000,
-   "year": 2019,
-   "miles": 1200,
-   "weissach": true,
-   "url": "https://bringatrailer.com/listing/2019-porsche-911-gt3-rs-weissach-100/",
-   "generation": "991.2"
-  },
-  {
-   "id": "fx-8",
-   "endedAt": "2026-05-28",
-   "platform": "Bring a Trailer",
-   "status": "sold",
-   "price": 212000,
-   "year": 2016,
-   "miles": 16000,
-   "weissach": false,
-   "url": "https://bringatrailer.com/listing/2016-porsche-911-gt3-rs-107/",
-   "generation": "991.1"
-  },
-  {
-   "id": "fx-9",
-   "endedAt": "2026-03-27",
-   "platform": "Bring a Trailer",
-   "status": "rnm",
-   "price": 189000,
-   "year": 2016,
-   "miles": 11000,
-   "weissach": false,
-   "url": "https://bringatrailer.com/listing/2016-porsche-911-gt3-rs-103/",
-   "generation": "991.1"
-  },
-  {
-   "id": "fx-10",
-   "endedAt": "2026-03-11",
-   "platform": "Hagerty Marketplace",
-   "status": "rnm",
-   "price": 186000,
-   "year": 2007,
-   "miles": 18700,
-   "weissach": false,
-   "url": "https://www.hagerty.com/marketplace/auction/2007-Porsche-911/47GuEcfq8iBJiSNjJtQufJ",
-   "generation": "997.1"
-  },
-  {
-   "id": "fx-11",
-   "endedAt": "2026-01-22",
-   "platform": "Bring a Trailer",
-   "status": "sold",
-   "price": 208000,
-   "year": 2016,
-   "miles": 6000,
-   "weissach": false,
-   "url": "https://bringatrailer.com/listing/2016-porsche-911-gt3-rs-98/",
-   "generation": "991.1"
-  },
-  {
-   "id": "fx-12",
-   "endedAt": "2026-01-06",
-   "platform": "Sotheby's Motorsport",
-   "status": "rnm",
-   "price": 377500,
-   "year": 2025,
-   "miles": 62,
-   "weissach": true,
-   "url": "https://www.sothebysmotorsport.com/auction/2025-porsche-911gt3rsweissach62miles-8177",
-   "generation": "992"
-  },
-  {
-   "id": "fx-13",
-   "endedAt": "2025-12-30",
-   "platform": "Bring a Trailer",
-   "status": "sold",
-   "price": 457500,
-   "year": 2024,
-   "miles": 1900,
-   "weissach": true,
-   "url": "https://bringatrailer.com/listing/2024-porsche-911-gt3-rs-58/",
-   "generation": "992"
-  },
-  {
-   "id": "fx-14",
-   "endedAt": "2025-12-30",
-   "platform": "Bring a Trailer",
-   "status": "sold",
-   "price": 169991,
-   "year": 2016,
-   "miles": 28000,
-   "weissach": false,
-   "url": "https://bringatrailer.com/listing/2016-porsche-911-gt3-rs-99/",
-   "generation": "991.1"
-  },
-  {
-   "id": "fx-15",
-   "endedAt": "2025-12-22",
-   "platform": "Bring a Trailer",
-   "status": "rnm",
-   "price": 300000,
-   "year": 2007,
-   "miles": 11000,
-   "weissach": false,
-   "url": "https://bringatrailer.com/listing/2007-porsche-911-gt3-rs-31/",
-   "generation": "997.1"
-  },
-  {
-   "id": "fx-16",
-   "endedAt": "2025-12-16",
-   "platform": "Bring a Trailer",
-   "status": "sold",
-   "price": 190000,
-   "year": 2019,
-   "miles": 44000,
-   "weissach": false,
-   "url": "https://bringatrailer.com/listing/2019-porsche-911-gt3-rs-60/",
-   "generation": "991.2"
-  },
-  {
-   "id": "fx-17",
-   "endedAt": "2025-12-10",
-   "platform": "Bring a Trailer",
-   "status": "sold",
-   "price": 182281,
-   "year": 2016,
-   "miles": 22000,
-   "weissach": false,
-   "url": "https://bringatrailer.com/listing/2016-porsche-911-gt3-rs-96/",
-   "generation": "991.1"
-  }
- ]
 }

@@ -11,8 +11,8 @@ const securityHeaders = [
     value: [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "font-src 'self' https://fonts.gstatic.com",
+      "style-src 'self' 'unsafe-inline'",
+      "font-src 'self'",
       "img-src 'self' data: blob: https:",
       "connect-src 'self' https://vitals.vercel-insights.com",
       "frame-ancestors 'none'",
@@ -25,7 +25,6 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  typedRoutes: true,
   experimental: { serverActions: { bodySizeLimit: "1mb" } },
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];

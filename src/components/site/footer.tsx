@@ -9,8 +9,8 @@ export function SiteFooter() {
           InAuto
         </div>
         <p className="note">
-          Market data from dealer listings (Visor) and auction results (Old Cars Data). Estimates are
-          not offers. Always vet the title and get a condition report before you send money.
+          Market data from dealer listings (Visor) and auction results (Old Cars Data). Estimates
+          are not offers. Always vet the title and get a condition report before you send money.
         </p>
       </div>
       <nav aria-label="Footer">

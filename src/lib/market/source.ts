@@ -13,12 +13,20 @@ const FIXTURES: Record<string, MarketSnapshot> = {
   "porsche/911-gt3-rs": gt3rs as unknown as MarketSnapshot,
 };
 
-export async function getMarketSnapshot(makeSlug: string, modelSlug: string): Promise<MarketSnapshot | null> {
+export async function getMarketSnapshot(
+  makeSlug: string,
+  modelSlug: string,
+): Promise<MarketSnapshot | null> {
   return FIXTURES[`${makeSlug}/${modelSlug}`] ?? null;
 }
 
 export async function listMarketModels(): Promise<
-  { make: MarketSnapshot["make"]; model: MarketSnapshot["model"]; totals: MarketSnapshot["totals"]; headline: number }[]
+  {
+    make: MarketSnapshot["make"];
+    model: MarketSnapshot["model"];
+    totals: MarketSnapshot["totals"];
+    headline: number;
+  }[]
 > {
   return Object.values(FIXTURES).map((s) => ({
     make: s.make,

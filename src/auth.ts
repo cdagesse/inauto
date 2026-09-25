@@ -23,12 +23,18 @@ if (env.AUTH_GITHUB_ID && env.AUTH_GITHUB_SECRET) {
   providers.push(GitHub({ clientId: env.AUTH_GITHUB_ID, clientSecret: env.AUTH_GITHUB_SECRET }));
 }
 if (env.devLoginEnabled) {
-  const devSchema = z.object({ email: z.string().email(), name: z.string().min(1).max(80).optional() });
+  const devSchema = z.object({
+    email: z.string().email(),
+    name: z.string().min(1).max(80).optional(),
+  });
   providers.push(
     Credentials({
       id: "dev",
       name: "Development sign-in",
-      credentials: { email: { label: "Email", type: "email" }, name: { label: "Name", type: "text" } },
+      credentials: {
+        email: { label: "Email", type: "email" },
+        name: { label: "Name", type: "text" },
+      },
       async authorize(raw) {
         const parsed = devSchema.safeParse(raw);
         if (!parsed.success) return null;
@@ -37,7 +43,11 @@ if (env.devLoginEnabled) {
         if (existing) return existing;
         const [created] = await db
           .insert(users)
-          .values({ email, name: parsed.data.name ?? email.split("@")[0], emailVerified: new Date() })
+          .values({
+            email,
+            name: parsed.data.name ?? email.split("@")[0],
+            emailVerified: new Date(),
+          })
           .returning();
         return created ?? null;
       },

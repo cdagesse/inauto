@@ -1,10 +1,13 @@
 import Link from "next/link";
-import { auth } from "@/auth";
 import { ThemeToggle } from "./theme-toggle";
 import { UserMenu } from "./user-menu";
 
-export async function SiteHeader() {
-  const session = await auth();
+/**
+ * No session read here on purpose: reading cookies in the root layout would make
+ * every route dynamic. The user menu resolves its session on the client, so
+ * market pages stay statically cached at the CDN.
+ */
+export function SiteHeader() {
   return (
     <header className="wrap">
       <div className="bar">
@@ -21,7 +24,7 @@ export async function SiteHeader() {
         </nav>
         <div className="bar-right">
           <ThemeToggle />
-          <UserMenu user={session?.user ?? null} />
+          <UserMenu />
         </div>
       </div>
     </header>

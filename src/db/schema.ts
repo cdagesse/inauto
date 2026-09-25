@@ -122,7 +122,10 @@ export const generations = pgTable(
     hp: text("hp"),
     gearbox: text("gearbox"),
     notes: text("notes"),
-    packages: text("packages").array().notNull().default(sql`'{}'::text[]`),
+    packages: text("packages")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     sortOrder: integer("sort_order").notNull().default(0),
   },
   (t) => [uniqueIndex("generation_model_code_idx").on(t.modelId, t.code)],
@@ -169,7 +172,10 @@ const dealerColumns = {
   price: integer("price"),
   color: text("color"),
   isPts: boolean("is_pts").notNull().default(false),
-  packages: text("packages").array().notNull().default(sql`'{}'::text[]`),
+  packages: text("packages")
+    .array()
+    .notNull()
+    .default(sql`'{}'::text[]`),
   dealerName: text("dealer_name"),
   state: text("state"),
   daysOnMarket: integer("days_on_market"),
@@ -215,7 +221,10 @@ export const auctionResults = pgTable(
     hammerPrice: integer("hammer_price"),
     status: auctionStatus("status").notNull(),
     endedAt: timestamp("ended_at", { withTimezone: true }),
-    packages: text("packages").array().notNull().default(sql`'{}'::text[]`),
+    packages: text("packages")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     excludedReason: excludedReason("excluded_reason"),
     needsReview: boolean("needs_review").notNull().default(false),
     rawJson: jsonb("raw_json"),
@@ -351,7 +360,10 @@ export const networkMembers = pgTable(
     role: networkRole("role").notNull().default("member"),
     joinedAt: createdAt(),
   },
-  (t) => [primaryKey({ columns: [t.networkId, t.userId] }), index("network_member_user_idx").on(t.userId)],
+  (t) => [
+    primaryKey({ columns: [t.networkId, t.userId] }),
+    index("network_member_user_idx").on(t.userId),
+  ],
 );
 
 export const networkInvites = pgTable(
@@ -396,10 +408,16 @@ export const listings = pgTable(
     colorClass: text("color_class").notNull().default("std"),
     condition: text("condition").notNull().default("ex"),
     history: text("history").notNull().default("clean"),
-    packages: text("packages").array().notNull().default(sql`'{}'::text[]`),
+    packages: text("packages")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     title: text("title").notNull(),
     description: text("description"),
-    photos: jsonb("photos").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    photos: jsonb("photos")
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     location: text("location"),
     askingPrice: integer("asking_price"),
     reservePrice: integer("reserve_price"),

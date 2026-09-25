@@ -77,7 +77,10 @@ export interface MarketSnapshot {
   monthly: MonthlyPoint[];
   byYear: YearRow[];
   colors: { color: string; n: number; median: number }[];
-  milesBands: Record<GenerationCode, { from: number; to: number | null; n: number; median: number }[]>;
+  milesBands: Record<
+    GenerationCode,
+    { from: number; to: number | null; n: number; median: number }[]
+  >;
   states: { state: string; n: number }[];
   recentDealerSales: {
     soldDate: string;
