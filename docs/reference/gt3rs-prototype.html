@@ -1,0 +1,572 @@
+<title>GT3 RS Paddock Index</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --paper:#F2F3F1; --card:#FBFBFA; --ink:#15171A; --ink-2:#50555C; --ink-3:#7E848B;
+  --rule:#D8DBD8; --rule-2:#E6E8E5;
+  --accent:#1F63B5; --accent-ink:#FFFFFF;
+  --s1:#1F63B5; --s2:#D2561C; --s3:#16A07A;
+  --up:#1B7F4B; --down:#B8412C; --flag:#8A6A12; --flag-bg:#F5EDD6;
+  --grid:#E3E5E2;
+  --display:"Archivo","Arial Narrow",Arial,sans-serif;
+  --body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --paper:#111315; --card:#181B1E; --ink:#EEF0F1; --ink-2:#B3B8BE; --ink-3:#848A91;
+    --rule:#2C3035; --rule-2:#23272B;
+    --accent:#4A8DDB; --accent-ink:#0B1420;
+    --s1:#4A8DDB; --s2:#E0692F; --s3:#1C9E76;
+    --up:#46C080; --down:#E07A63; --flag:#E2C36A; --flag-bg:#2E2816;
+    --grid:#262A2E;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --paper:#111315; --card:#181B1E; --ink:#EEF0F1; --ink-2:#B3B8BE; --ink-3:#848A91;
+  --rule:#2C3035; --rule-2:#23272B;
+  --accent:#4A8DDB; --accent-ink:#0B1420;
+  --s1:#4A8DDB; --s2:#E0692F; --s3:#1C9E76;
+  --up:#46C080; --down:#E07A63; --flag:#E2C36A; --flag-bg:#2E2816;
+  --grid:#262A2E;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;margin:0;padding-inline:20px;padding-block:0 48px}
+.wrap{max-width:1180px;margin:0 auto}
+.num,table td.n,table th.n{font-variant-numeric:tabular-nums}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+
+/* top bar */
+.bar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:16px;border-bottom:1px solid var(--rule)}
+.brand{font-family:var(--display);font-stretch:112%;font-weight:800;letter-spacing:.02em;font-size:17px;text-transform:uppercase;display:flex;align-items:center;gap:10px}
+.brand i{display:inline-block;width:22px;height:12px;background:linear-gradient(90deg,var(--ink) 0 40%,transparent 40% 55%,var(--accent) 55%);border-radius:2px}
+.crumbs{font-family:var(--mono);font-size:12px;color:var(--ink-3);letter-spacing:.02em}
+.crumbs b{color:var(--ink-2);font-weight:500}
+
+/* hero */
+.hero{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:end;padding-block:32px 20px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+h1{font-family:var(--display);font-stretch:125%;font-weight:900;font-size:clamp(40px,7.5vw,88px);line-height:.9;letter-spacing:-.01em;margin:8px 0 0;text-wrap:balance}
+h1 span{font-stretch:75%;font-weight:600;color:var(--ink-2);display:block;font-size:.34em;letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px}
+.asof{font-family:var(--mono);font-size:12px;color:var(--ink-3);text-align:right;line-height:1.7}
+
+/* gen selector */
+.gens{display:flex;flex-wrap:wrap;gap:6px;padding-block:4px 20px}
+.gen{font:inherit;cursor:pointer;border:1px solid var(--rule);background:var(--card);color:var(--ink);border-radius:999px;padding:7px 14px;display:flex;align-items:baseline;gap:8px}
+.gen b{font-family:var(--display);font-stretch:110%;font-weight:700;font-size:15px}
+.gen small{font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+.gen[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.gen[aria-pressed="true"] small{color:var(--paper);opacity:.7}
+
+/* kpis */
+.kpis{display:grid;grid-template-columns:1.6fr repeat(5,1fr);border-top:2px solid var(--ink);border-bottom:1px solid var(--rule)}
+.kpi{padding:16px 16px 18px;border-left:1px solid var(--rule-2);display:flex;flex-direction:column;gap:4px;min-width:0}
+.kpi:first-child{border-left:0;padding-left:0}
+.kpi .l{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.kpi .v{font-family:var(--display);font-stretch:100%;font-weight:700;font-size:26px;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi:first-child .v{font-size:44px;font-stretch:108%;font-weight:800}
+.kpi .s{font-size:13px;color:var(--ink-2)}
+.chg{font-family:var(--mono);font-size:13px;font-weight:500}
+.chg.up{color:var(--up)} .chg.down{color:var(--down)}
+.pill{display:inline-block;font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:999px;background:var(--flag-bg);color:var(--flag);vertical-align:middle}
+
+/* sections */
+section{padding-block:32px 8px}
+h2{font-family:var(--display);font-stretch:110%;font-weight:800;font-size:22px;margin:0;letter-spacing:.005em;text-wrap:balance}
+.sub{color:var(--ink-2);font-size:14px;margin:4px 0 16px;max-width:70ch}
+.grid2{display:grid;grid-template-columns:1.35fr 1fr;gap:28px}
+.panel{background:var(--card);border:1px solid var(--rule-2);border-radius:10px;padding:18px 18px 12px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--ink-2);margin-bottom:6px}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:14px;height:3px;border-radius:2px;display:inline-block}
+svg text{font-family:var(--mono);font-size:11px;fill:var(--ink-3)}
+svg .lbl{fill:var(--ink-2);font-size:11.5px}
+.chart{position:relative}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--paper);font-size:12.5px;line-height:1.45;padding:8px 10px;border-radius:6px;white-space:nowrap;transform:translate(-50%,calc(-100% - 12px));opacity:0;transition:opacity .12s}
+.tip.on{opacity:1}
+.tip b{font-family:var(--mono);font-weight:500}
+
+/* tables */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:500;text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule)}
+td{padding:9px 10px;border-bottom:1px solid var(--rule-2)}
+th.n,td.n{text-align:right}
+td.mono{font-family:var(--mono);font-size:13px}
+tr.sel td{background:color-mix(in srgb,var(--accent) 7%,transparent)}
+.bar-cell{display:flex;align-items:center;gap:10px}
+.bar-cell span{min-width:4.5em;text-align:right;flex:none}
+.bar-cell i{display:block;height:6px;background:color-mix(in srgb,var(--accent) 38%,transparent);border-radius:0 3px 3px 0;flex:none;max-width:calc(100% - 5.5em)}
+
+/* gen guide */
+.guide{display:grid;grid-template-columns:repeat(5,1fr);gap:0;border-top:2px solid var(--ink)}
+.g{padding:14px 14px 16px;border-left:1px solid var(--rule-2);display:flex;flex-direction:column;gap:6px}
+.g:first-child{border-left:0;padding-left:0}
+.g h3{margin:0;font-family:var(--display);font-stretch:115%;font-weight:800;font-size:20px}
+.g .yrs{font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.g dl{margin:4px 0 0;display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:13px}
+.g dt{color:var(--ink-3)} .g dd{margin:0;font-variant-numeric:tabular-nums}
+.src{font-size:12px;color:var(--ink-3)}
+.rnm{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);border:1px solid var(--rule);border-radius:999px;padding:1px 6px}
+.note{font-size:13px;color:var(--ink-2);max-width:78ch}
+.method{border-top:1px solid var(--rule);margin-top:36px;padding-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.method p{margin:0 0 8px;font-size:13px;color:var(--ink-2)}
+.method h4{margin:0 0 6px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+
+
+/* valuation */
+.val{display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr);gap:28px;align-items:start}
+.val>*{min-width:0}
+.form{background:var(--card);border:1px solid var(--rule-2);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:14px}
+.fld{display:flex;flex-direction:column;gap:6px}
+.fld>label,.fld>.lab{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.fld select,.fld input{font:inherit;font-size:15px;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:7px;padding:9px 10px;width:100%}
+.fld input{font-variant-numeric:tabular-nums}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+.seg button{font:inherit;font-size:13px;cursor:pointer;border:1px solid var(--rule);background:var(--paper);color:var(--ink-2);border-radius:999px;padding:5px 11px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.seg button:disabled{opacity:.4;cursor:not-allowed}
+.hint{font-size:12px;color:var(--ink-3)}
+.est{border-top:2px solid var(--ink);padding-top:14px}
+.est .l{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.est .v{font-family:var(--display);font-stretch:108%;font-weight:800;font-size:clamp(34px,5vw,48px);line-height:1.05;font-variant-numeric:tabular-nums;margin-top:4px}
+.est .s{font-size:14px;color:var(--ink-2);margin-top:4px}
+.rec{margin:18px 0 14px;padding:14px 16px;border-radius:10px;background:color-mix(in srgb,var(--accent) 9%,var(--card));border:1px solid color-mix(in srgb,var(--accent) 30%,transparent)}
+.rec b{font-family:var(--display);font-stretch:108%;font-weight:800;font-size:18px;display:block;margin-bottom:2px}
+.rec p{margin:0;font-size:14px;color:var(--ink-2)}
+.chans{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.chan{background:var(--card);border:1px solid var(--rule-2);border-radius:10px;padding:14px 14px 12px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.chan.best{border-color:var(--accent);box-shadow:inset 0 3px 0 var(--accent)}
+.chan h3{margin:0;font-family:var(--display);font-stretch:108%;font-weight:800;font-size:16px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.chan h3 .pill{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent)}
+.chan .big{font-family:var(--display);font-weight:700;font-size:24px;font-variant-numeric:tabular-nums;line-height:1.1}
+.chan .cap{font-size:12.5px;color:var(--ink-3)}
+.chan dl{margin:6px 0 0;display:grid;grid-template-columns:1fr auto;gap:4px 10px;font-size:13px}
+.chan dt{color:var(--ink-2)} .chan dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.chan dd.tot{font-weight:600;color:var(--ink)} .chan dt.tot{font-weight:600;color:var(--ink)}
+.chan .rule{grid-column:1/-1;border-top:1px solid var(--rule-2);margin:2px 0}
+.adj{margin-top:16px}
+.adj table td:last-child{white-space:nowrap}
+@media (max-width:900px){.val{grid-template-columns:minmax(0,1fr)}.chans{grid-template-columns:1fr}}
+
+@media (max-width:900px){
+  .kpis{grid-template-columns:repeat(3,1fr)}
+  .kpi:first-child{grid-column:1/-1;padding-left:0;border-bottom:1px solid var(--rule-2)}
+  .kpi:nth-child(2){border-left:0;padding-left:0}
+  .grid2{grid-template-columns:1fr}
+  .guide{grid-template-columns:1fr 1fr}
+  .g{border-left:0;padding-left:0;border-bottom:1px solid var(--rule-2)}
+  .method{grid-template-columns:1fr}
+  .hero{grid-template-columns:1fr}
+  .asof{text-align:left}
+}
+@media (max-width:520px){
+  .kpis{grid-template-columns:1fr 1fr}
+  .kpi:nth-child(4){border-left:0;padding-left:0}
+  .guide{grid-template-columns:1fr}
+  .crumbs{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="bar">
+    <div class="brand"><i aria-hidden="true"></i>Paddock Index</div>
+    <div class="crumbs">Porsche / 911 / <b>GT3 RS</b> · <a href="#value">Value my car</a></div>
+  </header>
+
+  <div class="hero">
+    <div>
+      <div class="eyebrow">Market report · Dealer retail and auction, United States</div>
+      <h1><span>Porsche 911</span>GT3 RS</h1>
+    </div>
+    <div class="asof">Data through Sep 19, 2026<br>562 dealer sales since Feb 17, 2026<br>14 auction sales since Dec 2025<br>202 listed for sale today</div>
+  </div>
+
+  <nav class="gens" id="gens" aria-label="Generation"></nav>
+
+  <div class="kpis" id="kpis"></div>
+
+  <section id="value">
+    <h2>What is my GT3 RS worth?</h2>
+    <p class="sub">Enter your car and we'll estimate its market value from the dealer and auction sales on this page, then show what you'd walk away with at auction, selling to a dealer, or listing it yourself.</p>
+    <div class="val">
+      <form class="form" id="vForm" onsubmit="return false">
+        <div class="fld"><label for="vGen">Generation</label><select id="vGen"></select></div>
+        <div class="fld"><label for="vYear">Model year</label><select id="vYear"></select></div>
+        <div class="fld"><label for="vMiles">Mileage</label><input id="vMiles" type="number" inputmode="numeric" min="0" step="100"><span class="hint" id="vMilesHint"></span></div>
+        <div class="fld"><span class="lab" id="lWei">Weissach package</span><div class="seg" role="group" aria-labelledby="lWei" data-k="wei"><button type="button" data-v="0">No</button><button type="button" data-v="1">Yes</button></div></div>
+        <div class="fld"><span class="lab" id="lCol">Color</span><div class="seg" role="group" aria-labelledby="lCol" data-k="col"><button type="button" data-v="std">Standard</button><button type="button" data-v="spec">Special color</button><button type="button" data-v="pts">Paint to Sample</button></div><span class="hint">Special: Shark Blue, Lizard Green, Python Green, Voodoo Blue and similar.</span></div>
+        <div class="fld"><span class="lab" id="lCon">Condition</span><div class="seg" role="group" aria-labelledby="lCon" data-k="con"><button type="button" data-v="ex">Excellent</button><button type="button" data-v="good">Good</button><button type="button" data-v="fair">Needs work</button></div></div>
+        <div class="fld"><span class="lab" id="lHist">History report</span><div class="seg" role="group" aria-labelledby="lHist" data-k="hist"><button type="button" data-v="clean">Clean</button><button type="button" data-v="acc">Accident reported</button></div></div>
+      </form>
+      <div>
+        <div class="est" id="vEst"></div>
+        <div class="rec" id="vRec"></div>
+        <div class="chans" id="vChans"></div>
+        <div class="adj">
+          <div class="tw"><table id="vComps"></table></div>
+          <p class="note" id="vNote"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Price trend by generation</h2>
+    <p class="sub">Median sold price per month for the three generations with enough sales to chart. The 997 cars trade too thinly for a monthly line; their sales are in the table below.</p>
+    <div class="panel">
+      <div class="legend" id="trendLegend"></div>
+      <div class="chart" id="trend"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 id="scatterTitle">Price vs. mileage</h2>
+    <p class="sub" id="scatterSub"></p>
+    <div class="grid2">
+      <div class="panel"><div class="chart" id="scatter"></div></div>
+      <div>
+        <div class="tw"><table id="milesTbl"></table></div>
+        <p class="note" id="milesNote"></p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>By model year</h2>
+    <p class="sub">Sold results by model year. The 2011 figures include the RS 4.0, a 600-car run that sells at a large premium to the standard 997.2.</p>
+    <div class="tw"><table id="yearTbl"></table></div>
+  </section>
+
+  <section class="grid2">
+    <div>
+      <h2>Color premium, 992</h2>
+      <p class="sub">Median sold price by exterior color, colors with at least 5 sales.</p>
+      <div class="tw"><table id="colorTbl"></table></div>
+    </div>
+    <div>
+      <h2>Where they sell</h2>
+      <p class="sub">Share of all GT3 RS sales by dealer state.</p>
+      <div class="tw"><table id="stateTbl"></table></div>
+    </div>
+  </section>
+
+
+  <section>
+    <h2>Auction results</h2>
+    <p class="sub">The 18 most recent GT3 RS auctions across Bring a Trailer, Sotheby's Motorsport, Bonhams, Barrett-Jackson and Hagerty, from Old Cars Data. Hammer prices are what the car actually sold for; reserve-not-met rows show the high bid.</p>
+    <div class="tw"><table id="aucCmp"></table></div>
+    <p class="note" id="aucCmpNote"></p>
+    <div class="tw" style="margin-top:18px"><table id="aucTbl"></table></div>
+  </section>
+
+  <section>
+    <h2>Recent dealer sales</h2>
+    <p class="sub">The latest dealer sales with an advertised price.</p>
+    <div class="tw"><table id="recentTbl"></table></div>
+  </section>
+
+  <section>
+    <h2>Generation guide</h2>
+    <p class="sub">What changed between generations, and how each is trading against its original sticker.</p>
+    <div class="guide" id="guide"></div>
+  </section>
+
+  <footer class="method">
+    <div>
+      <h4>How these numbers are built</h4>
+      <p>Dealer figures are asking prices at the moment a car left the market (Visor sold listings). Auction figures are hammer prices from Old Cars Data, which aggregates Bring a Trailer, Cars &amp; Bids, RM Sotheby's, Bonhams, Barrett-Jackson and 14 other platforms. Medians are used throughout so a few mispriced or mislabeled listings do not move the result.</p>
+      <p>Change figures compare the median of the last 90 days (Jun 21 to Sep 19) with the 90 days before it. Months at either end of the window are partial.</p>
+    </div>
+    <div>
+      <h4>Limits of this sample</h4>
+      <p>Dealer history starts Feb 17, 2026. Auction data covers only the 18 most recent GT3 RS results because the Old Cars Data free plan returns 20 rows per search and 10 searches a month. A paid plan opens the full archive back to 2018 and would extend every trend line on this page.</p>
+      <p>The value tool fits a price-vs-mileage curve to each generation's dealer sales, converts it to an expected hammer price using the measured auction-to-dealer gap, and estimates dealer offers from a margin that widens for slower-selling generations. Package, color, condition and history adjustments are fixed starting assumptions, not yet measured.</p>
+      <p>Seven 2016 listings between $680,000 and $900,000 with delivery miles were excluded from the 991.1 chart and range as likely mislabeled (911 R or special-order cars).</p>
+    </div>
+  </footer>
+</div>
+
+<script>
+const DATA = {
+  monthly:[
+    {m:"2026-02",p:true,"992":[6,414896],"991.2":[3,264881],"991.1":[2,221884]},
+    {m:"2026-03","992":[42,413491],"991.2":[15,269999],"991.1":[8,214389]},
+    {m:"2026-04","992":[53,425995],"991.2":[24,263284],"991.1":[18,215950]},
+    {m:"2026-05","992":[46,432473],"991.2":[13,249990],"991.1":[11,219900]},
+    {m:"2026-06","992":[33,461293],"991.2":[24,267443],"991.1":[13,229888]},
+    {m:"2026-07","992":[32,489598],"991.2":[16,260356],"991.1":[11,229813]},
+    {m:"2026-08","992":[36,550394],"991.2":[16,272712],"991.1":[6,231493]},
+    {m:"2026-09",p:true,"992":[32,499995],"991.2":[11,279000],"991.1":[1,188595]}
+  ],
+  gens:{
+    "992":{name:"992",yrs:"2023 to 2026",sold:307,active:114,med:459984,lo:394990,hi:664991,miles:1458,msrp:253600,prem:1.75,dom:16,actMed:520646,actMiles:2018,last90:519498,prior90:439995,n90:106,np:134},
+    "991.2":{name:"991.2",yrs:"2019",sold:137,active:42,med:267995,lo:234900,hi:315195,miles:11541,msrp:192970,prem:1.33,dom:28,actMed:275413,actMiles:16159,last90:270423,prior90:261999,n90:45,np:61},
+    "991.1":{name:"991.1",yrs:"2016",sold:79,active:32,med:219984,lo:197000,hi:240000,miles:11279,msrp:180090,prem:1.22,dom:27,actMed:242592,actMiles:14789,last90:230044,prior90:215950,n90:22,np:40},
+    "997.2":{name:"997.2",yrs:"2010 to 2011",sold:29,active:12,med:299948,lo:162996,hi:800312,miles:17462,msrp:135500,prem:2.24,dom:20,actMed:659999,actMiles:7001,last90:390106,prior90:257445,n90:8,np:6,thin:true},
+    "997.1":{name:"997.1",yrs:"2007 to 2008",sold:10,active:2,med:359900,lo:133000,hi:429999,miles:13794,msrp:128310,prem:2.58,dom:13,actMed:314949,actMiles:29203,last90:317488,prior90:349995,n90:2,np:3,thin:true}
+  },
+  byYear:[[2025,127,459800,1322,"992"],[2024,127,488800,1336,"992"],[2023,26,400495,2930,"992"],[2019,122,267995,11541,"991.2"],[2016,70,219984,11279,"991.1"],[2011,5,624991,9528,"997.2"],[2010,11,259900,19156,"997.2"],[2008,3,379991,13065,"997.1"],[2007,4,287494,18053,"997.1"]],
+  colors:[["White",45,434995],["Black",35,466080],["Ice Grey Metallic",27,450542],["Shark Blue",22,641944],["Arctic Grey",21,414990],["GT Silver Metallic",15,444999],["Guards Red",13,405998],["Paint to Sample",12,590295]],
+  miles:{
+    "992":[[0,500,68,599997],[500,1000,47,500590],[1000,2500,70,453830],[2500,5000,56,449495],[5000,10000,31,401685],[10000,null,8,417895]],
+    "991.2":[[0,2500,7,279999],[2500,5000,17,272888],[5000,10000,30,271956],[10000,15000,21,264988],[15000,20000,21,259813],[20000,null,25,245990]],
+    "991.1":[[0,5000,9,232000],[5000,10000,14,220000],[10000,15000,12,224500],[15000,20000,10,215000],[20000,null,15,200000]]
+  },
+  states:[["CA",115],["FL",98],["TX",60],["IL",37],["AZ",29],["NC",24],["NJ",21],["NY",21]],
+  recent:[["2026-09-18",2019,"Lizard Green",null,270598,"UT"],["2026-09-18",2025,null,391,450426,"NY"],["2026-09-18",2024,"Shark Blue",2500,475991,"AZ"],["2026-09-17",2025,"White",583,527603,"FL"],["2026-09-17",2011,null,4608,800312,"IL"],["2026-09-17",2024,"Black",788,500699,"NC"],["2026-09-17",2025,"Arctic Grey",2083,441700,"MO"],["2026-09-17",2019,"White",24000,272800,"NV"],["2026-09-16",2025,"Guards Red",1200,639995,"UT"],["2026-09-15",2019,"Lizard Green",6100,319980,"FL"],["2026-09-15",2019,"White",17132,269999,"NV"],["2026-09-14",2025,null,1311,495970,"NY"],["2026-09-14",2007,null,12122,409984,"CA"],["2026-09-14",2019,null,15904,269899,"AL"]],
+  scatter:{
+    "992":[[279,400],[608,501],[3629,410],[45,426],[1930,519],[216,560],[550,599],[310,412],[77,490],[1500,413],[4464,449],[2585,410],[745,534],[5467,393],[1743,389],[1494,415],[2029,425],[409,459],[1781,475],[1793,452],[7445,389],[3270,460],[2727,525],[193,577],[2503,440],[2858,395],[1554,424],[4956,451],[2673,449],[12538,416],[4372,516],[732,550],[6897,385],[327,510],[1093,699],[0,540],[1266,450],[121,510],[1247,616],[2240,420],[852,450],[2982,442],[1164,644],[5673,623],[757,420],[1972,416],[2315,571],[1913,385],[2382,700],[583,528],[136,666],[1100,559],[3711,450],[676,400],[12278,484],[2608,420],[121,670],[1311,496],[452,405],[3790,480],[1615,540],[5656,380],[13195,420],[1105,450],[1527,426],[5133,600],[3627,380],[225,400],[703,430],[2560,430],[3703,380],[64,630],[4625,455],[48,690],[1864,500],[63,640],[60,490],[3183,430],[2339,400],[138,610],[806,480],[2400,476],[1432,470],[450,401],[8479,386],[878,672],[1293,400],[573,440],[26,473],[765,526],[896,523],[533,656],[4620,433],[736,400],[4908,455],[3324,470],[5710,380],[1528,600],[318,449],[210,520],[993,380],[1939,600],[788,501],[1209,489],[499,420],[4163,400],[3740,456],[89,470],[85,500],[4516,500],[1791,460],[0,400],[570,445],[2049,420],[785,450],[1641,660],[3188,451],[33,408],[582,600],[1446,500],[380,625],[1322,470],[2507,446],[29,700],[1250,380],[2159,651],[4250,480],[3672,419],[2259,451],[1544,422],[7663,500],[3870,428],[549,451],[1140,650],[750,430],[6189,390],[2176,423],[115,650],[1041,508],[698,426],[3056,630],[824,641],[1948,412],[863,540],[5150,469],[500,668],[514,471],[1102,499],[1902,410],[2909,410],[26,455],[2110,411],[665,600],[156,648],[479,631],[2299,400],[638,445],[1445,498],[5417,402],[682,551],[317,395],[1813,436],[519,680],[26,670],[692,470],[5267,444],[55,700],[62,551],[144,670],[596,599],[8035,390],[2083,442],[1774,429],[479,600],[2615,480],[5020,407],[261,692],[123,471],[2589,450],[3435,460],[1328,435],[4445,409],[3037,415],[462,461],[424,550],[2750,650],[1180,436],[399,600],[3759,530],[1827,456],[951,660],[9209,386],[819,418],[1109,446],[6666,405],[4450,410],[5903,530],[1266,530],[2358,450],[0,650],[8273,470],[456,640],[5081,386],[3159,403],[1520,530],[1789,430],[6621,481],[765,490],[3968,402],[14491,389],[3405,585],[3754,700],[5250,466],[1076,650],[3829,600],[592,444],[2044,489],[1200,640],[307,750],[12775,420],[370,651],[730,411],[12,450],[326,445],[50,670],[50,390],[3484,385],[7725,385],[1750,590],[3610,610],[592,660],[750,419],[91,666],[5816,435],[1200,428],[930,629],[57,649],[2781,415],[122,656],[11,670],[611,390],[391,450],[5324,415],[969,670],[57,740],[84,630],[14202,397],[57,649],[2103,413],[6406,400],[55,700],[7836,440],[2020,520],[3169,600],[15709,430],[786,390],[3129,414],[2424,406],[1336,645],[24,649],[2500,476],[488,666],[5064,421],[72,660],[4321,630],[1470,415],[2533,660],[502,665],[4958,397],[3002,406]],
+    "991.2":[[22655,235],[7427,270],[3709,250],[6004,280],[6661,270],[2259,261],[10029,320],[13569,280],[15751,269],[25168,248],[14685,290],[4233,222],[0,280],[2370,340],[4649,330],[9959,282],[7623,285],[20285,329],[12609,280],[1650,270],[4414,269],[11541,260],[5057,240],[13321,260],[16338,255],[7666,265],[27430,246],[5709,230],[9345,250],[3015,289],[29528,249],[11817,220],[11283,276],[5959,300],[8797,275],[17505,262],[16088,278],[6562,275],[16364,271],[4658,325],[11941,279],[15904,270],[14410,259],[26141,245],[12623,265],[11562,267],[15164,256],[2943,340],[36788,205],[10076,259],[1929,280],[6100,320],[7286,300],[3526,350],[20643,261],[4756,270],[2936,270],[13562,278],[17499,232],[24405,267],[14302,275],[17541,285],[8370,270],[25250,222],[10386,244],[19546,249],[29427,245],[18044,288],[5030,280],[9100,273],[8089,280],[7962,255],[26149,300],[19111,217],[25177,257],[20453,235],[26740,255],[6236,315],[3174,300],[9454,268],[15627,252],[18510,260],[19500,250],[25817,255],[8888,269],[5277,283],[7404,265],[4514,273],[14450,260],[13091,268],[23552,270],[8234,270],[10387,236],[21742,243],[16060,260],[16806,250],[20805,245],[2687,290],[2969,270],[24000,273],[8648,251],[18311,278],[28970,246],[9591,254],[15189,239],[14011,229],[5382,320],[1345,370],[25167,245],[7928,259],[17132,270],[21279,228],[24417,232],[6094,290],[4286,256],[4313,265],[11531,240]],
+    "991.1":[[7036,216],[17282,210],[10918,228],[20995,196],[3334,232],[13250,220],[8579,240],[14479,229],[6077,199],[6209,219],[14162,240],[9421,215],[3151,240],[9951,220],[12024,200],[20064,226],[17532,217],[19209,197],[16949,213],[32165,196],[15554,220],[6578,200],[602,190],[27538,240],[15745,190],[10810,224],[4292,215],[12117,230],[7117,230],[18452,220],[9705,240],[19419,230],[21307,200],[11640,225],[23166,200],[8675,225],[9377,240],[4995,230],[27688,209],[21362,197],[26350,205],[20015,210],[8172,220],[42909,200],[14880,212],[24500,200],[30698,192],[1447,245],[6916,213],[13935,210],[15922,235],[20240,220],[85,316],[7480,238],[3569,245],[11727,225],[4500,220],[17668,208],[34397,189],[10332,215]]
+  },
+AUCTIONS:[["2026-09-12", "Barrett-Jackson", "sold", 495000, 2025, 0, false, "https://www.barrett-jackson.com/2026-las-vegas/docket/vehicle/2025-porsche-911-gt3-rs-weissach-303111?origin=results"], ["2026-07-20", "Bring a Trailer", "sold", 249000, 2019, 9000, false, "https://bringatrailer.com/listing/2019-porsche-911-gt3-rs-71/"], ["2026-07-13", "Bring a Trailer", "sold", 280000, 2016, 86, false, "https://bringatrailer.com/listing/2016-porsche-911-gt3-rs-113/"], ["2026-07-02", "Sotheby's Motorsport", "sold", 435000, 2025, 100, true, "https://www.sothebysmotorsport.com/auction/2025-porsche-911gt3rsweissach-10347"], ["2026-06-24", "Bring a Trailer", "sold", 260000, 2016, 5000, false, "https://bringatrailer.com/listing/2016-porsche-911-gt3-rs-112/"], ["2026-06-05", "Sotheby's Motorsport", "sold", 342500, 2023, 12750, true, "https://www.sothebysmotorsport.com/auction/2023-porsche-911gt3rsweissach-10081"], ["2026-05-31", "Bonhams", "sold", 237440, 2007, 33780, false, "https://cars.bonhams.com/auction/32391/lot/10/2007-porsche-911-gt3-rs-38-chassis-no-wp0ac299x7s793248/"], ["2026-05-29", "Bring a Trailer", "sold", 274000, 2019, 1200, true, "https://bringatrailer.com/listing/2019-porsche-911-gt3-rs-weissach-100/"], ["2026-05-28", "Bring a Trailer", "sold", 212000, 2016, 16000, false, "https://bringatrailer.com/listing/2016-porsche-911-gt3-rs-107/"], ["2026-03-27", "Bring a Trailer", "rnm", 189000, 2016, 11000, false, "https://bringatrailer.com/listing/2016-porsche-911-gt3-rs-103/"], ["2026-03-11", "Hagerty Marketplace", "rnm", 186000, 2007, 18700, false, "https://www.hagerty.com/marketplace/auction/2007-Porsche-911/47GuEcfq8iBJiSNjJtQufJ"], ["2026-01-22", "Bring a Trailer", "sold", 208000, 2016, 6000, false, "https://bringatrailer.com/listing/2016-porsche-911-gt3-rs-98/"], ["2026-01-06", "Sotheby's Motorsport", "rnm", 377500, 2025, 62, true, "https://www.sothebysmotorsport.com/auction/2025-porsche-911gt3rsweissach62miles-8177"], ["2025-12-30", "Bring a Trailer", "sold", 457500, 2024, 1900, true, "https://bringatrailer.com/listing/2024-porsche-911-gt3-rs-58/"], ["2025-12-30", "Bring a Trailer", "sold", 169991, 2016, 28000, false, "https://bringatrailer.com/listing/2016-porsche-911-gt3-rs-99/"], ["2025-12-22", "Bring a Trailer", "rnm", 300000, 2007, 11000, false, "https://bringatrailer.com/listing/2007-porsche-911-gt3-rs-31/"], ["2025-12-16", "Bring a Trailer", "sold", 190000, 2019, 44000, false, "https://bringatrailer.com/listing/2019-porsche-911-gt3-rs-60/"], ["2025-12-10", "Bring a Trailer", "sold", 182281, 2016, 22000, false, "https://bringatrailer.com/listing/2016-porsche-911-gt3-rs-96/"]],
+  guide:[
+    {g:"997.1",yrs:"2007 to 2008",eng:"3.6 L flat-six",hp:"415 hp",box:"6-speed manual",orig:128310},
+    {g:"997.2",yrs:"2010 to 2011",eng:"3.8 L flat-six",hp:"450 hp",box:"6-speed manual",orig:135500,extra:"RS 4.0 (2011): 4.0 L, 500 hp, 600 built"},
+    {g:"991.1",yrs:"2016",eng:"4.0 L flat-six",hp:"500 hp",box:"7-speed PDK only",orig:180090},
+    {g:"991.2",yrs:"2019",eng:"4.0 L flat-six",hp:"520 hp",box:"7-speed PDK",orig:192970},
+    {g:"992",yrs:"2023 to 2026",eng:"4.0 L flat-six",hp:"518 hp",box:"7-speed PDK, DRS",orig:253600}
+  ]
+};
+const ORDER=["992","991.2","991.1","997.2","997.1"];
+const SERIES=[{k:"992",c:"--s1"},{k:"991.2",c:"--s2"},{k:"991.1",c:"--s3"}];
+let sel="992";
+try{ const s=localStorage.getItem("pi-gen"); if(s&&DATA.gens[s]) sel=s; }catch(e){}
+const $=id=>document.getElementById(id);
+const usd=v=>v==null?"n/a":"$"+Math.round(v).toLocaleString("en-US");
+const usdK=v=>"$"+Math.round(v/1000)+"k";
+const mi=v=>v==null?"n/a":Math.round(v).toLocaleString("en-US");
+const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const mLabel=m=>MON[+m.slice(5)-1];
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const NS="http://www.w3.org/2000/svg";
+function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e;}
+function niceTicks(lo,hi,n){const span=hi-lo;const step0=span/n;const mag=Math.pow(10,Math.floor(Math.log10(step0)));const step=[1,2,2.5,5,10].map(x=>x*mag).find(s=>span/s<=n)||mag*10;const a=Math.floor(lo/step)*step,b=Math.ceil(hi/step)*step;const t=[];for(let v=a;v<=b+1e-9;v+=step)t.push(v);return t;}
+
+function renderGens(){
+  $("gens").innerHTML="";
+  for(const k of ORDER){const g=DATA.gens[k];const b=document.createElement("button");b.className="gen";b.type="button";b.id="gen-"+k.replace(".","_");b.setAttribute("aria-pressed",k===sel);b.innerHTML=`<b>${g.name}</b><small>${g.yrs}</small>`;b.onclick=()=>{sel=k;try{localStorage.setItem("pi-gen",k)}catch(e){}renderAll();};$("gens").appendChild(b);}
+}
+function renderKpis(){
+  const g=DATA.gens[sel];const ch=(g.last90-g.prior90)/g.prior90;const up=ch>=0;
+  const thin=g.thin?` <span class="pill">Thin sample</span>`:"";
+  $("kpis").innerHTML=`
+  <div class="kpi"><div class="l">Median sold price · ${g.name}${thin}</div><div class="v">${usd(g.med)}</div><div class="s">Typical range ${usd(g.lo)} to ${usd(g.hi)}</div></div>
+  <div class="kpi"><div class="l">90-day change</div><div class="v chg ${up?"up":"down"}" style="font-family:var(--display);font-size:26px">${up?"+":""}${(ch*100).toFixed(1)}%</div><div class="s">${usdK(g.prior90)} to ${usdK(g.last90)} median, ${g.n90} sales in last 90 days</div></div>
+  <div class="kpi"><div class="l">Sales since Feb 17</div><div class="v">${g.sold}</div><div class="s">Median ${g.dom} days to sell</div></div>
+  <div class="kpi"><div class="l">For sale now</div><div class="v">${g.active}</div><div class="s">Asking ${usdK(g.actMed)} median</div></div>
+  <div class="kpi"><div class="l">Median miles</div><div class="v">${mi(g.miles)}</div><div class="s">Listed now ${mi(g.actMiles)}</div></div>
+  <div class="kpi"><div class="l">vs. original sticker</div><div class="v">${g.prem.toFixed(2)}×</div><div class="s">MSRP ${usdK(g.msrp)} median</div></div>`;
+}
+
+function renderTrend(){
+  const box=$("trend");box.innerHTML="";
+  const W=Math.max(320,box.clientWidth||900),H=320,M={l:58,r:64,t:14,b:30};
+  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%",height:H,role:"img","aria-label":"Median monthly sold price by generation, Feb to Sep 2026"},box);
+  const months=DATA.monthly.map(d=>d.m);const xs=i=>M.l+i*(W-M.l-M.r)/(months.length-1);
+  const vals=[];for(const d of DATA.monthly)for(const s of SERIES)if(d[s.k])vals.push(d[s.k][1]);
+  const ticks=niceTicks(Math.min(...vals)*0.92,Math.max(...vals)*1.03,5);const y0=ticks[0],y1=ticks[ticks.length-1];
+  const ys=v=>M.t+(H-M.t-M.b)*(1-(v-y0)/(y1-y0));
+  for(const t of ticks){el("line",{x1:M.l,x2:W-M.r,y1:ys(t),y2:ys(t),stroke:css("--grid"),"stroke-width":1},svg);const tx=el("text",{x:M.l-8,y:ys(t)+4,"text-anchor":"end"},svg);tx.textContent=usdK(t);}
+  months.forEach((m,i)=>{const tx=el("text",{x:xs(i),y:H-8,"text-anchor":"middle"},svg);tx.textContent=mLabel(m)+(DATA.monthly[i].p?"*":"");});
+  // partial month shading
+  const pw=(W-M.l-M.r)/(months.length-1)/2;
+  for(const i of [0,months.length-1]){el("rect",{x:Math.max(M.l,xs(i)-pw),y:M.t,width:(i===0?pw:pw),height:H-M.t-M.b,fill:css("--grid"),opacity:.5},svg);}
+  const leg=$("trendLegend");leg.innerHTML="";
+  for(const s of SERIES){
+    const pts=DATA.monthly.map((d,i)=>d[s.k]&&d[s.k][0]>=3?[xs(i),ys(d[s.k][1]),d[s.k]]:null).filter(Boolean);
+    const isSel=s.k===sel;const col=css(s.c);
+    el("path",{d:pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" "),fill:"none",stroke:col,"stroke-width":isSel?3:2,"stroke-linejoin":"round","stroke-linecap":"round",opacity:(isSel||!DATA.gens[sel]||!SERIES.some(x=>x.k===sel))?1:.45},svg);
+    for(const p of pts)el("circle",{cx:p[0],cy:p[1],r:isSel?4.5:3.5,fill:col,stroke:css("--card"),"stroke-width":2},svg);
+    const last=pts[pts.length-1];const lt=el("text",{x:last[0]+10,y:last[1]+4,class:"lbl"},svg);lt.textContent=s.k;
+    leg.insertAdjacentHTML("beforeend",`<span><i style="background:${col}"></i>${s.k}</span>`);
+  }
+  leg.insertAdjacentHTML("beforeend",`<span style="color:var(--ink-3)">* partial month · points need 3+ sales</span>`);
+  // hover
+  const tip=document.createElement("div");tip.className="tip";box.appendChild(tip);
+  const cross=el("line",{y1:M.t,y2:H-M.b,stroke:css("--ink-3"),"stroke-width":1,"stroke-dasharray":"3 3",opacity:0},svg);
+  const hit=el("rect",{x:M.l-20,y:0,width:W-M.l-M.r+40,height:H,fill:"transparent"},svg);
+  hit.addEventListener("pointermove",e=>{const r=svg.getBoundingClientRect();const x=(e.clientX-r.left)*W/r.width;let i=Math.round((x-M.l)/((W-M.l-M.r)/(months.length-1)));i=Math.max(0,Math.min(months.length-1,i));const d=DATA.monthly[i];cross.setAttribute("x1",xs(i));cross.setAttribute("x2",xs(i));cross.setAttribute("opacity",.6);
+    tip.innerHTML=`<div style="opacity:.7;margin-bottom:2px">${mLabel(d.m)} 2026${d.p?" (partial)":""}</div>`+SERIES.map(s=>d[s.k]?`<div>${s.k} <b>${usd(d[s.k][1])}</b> <span style="opacity:.7">${d[s.k][0]} sold</span></div>`:"").join("");
+    tip.style.left=(xs(i)/W*r.width)+"px";tip.style.top=(M.t+30)+"px";tip.classList.add("on");});
+  hit.addEventListener("pointerleave",()=>{tip.classList.remove("on");cross.setAttribute("opacity",0);});
+}
+
+function renderScatter(){
+  const box=$("scatter");box.innerHTML="";const pts=DATA.scatter[sel];const g=DATA.gens[sel];
+  $("scatterTitle").textContent=`Price vs. mileage, ${g.name}`;
+  if(!pts){$("scatterSub").textContent="";box.innerHTML=`<p class="note" style="padding:40px 8px">Only ${g.sold} ${g.name} sales in the window, too few for a mileage curve. Individual results are in the model-year and recent-sales tables.</p>`;$("milesTbl").innerHTML="";$("milesNote").textContent="";return;}
+  $("scatterSub").textContent=`Each dot is one ${g.name} dealer sale since Feb 17; diamonds are auction sales. ${sel==="992"?"Delivery-mile cars carry the biggest premium; the curve flattens after about 2,500 miles.":"Miles matter less than on the 992; condition, color and spec explain most of the spread."}`;
+  const W=Math.max(300,box.clientWidth||560),H=300,M={l:54,r:14,t:10,b:34};
+  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,width:"100%",height:H,role:"img","aria-label":`Sold price against mileage for ${g.name}`},box);
+  const genA=y=>y<=2008?"997.1":y<=2011?"997.2":y===2016?"991.1":y===2019?"991.2":"992";const ap=DATA.AUCTIONS.filter(r=>r[2]==="sold"&&genA(r[4])===sel).map(r=>[r[5],r[3]/1000]);const all=pts.concat(ap);const xmax=Math.max(...all.map(p=>p[0]));const xt=niceTicks(0,xmax,5);const ymin=Math.min(...all.map(p=>p[1])),ymax=Math.max(...all.map(p=>p[1]));const yt=niceTicks(ymin*0.95,ymax*1.02,5);
+  const xs=v=>M.l+(W-M.l-M.r)*v/xt[xt.length-1];const ys=v=>M.t+(H-M.t-M.b)*(1-(v-yt[0])/(yt[yt.length-1]-yt[0]));
+  for(const t of yt){el("line",{x1:M.l,x2:W-M.r,y1:ys(t),y2:ys(t),stroke:css("--grid")},svg);const tx=el("text",{x:M.l-8,y:ys(t)+4,"text-anchor":"end"},svg);tx.textContent="$"+t+"k";}
+  for(const t of xt){const tx=el("text",{x:xs(t),y:H-14,"text-anchor":"middle"},svg);tx.textContent=t>=1000?(t/1000)+"k":t;}
+  const ax=el("text",{x:W-M.r,y:H-1,"text-anchor":"end"},svg);ax.textContent="miles";
+  const col=css(SERIES.find(s=>s.k===sel).c);
+  const tip=document.createElement("div");tip.className="tip";box.appendChild(tip);
+  for(const p of pts){const c=el("circle",{cx:xs(p[0]),cy:ys(p[1]),r:4,fill:col,"fill-opacity":.55,stroke:css("--card"),"stroke-width":1},svg);
+    const h=el("circle",{cx:xs(p[0]),cy:ys(p[1]),r:9,fill:"transparent"},svg);
+    h.addEventListener("pointerenter",()=>{c.setAttribute("fill-opacity",1);c.setAttribute("r",5.5);const r=svg.getBoundingClientRect();tip.innerHTML=`<b>$${p[1]}k</b> · ${mi(p[0])} miles`;tip.style.left=(xs(p[0])/W*r.width)+"px";tip.style.top=(ys(p[1])/H*r.height)+"px";tip.classList.add("on");});
+    h.addEventListener("pointerleave",()=>{c.setAttribute("fill-opacity",.55);c.setAttribute("r",4);tip.classList.remove("on");});}
+  // auction overlay
+  const gen2=y=>y<=2008?"997.1":y<=2011?"997.2":y===2016?"991.1":y===2019?"991.2":"992";
+  const au=DATA.AUCTIONS.filter(r=>r[2]==="sold"&&gen2(r[4])===sel&&r[5]<=xt[xt.length-1]&&r[3]/1000>=yt[0]&&r[3]/1000<=yt[yt.length-1]);
+  for(const r of au){const x=xs(r[5]),y=ys(r[3]/1000),k=6;
+    const d=el("path",{d:`M${x} ${y-k}L${x+k} ${y}L${x} ${y+k}L${x-k} ${y}Z`,fill:css("--card"),stroke:css("--ink"),"stroke-width":2},svg);
+    const h=el("circle",{cx:x,cy:y,r:10,fill:"transparent"},svg);
+    h.addEventListener("pointerenter",()=>{const rr=svg.getBoundingClientRect();tip.innerHTML=`Auction · <b>${usd(r[3])}</b> · ${mi(r[5])} mi<br><span style="opacity:.7">${r[1]}${r[6]?", Weissach":""}</span>`;tip.style.left=(x/W*rr.width)+"px";tip.style.top=(y/H*rr.height)+"px";tip.classList.add("on");});
+    h.addEventListener("pointerleave",()=>tip.classList.remove("on"));}
+  if(au.length){const lg=el("g",{},svg);const lx=M.l+10,ly=M.t+12;el("circle",{cx:lx,cy:ly,r:4,fill:col,"fill-opacity":.55},lg);const t1=el("text",{x:lx+9,y:ly+4,class:"lbl"},lg);t1.textContent="Dealer";el("path",{d:`M${lx+62} ${ly-5}L${lx+67} ${ly}L${lx+62} ${ly+5}L${lx+57} ${ly}Z`,fill:css("--card"),stroke:css("--ink"),"stroke-width":2},lg);const t2=el("text",{x:lx+73,y:ly+4,class:"lbl"},lg);t2.textContent="Auction";}
+  // median line
+  const my=ys(g.med/1000);el("line",{x1:M.l,x2:W-M.r,y1:my,y2:my,stroke:css("--ink-2"),"stroke-dasharray":"4 4"},svg);const mt=el("text",{x:W-M.r,y:my-6,"text-anchor":"end",class:"lbl"},svg);mt.textContent="median "+usdK(g.med);
+  // miles table
+  const rows=DATA.miles[sel];const max=Math.max(...rows.map(r=>r[3]));
+  $("milesTbl").innerHTML=`<thead><tr><th>Mileage</th><th class="n">Sold</th><th>Median price</th></tr></thead><tbody>`+rows.map(r=>`<tr><td class="mono">${mi(r[0])}${r[1]?" to "+mi(r[1]):"+"}</td><td class="n">${r[2]}</td><td><div class="bar-cell"><span class="num">${usd(r[3])}</span><i style="width:${(r[3]/max*60).toFixed(0)}%"></i></div></td></tr>`).join("")+`</tbody>`;
+  const f=rows[0],l=rows[rows.length-1];$("milesNote").textContent=`A ${g.name} under ${mi(f[1])} miles sells for about ${usdK(f[3]-l[3])} more than one over ${mi(l[0])} miles.`+(sel==="991.1"?" Mileage bands use the 60 sales left after removing the mislabeled listings.":"");
+}
+
+function renderTables(){
+  $("yearTbl").innerHTML=`<thead><tr><th>Model year</th><th>Generation</th><th class="n">Sold</th><th class="n">Median price</th><th class="n">Median miles</th></tr></thead><tbody>`+DATA.byYear.map(r=>`<tr class="${r[4]===sel?"sel":""}"><td class="mono">${r[0]}</td><td>${r[4]}${r[1]<8?' <span class="pill">Thin</span>':""}</td><td class="n">${r[1]}</td><td class="n">${usd(r[2])}</td><td class="n">${mi(r[3])}</td></tr>`).join("")+`</tbody>`;
+  const base=DATA.colors.find(c=>c[0]==="White")[2];
+  $("colorTbl").innerHTML=`<thead><tr><th>Color</th><th class="n">Sold</th><th class="n">Median</th><th class="n">vs. White</th></tr></thead><tbody>`+DATA.colors.slice().sort((a,b)=>b[2]-a[2]).map(c=>{const d=(c[2]-base)/base;return `<tr><td>${c[0]}</td><td class="n">${c[1]}</td><td class="n">${usd(c[2])}</td><td class="n mono" style="color:${d>0.001?"var(--up)":d<-0.001?"var(--down)":"var(--ink-3)"}">${d>0?"+":""}${(d*100).toFixed(0)}%</td></tr>`}).join("")+`</tbody>`;
+  const tot=562;const smax=DATA.states[0][1];
+  $("stateTbl").innerHTML=`<thead><tr><th>State</th><th class="n">Sales</th><th>Share</th></tr></thead><tbody>`+DATA.states.map(s=>`<tr><td class="mono">${s[0]}</td><td class="n">${s[1]}</td><td><div class="bar-cell"><span class="num">${(s[1]/tot*100).toFixed(0)}%</span><i style="width:${(s[1]/smax*60).toFixed(0)}%"></i></div></td></tr>`).join("")+`</tbody>`;
+  const gen=y=>y<=2008?"997.1":y<=2011?"997.2":y===2016?"991.1":y===2019?"991.2":"992";
+  $("recentTbl").innerHTML=`<thead><tr><th>Sold</th><th>Car</th><th>Color</th><th class="n">Miles</th><th class="n">Price</th><th>State</th></tr></thead><tbody>`+DATA.recent.map(r=>`<tr class="${gen(r[1])===sel?"sel":""}"><td class="mono">${MON[+r[0].slice(5,7)-1]} ${+r[0].slice(8)}</td><td>${r[1]} GT3 RS <span style="color:var(--ink-3)">${gen(r[1])}</span></td><td>${r[2]||'<span style="color:var(--ink-3)">Not listed</span>'}</td><td class="n">${mi(r[3])}</td><td class="n">${usd(r[4])}</td><td class="mono">${r[5]}</td></tr>`).join("")+`</tbody>`;
+}
+function renderGuide(){
+  $("guide").innerHTML=DATA.guide.slice().reverse().map(x=>{const g=DATA.gens[x.g];return `<div class="g"><h3>${x.g}</h3><div class="yrs">${x.yrs}</div><dl><dt>Engine</dt><dd>${x.eng}</dd><dt>Output</dt><dd>${x.hp}</dd><dt>Gearbox</dt><dd>${x.box}</dd><dt>Sticker</dt><dd>${usd(x.orig)}</dd><dt>Sells for</dt><dd><b>${usd(g.med)}</b></dd><dt>Multiple</dt><dd>${g.prem.toFixed(2)}×</dd></dl>${x.extra?`<div class="note" style="font-size:12px">${x.extra}</div>`:""}</div>`}).join("");
+}
+function renderAuctions(){
+  const gen=y=>y<=2008?"997.1":y<=2011?"997.2":y===2016?"991.1":y===2019?"991.2":"992";
+  const med=a=>{if(!a.length)return null;const s=[...a].sort((x,y)=>x-y),m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2;};
+  const A=DATA.AUCTIONS;
+  const rows=ORDER.map(g=>{const s=A.filter(r=>r[2]==="sold"&&gen(r[4])===g);return [g,s.length,med(s.map(r=>r[3])),med(s.map(r=>r[5])),DATA.gens[g].med,DATA.gens[g].miles];}).filter(r=>r[1]>0);
+  $("aucCmp").innerHTML=`<thead><tr><th>Generation</th><th class="n">Auction sales</th><th class="n">Auction median</th><th class="n">Their median miles</th><th class="n">Dealer median</th><th class="n">Dealer miles</th><th class="n">Gap</th></tr></thead><tbody>`+rows.map(r=>{const gap=(r[2]-r[4])/r[4];return `<tr class="${r[0]===sel?"sel":""}"><td>${r[0]}</td><td class="n">${r[1]}</td><td class="n">${usd(r[2])}</td><td class="n">${mi(r[3])}</td><td class="n">${usd(r[4])}</td><td class="n">${mi(r[5])}</td><td class="n mono" style="color:${gap>=0?"var(--up)":"var(--down)"}">${gap>=0?"+":""}${(gap*100).toFixed(0)}%</td></tr>`}).join("")+`</tbody>`;
+  $("aucCmpNote").textContent="Read the gap with care: most of the 992 auction cars were Weissach-package cars, and a few auction results per generation is a small sample. The 991 cars come in 5 to 7 percent under dealer asks at similar miles, roughly the room you'd expect between a dealer's asking price and a hammer price. The 997.1 figure is a single 33,780-mile car and says little about the generation.";
+  $("aucTbl").innerHTML=`<thead><tr><th>Ended</th><th>Car</th><th>Platform</th><th class="n">Miles</th><th class="n">Result</th></tr></thead><tbody>`+A.map(r=>`<tr class="${gen(r[4])===sel?"sel":""}"><td class="mono">${MON[+r[0].slice(5,7)-1]} ${+r[0].slice(8)}, ${r[0].slice(0,4)}</td><td><a href="${r[7]}" target="_blank" rel="noopener">${r[4]} GT3 RS${r[6]?" Weissach":""}</a> <span style="color:var(--ink-3)">${gen(r[4])}</span></td><td class="src">${r[1]}</td><td class="n">${mi(r[5])}</td><td class="n">${usd(r[3])}${r[2]==="rnm"?' <span class="rnm">High bid, no sale</span>':""}</td></tr>`).join("")+`</tbody>`;
+}
+
+/* ---------- valuation ---------- */
+const VAL={
+  // Starting assumptions; tune as more tagged sales come in.
+  wei:{"992":0.03,"991.2":0.06},
+  col:{std:0,spec:0.06,pts:0.12},
+  con:{ex:0,good:-0.06,fair:-0.15},
+  hist:{clean:0,acc:-0.18},
+  aucGapDefault:-0.08, aucMin:3,
+  batBuyerPct:0.05, batBuyerMin:250, batBuyerCap:7500, batListing:349, aucPrep:1500,
+  dealerBase:0.08, dealerPerDom:0.001, dealerThin:0.04,
+  privAsk:1.04, privSale:0.99, privCost:1000
+};
+const genOf=y=>y<=2008?"997.1":y<=2011?"997.2":y===2016?"991.1":y===2019?"991.2":"992";
+const YEARS={"992":[2026,2025,2024,2023],"991.2":[2019],"991.1":[2016],"997.2":[2010,2011],"997.1":[2008,2007]};
+const vs={gen:null,year:null,miles:null,wei:"0",col:"std",con:"ex",hist:"clean"};
+const r500=v=>Math.round(v/500)*500;
+const median=a=>{if(!a.length)return null;const s=[...a].sort((x,y)=>x-y),m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2;};
+const FIT={};
+function fitGen(g){
+  if(FIT[g]!==undefined)return FIT[g];
+  const p=DATA.scatter[g];if(!p||p.length<30){FIT[g]=null;return null;}
+  const X=p.map(q=>Math.log(q[0]+250)),Y=p.map(q=>Math.log(q[1]*1000)),n=X.length;
+  const mx=X.reduce((a,b)=>a+b)/n,my=Y.reduce((a,b)=>a+b)/n;let sxy=0,sxx=0;
+  for(let i=0;i<n;i++){sxy+=(X[i]-mx)*(Y[i]-my);sxx+=(X[i]-mx)**2;}
+  const b=sxy/sxx,a=my-b*mx;const res=Y.map((y,i)=>y-(a+b*X[i])).sort((x,y)=>x-y);
+  const q=f=>res[Math.floor(f*(n-1))];
+  return FIT[g]={a,b,lo:q(.25),hi:q(.75),n};
+}
+function aucGap(g){
+  const s=DATA.AUCTIONS.filter(r=>r[2]==="sold"&&genOf(r[4])===g);
+  if(s.length<VAL.aucMin)return {gap:VAL.aucGapDefault,n:s.length,est:true};
+  const m=median(s.map(r=>r[3]));return {gap:(m-DATA.gens[g].med)/DATA.gens[g].med,n:s.length,est:false};
+}
+function valuate(){
+  const g=vs.gen,G=DATA.gens[g],f=fitGen(g),miles=Math.max(0,+vs.miles||0);
+  let base,lo,hi,basis;
+  if(f){base=Math.exp(f.a+f.b*Math.log(miles+250));lo=Math.exp(f.lo);hi=Math.exp(f.hi);basis=`${f.n} dealer sales`;}
+  else{const yy=(g==="997.2"&&+vs.year===2011)?2010:+vs.year;const y0=DATA.byYear.find(r=>r[0]===yy);const y=y0&&y0[1]>=5?y0:null;const ym=y?y[2]:G.med,ymi=y?y[3]:G.miles;
+    base=ym*Math.pow((miles+250)/(ymi+250),-0.06);lo=0.8;hi=1.2;basis=`${y?y[1]:G.sold} dealer sales (thin)`;}
+  const parts=[["Market value at "+mi(miles)+" miles",base]];let m=1;
+  const add=(label,pct)=>{if(pct){m*=1+pct;parts.push([label,pct]);}};
+  if(vs.wei==="1")add("Weissach package",VAL.wei[g]||0);
+  add(vs.col==="pts"?"Paint to Sample":"Special color",VAL.col[vs.col]);
+  add(vs.con==="good"?"Good condition":"Needs work",VAL.con[vs.con]);
+  add("Accident on history report",VAL.hist[vs.hist]);
+  const mid=base*m;
+  const ag=aucGap(g);const hammer=mid*(1+ag.gap);
+  const buyerFee=Math.min(VAL.batBuyerCap,Math.max(VAL.batBuyerMin,hammer*VAL.batBuyerPct));
+  const netA=hammer-VAL.batListing-VAL.aucPrep;
+  const margin=VAL.dealerBase+VAL.dealerPerDom*G.dom+(G.thin?VAL.dealerThin:0);
+  const offer=mid*(1-margin);
+  const ask=mid*VAL.privAsk,sale=mid*VAL.privSale,netP=sale-VAL.privCost;
+  return {g,G,f,miles,mid,lo:mid*lo,hi:mid*hi,parts,basis,ag,hammer,hamLo:hammer*lo,reserve:hammer*0.93,hamHi:hammer*hi,buyerFee,netA,margin,offer,offLo:offer*0.97,offHi:offer*1.02,ask,sale,netP};
+}
+function renderValForm(){
+  if(vs.gen!==sel){vs.gen=sel;vs.year=YEARS[sel][0];vs.miles=Math.round(DATA.gens[sel].miles/100)*100;if(!VAL.wei[sel])vs.wei="0";}
+  $("vGen").innerHTML=ORDER.map(k=>`<option value="${k}"${k===vs.gen?" selected":""}>${DATA.gens[k].name} (${DATA.gens[k].yrs})</option>`).join("");
+  $("vYear").innerHTML=YEARS[vs.gen].map(y=>`<option${y==vs.year?" selected":""}>${y}</option>`).join("");
+  $("vMiles").value=vs.miles;
+  $("vMilesHint").textContent=`Typical ${DATA.gens[vs.gen].name} sells with ${mi(DATA.gens[vs.gen].miles)} miles.`+(vs.gen==="997.2"&&vs.year==2011?" This estimate is for the 3.8 L car. A 2011 RS 4.0 (600 built) trades at $600,000 and up and needs a specialist appraisal.":"");
+  document.querySelectorAll("#vForm .seg").forEach(sg=>{const k=sg.dataset.k;sg.querySelectorAll("button").forEach(b=>{b.setAttribute("aria-pressed",b.dataset.v===vs[k]);if(k==="wei")b.disabled=!VAL.wei[vs.gen]&&b.dataset.v==="1";});});
+  $("lWei").textContent=VAL.wei[vs.gen]?"Weissach package":"Weissach package (992 and 991.2 only)";
+  renderVal();
+}
+function renderVal(){
+  const v=valuate(),G=v.G;
+  const conf=v.f?`Half of comparable sales at this spec land between ${usd(r500(v.lo))} and ${usd(r500(v.hi))}.`:`Only a handful of recent ${G.name} sales, so treat this as a starting point and get an appraisal.`;
+  $("vEst").innerHTML=`<div class="l">Estimated market value · ${vs.year} GT3 RS${vs.wei==="1"?" Weissach":""}${G.thin?' <span class="pill">Thin sample</span>':""}</div><div class="v">${usd(r500(v.mid))}</div><div class="s">${conf}</div>`;
+  const diff=v.netA-v.offer,th=Math.max(5000,0.03*v.mid);
+  const issues=vs.hist==="acc"||vs.con==="fair";
+  let rec;
+  if(issues)rec=["Sell to a dealer","Auction bidders pick apart condition issues and accident history in the comments, which tends to push hammer prices down further than a dealer's offer. A dealer sale is the cleaner path; get two or three written offers."];
+  else if(diff>th)rec=["Auction it",`An online auction should net you about ${usd(r500(diff))} more than a dealer offer. Set the reserve near ${usd(r500(v.reserve))} and expect bidding to finish around ${usd(r500(v.hammer))}.`];
+  else rec=["Sell to a dealer",`An auction would net only about ${usd(r500(Math.max(0,diff)))} more than a dealer offer, which isn't worth the weeks of waiting and the risk of a no-sale. Take the dealer's money.`];
+  $("vRec").innerHTML=`<b>Our recommendation: ${rec[0]}</b><p>${rec[1]}</p>`;
+  const best=rec[0]==="Auction it"?"a":"d";
+  const gapTxt=v.ag.est?`no recent ${G.name} auctions to measure against, so we assume ${Math.round(-v.ag.gap*100)}% under dealer`:`${G.name} auctions have run ${Math.abs(Math.round(v.ag.gap*100))}% ${v.ag.gap<0?"under":"over"} dealer prices (${v.ag.n} sales)`;
+  $("vChans").innerHTML=`
+  <div class="chan${best==="a"?" best":""}"><h3>Online auction${best==="a"?'<span class="pill">Best net</span>':""}</h3>
+    <div class="cap">Expected hammer price</div><div class="big">${usd(r500(v.hammer))}</div>
+    <div class="cap">Likely range ${usdK(v.hamLo)} to ${usdK(v.hamHi)}. Suggested reserve ${usd(r500(v.reserve))}.</div>
+    <dl><dt>Hammer price</dt><dd>${usd(r500(v.hammer))}</dd><dt>Listing fee (BaT Plus)</dt><dd>−${usd(VAL.batListing)}</dd><dt>Detail, photos, inspection</dt><dd>−${usd(VAL.aucPrep)}</dd><span class="rule"></span><dt class="tot">You keep</dt><dd class="tot">${usd(r500(v.netA))}</dd></dl>
+    <div class="cap">Buyer also pays a ${usd(v.buyerFee)} fee on top. About 3 to 6 weeks from submission to payment. ${gapTxt}.</div></div>
+  <div class="chan${best==="d"?" best":""}"><h3>Sell to a dealer${best==="d"?'<span class="pill">Recommended</span>':""}</h3>
+    <div class="cap">Expected offer</div><div class="big">${usd(r500(v.offer))}</div>
+    <div class="cap">Typical offers ${usdK(v.offLo)} to ${usdK(v.offHi)}.</div>
+    <dl><dt>Market value</dt><dd>${usd(r500(v.mid))}</dd><dt>Dealer margin, recon, holding</dt><dd>−${Math.round(v.margin*100)}%</dd><span class="rule"></span><dt class="tot">You keep</dt><dd class="tot">${usd(r500(v.offer))}</dd></dl>
+    <div class="cap">Paid in a day or two, no fees. Dealers are sharpest when a generation turns fast; ${G.name} cars sell in a median ${G.dom} days.</div></div>
+  <div class="chan"><h3>List it yourself</h3>
+    <div class="cap">Suggested asking price</div><div class="big">${usd(r500(v.ask))}</div>
+    <div class="cap">Expect to settle near ${usd(r500(v.sale))}.</div>
+    <dl><dt>Likely sale price</dt><dd>${usd(r500(v.sale))}</dd><dt>Ads, detail, inspection</dt><dd>−${usd(VAL.privCost)}</dd><span class="rule"></span><dt class="tot">You keep</dt><dd class="tot">${usd(r500(v.netP))}</dd></dl>
+    <div class="cap">Most money on paper, but plan on ${Math.round(G.dom*2)} or more days, strangers at your house, and handling payment and title yourself.</div></div>`;
+  // comps: nearest by miles, dealer + auction
+  const d=(DATA.scatter[v.g]||[]).map(p=>({src:"Dealer sale",miles:p[0],price:p[1]*1000}));
+  const a=DATA.AUCTIONS.filter(r=>genOf(r[4])===v.g).map(r=>({src:r[1],miles:r[5],price:r[3],url:r[7],rnm:r[2]==="rnm",yr:r[4],wei:r[6]}));
+  const wm=c=>c.wei===undefined?0:(c.wei!==(vs.wei==="1"))?1:0;
+  const near=arr=>arr.sort((x,y)=>(wm(x)-wm(y))||(Math.abs(x.miles-v.miles)-Math.abs(y.miles-v.miles)));
+  const comps=near(a).slice(0,4).concat(near(d).slice(0,Math.max(3,7-Math.min(4,a.length)))).sort((x,y)=>x.miles-y.miles);
+  $("vComps").innerHTML=`<caption style="text-align:left;padding:0 0 6px"><span class="lab" style="font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)">Closest comparable sales by mileage</span></caption><thead><tr><th>Source</th><th class="n">Miles</th><th class="n">Price</th></tr></thead><tbody>`+comps.map(c=>`<tr><td>${c.url?`<a href="${c.url}" target="_blank" rel="noopener">${c.yr}${c.wei?" Weissach":""}, ${c.src}</a>`:c.src}</td><td class="n">${mi(c.miles)}</td><td class="n">${usd(c.price)}${c.rnm?' <span class="rnm">High bid, no sale</span>':""}</td></tr>`).join("")+`</tbody>`;
+  const adj=v.parts.slice(1).map(p=>`${p[0]} ${p[1]>0?"+":""}${Math.round(p[1]*100)}%`).join(", ");
+  $("vNote").textContent=`How this is built: a price-vs-mileage curve fit to ${v.basis}${adj?`, then adjusted for ${adj}`:""}. Weissach, color, condition and history adjustments are starting assumptions until we have enough tagged sales to measure them. Auction fees are Bring a Trailer's current schedule (buyer pays 5%, capped at $7,500). This is an estimate, not an offer.`;
+}
+$("vGen").onchange=e=>{sel=e.target.value;try{localStorage.setItem("pi-gen",sel)}catch(x){}renderAll();};
+$("vYear").onchange=e=>{vs.year=+e.target.value;renderValForm();};
+$("vMiles").oninput=e=>{vs.miles=e.target.value;renderVal();};
+document.querySelectorAll("#vForm .seg").forEach(sg=>sg.addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled)return;vs[sg.dataset.k]=b.dataset.v;sg.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));renderVal();}));
+
+function renderAll(){renderGens();renderKpis();renderValForm();renderTrend();renderScatter();renderTables();renderAuctions();}
+renderAll();renderGuide();
+let rt;addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>{renderTrend();renderScatter();},150)});
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",()=>{renderTrend();renderScatter();});
+new MutationObserver(()=>{renderTrend();renderScatter();}).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+</script>
