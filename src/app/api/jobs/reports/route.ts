@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { env } from "@/env/server";
 import { processReportRequests } from "@/jobs/report";
 
@@ -23,6 +24,10 @@ async function handle(req: Request) {
   const dryRun = url.searchParams.get("live") === "1" ? false : env.jobsDryRun;
   const limit = Number(url.searchParams.get("limit") ?? 3) || 3;
   const result = await processReportRequests({ dryRun, limit });
+  // Model pages are statically cached for an hour; fresh data must invalidate them.
+  revalidatePath("/[make]/[model]", "page");
+  revalidatePath("/markets");
+  revalidatePath("/");
   return NextResponse.json({ dryRun, ...result });
 }
 
