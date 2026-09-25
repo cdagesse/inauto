@@ -6,6 +6,7 @@ import * as schema from "./schema";
 import { DEFAULT_CONFIG } from "@/lib/valuation/config";
 import type { MarketSnapshot } from "@/lib/market/types";
 import fixture from "@/data/fixtures/porsche-911-gt3-rs.json";
+import { seedCatalog } from "./seed-catalog";
 
 /**
  * Idempotent seed: catalog for the Porsche 911 GT3 RS, source aliases,
@@ -154,6 +155,8 @@ async function main() {
           generationId: sql`excluded.generation_id`,
         },
       });
+
+    await seedCatalog(db);
 
     console.log(
       `seeded ${snap.make.name} ${snap.model.name}: ${genIds.size} generations, ${dealerRows.length} dealer sales, ${auctionRows.length} auction results, ${Object.keys(DEFAULT_CONFIG).length} config keys`,
