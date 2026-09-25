@@ -30,6 +30,8 @@ export function ilikeToRegExp(pattern: string): RegExp {
 }
 
 const norm = (s: string | null | undefined) => (s ?? "").trim().toLowerCase();
+/** Trim spellings vary by feed ("AMG C63", "C 63", "C63 AMG®"): compare with spaces, hyphens and marks removed. */
+const squash = (s: string) => s.replace(/[\s\-®™]/g, "");
 
 /** Find the model an alias rule maps this raw row to, or null when no rule matches. */
 export function matchAlias(
@@ -42,7 +44,7 @@ export function matchAlias(
     if (norm(r.rawMake) !== norm(raw.make)) continue;
     if (norm(r.rawModel) !== norm(raw.model)) continue;
     if (r.rawTrimPattern) {
-      if (!raw.text || !ilikeToRegExp(r.rawTrimPattern).test(raw.text)) continue;
+      if (!raw.text || !ilikeToRegExp(squash(r.rawTrimPattern)).test(squash(raw.text))) continue;
     }
     return r.modelId;
   }

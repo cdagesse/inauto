@@ -170,3 +170,41 @@ describe("check", () => {
     expect(w.every((x) => x.generationCode === "992")).toBe(true);
   });
 });
+
+import { matchAlias as matchAliasSquash } from "@/jobs/lib/normalize";
+
+describe("matchAlias ignores spacing and marks in trim text", () => {
+  const rules = [
+    {
+      modelId: "c63",
+      source: "visor",
+      rawMake: "Mercedes-Benz",
+      rawModel: "C-Class",
+      rawTrimPattern: "%C 63%",
+    },
+    {
+      modelId: "c43",
+      source: "visor",
+      rawMake: "Mercedes-Benz",
+      rawModel: "C-Class",
+      rawTrimPattern: "%C 43%",
+    },
+  ];
+  it("matches AMG C63 / C63 AMG® / AMG® C 63 S to the C63 rule", () => {
+    for (const text of ["AMG C63", "C63 AMG®", "AMG® C 63 S", "c-63"]) {
+      expect(
+        matchAliasSquash(rules, "visor", { make: "Mercedes-Benz", model: "C-Class", text }),
+      ).toBe("c63");
+    }
+    expect(
+      matchAliasSquash(rules, "visor", { make: "Mercedes-Benz", model: "C-Class", text: "C 300" }),
+    ).toBeNull();
+    expect(
+      matchAliasSquash(rules, "visor", {
+        make: "Mercedes-Benz",
+        model: "C-Class",
+        text: "AMG C43",
+      }),
+    ).toBe("c43");
+  });
+});
