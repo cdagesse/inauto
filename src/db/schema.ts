@@ -499,6 +499,72 @@ export const bids = pgTable(
   (t) => [index("bid_listing_amount_idx").on(t.listingId, t.amount)],
 );
 
+/** Auction listings on third-party platforms (Bring a Trailer, Cars & Bids, …), pulled by the live-auctions job. */
+export const externalListingStatus = pgEnum("external_listing_status", [
+  "live",
+  "sold",
+  "rnm",
+  "withdrawn",
+  "ended",
+]);
+
+export const externalListings = pgTable(
+  "external_listing",
+  {
+    id: id(),
+    source: text("source").notNull(), // platform key, e.g. "bat", "carsandbids"
+    sourceName: text("source_name").notNull(), // display name, e.g. "Bring a Trailer"
+    sourceId: text("source_id").notNull(),
+    url: text("url").notNull(),
+    status: externalListingStatus("status").notNull().default("live"),
+    title: text("title").notNull(),
+    make: text("make"),
+    model: text("model"),
+    year: integer("year"),
+    trim: text("trim"),
+    vin: text("vin"),
+    miles: integer("miles"),
+    color: text("color"),
+    location: text("location"),
+    description: text("description"),
+    photoUrls: jsonb("photo_urls")
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    currentBid: integer("current_bid"),
+    bidCount: integer("bid_count"),
+    reserveMet: boolean("reserve_met"),
+    finalPrice: integer("final_price"),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    endsAt: timestamp("ends_at", { withTimezone: true }),
+    modelId: text("model_id").references(() => models.id, { onDelete: "set null" }),
+    generationId: text("generation_id").references(() => generations.id, { onDelete: "set null" }),
+    rawJson: jsonb("raw_json"),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("external_listing_source_idx").on(t.source, t.sourceId),
+    index("external_listing_status_ends_idx").on(t.status, t.endsAt),
+    index("external_listing_model_idx").on(t.modelId, t.status),
+  ],
+);
+
+/** Outbound clicks to source platforms, for measuring what we send off-site. No PII beyond a salted IP hash. */
+export const outboundClicks = pgTable(
+  "outbound_click",
+  {
+    id: id(),
+    externalListingId: text("external_listing_id")
+      .notNull()
+      .references(() => externalListings.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    ipHash: text("ip_hash"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("outbound_click_listing_idx").on(t.externalListingId, t.createdAt)],
+);
+
 /* ------------------------------------------------------------------ */
 /* Garage                                                              */
 /* ------------------------------------------------------------------ */
