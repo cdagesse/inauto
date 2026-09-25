@@ -72,7 +72,7 @@ export async function POST(req: Request) {
   try {
     const session = await auth();
     const ipHash = createHash("sha256")
-      .update(`${ip}|${env.AUTH_SECRET}`)
+      .update(`${ip}|${env.ipHashSalt}`)
       .digest("hex")
       .slice(0, 32);
     await db.insert(valuationRequests).values({

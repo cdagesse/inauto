@@ -13,7 +13,7 @@ Only the CLI can grant or revoke `admin`:
 pnpm users:role chris@nucar.com admin
 ```
 
-The user must have signed in at least once. The change is recorded in the audit log with
+The user must have signed in at least once. The role is also mirrored to Clerk `publicMetadata.role` (drives the header's Admin link). The change is recorded in the audit log with
 `via: "cli"`. The console itself can only switch users between `user` and `dealer`.
 
 ## Pages
@@ -32,7 +32,7 @@ The user must have signed in at least once. The change is recorded in the audit 
 ## Account status semantics
 
 - `active`: normal.
-- `disabled`: cannot sign in (Auth.js `signIn` callback) or act (`requireUser`). Listings are hidden from everyone except the owner but keep their status, so reactivation restores them.
+- `disabled`: cannot act (`requireUser` re-reads status on every call) and is banned in Clerk best-effort, which ends their session at the edge. Listings are hidden from everyone except the owner but keep their status, so reactivation restores them.
 - `blocked`: as disabled, plus active listings are withdrawn at block time.
 
 Admins cannot change their own status or role, and cannot disable, block, or demote other admins from the console.

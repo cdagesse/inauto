@@ -13,13 +13,13 @@ Dark-themed, built on Next.js 16 (App Router), Postgres (Neon via Vercel), Drizz
 pnpm install
 vercel link --project inauto            # once; then
 vercel env pull .env.local              # pulls DATABASE_URL etc. from Vercel
-# add AUTH_SECRET (openssl rand -base64 32), AUTH_DEV_LOGIN=true, JOBS_DRY_RUN=true to .env.local
+# add IP_HASH_SALT (openssl rand -base64 32) and JOBS_DRY_RUN=true to .env.local
 pnpm db:migrate                         # apply ./drizzle migrations
 pnpm db:seed                            # Porsche 911 GT3 RS catalog + fixture market data
 pnpm dev
 ```
 
-Sign in locally with the "Development sign-in" (any email) when `AUTH_DEV_LOGIN=true`. It is disabled in production by code, not just by config.
+Sign-in is Clerk (installed from the Vercel Marketplace). The development instance accepts test accounts: sign up with an email like `you+clerk_test@example.com` and use the verification code `424242`. No real mail is sent.
 
 ## Commands
 

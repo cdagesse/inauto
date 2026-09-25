@@ -16,13 +16,14 @@ const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   DATABASE_URL: z.string().url(),
   DATABASE_URL_UNPOOLED: optionalString,
-  AUTH_SECRET: z.string().min(16),
-  AUTH_URL: optionalString,
-  AUTH_GOOGLE_ID: optionalString,
-  AUTH_GOOGLE_SECRET: optionalString,
-  AUTH_GITHUB_ID: optionalString,
-  AUTH_GITHUB_SECRET: optionalString,
-  AUTH_DEV_LOGIN: optionalString,
+  // Clerk (Vercel Marketplace) owns identity and sessions.
+  CLERK_SECRET_KEY: z.string().min(10),
+  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(10),
+  CLERK_WEBHOOK_SIGNING_SECRET: optionalString,
+  /** Salt for truncated IP hashes in valuation_request and outbound_click. */
+  IP_HASH_SALT: optionalString,
+  /** Legacy name for IP_HASH_SALT; still honoured so existing deployments keep working. */
+  AUTH_SECRET: optionalString,
   CRON_SECRET: optionalString,
   JOBS_DRY_RUN: optionalString,
   VISOR_API_KEY: optionalString,
@@ -39,11 +40,17 @@ if (!parsed.success) {
   const issues = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
   throw new Error(`Invalid server environment: ${issues}`);
 }
+const ipHashSalt = parsed.data.IP_HASH_SALT ?? parsed.data.AUTH_SECRET;
+if (!ipHashSalt || ipHashSalt.length < 16) {
+  throw new Error(
+    "Invalid server environment: IP_HASH_SALT (or AUTH_SECRET) must be at least 16 characters",
+  );
+}
 
 export const env = {
   ...parsed.data,
+  ipHashSalt,
   isProd: parsed.data.NODE_ENV === "production",
-  devLoginEnabled: parsed.data.NODE_ENV !== "production" && parsed.data.AUTH_DEV_LOGIN === "true",
   jobsDryRun: parsed.data.JOBS_DRY_RUN !== "false",
   externalPhotos: parsed.data.EXTERNAL_PHOTOS === "true",
 };

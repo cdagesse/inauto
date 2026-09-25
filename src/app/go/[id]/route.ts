@@ -34,7 +34,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   try {
     const session = await auth();
     const ipHash = createHash("sha256")
-      .update(`${clientIp(req.headers)}|${env.AUTH_SECRET}`)
+      .update(`${clientIp(req.headers)}|${env.ipHashSalt}`)
       .digest("hex")
       .slice(0, 32);
     await db.insert(outboundClicks).values({

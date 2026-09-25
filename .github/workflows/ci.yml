@@ -14,8 +14,9 @@ env:
   # build needs syntactically valid values. Never real credentials.
   DATABASE_URL: postgres://postgres:ci-throwaway-not-a-secret@localhost:5432/inauto_ci
   DATABASE_URL_UNPOOLED: postgres://postgres:ci-throwaway-not-a-secret@localhost:5432/inauto_ci
-  AUTH_SECRET: ci-placeholder-session-secret-not-a-real-value
-  AUTH_DEV_LOGIN: "false"
+  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_Y2xlcmsuaW5hdXRvLmxvY2FsJA
+  CLERK_SECRET_KEY: sk_test_ci-placeholder
+  IP_HASH_SALT: ci-placeholder-salt-not-a-real-value
   JOBS_DRY_RUN: "true"
 
 jobs:

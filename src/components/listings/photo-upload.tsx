@@ -1,7 +1,7 @@
 "use client";
 
 import { upload } from "@vercel/blob/client";
-import { useSession } from "next-auth/react";
+import { useUser } from "@clerk/nextjs";
 import { useEffect, useId, useRef, useState } from "react";
 
 const ACCEPT = ["image/jpeg", "image/png", "image/webp", "image/heic"];
@@ -18,8 +18,8 @@ export function PhotoUpload({
   onChange: (urls: string[]) => void;
   max?: number;
 }) {
-  const { data: session } = useSession();
-  const userId = session?.user?.id ?? null;
+  const { user } = useUser();
+  const userId = user?.id ?? null; // Clerk id; the token broker checks the same prefix
   const inputId = useId();
   const urlId = useId();
   const [pending, setPending] = useState<Pending[]>([]);

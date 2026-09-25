@@ -23,7 +23,8 @@ const plexMono = IBM_Plex_Mono({
 });
 import { SiteHeader } from "@/components/site/header";
 import { SiteFooter } from "@/components/site/footer";
-import { Providers } from "@/components/site/providers";
+import { ClerkProvider } from "@clerk/nextjs";
+import { clerkAppearance } from "@/components/site/clerk-appearance";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://inauto-nu.vercel.app"),
@@ -49,13 +50,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        <Providers>
+        {/* Inside <body> so the root layout stays static; Clerk does not force dynamic rendering. */}
+        <ClerkProvider appearance={clerkAppearance} signInUrl="/signin" signUpUrl="/signup">
           <SiteHeader />
           <main className="wrap" style={{ paddingBlock: "0 48px" }}>
             {children}
           </main>
           <SiteFooter />
-        </Providers>
+        </ClerkProvider>
       </body>
     </html>
   );

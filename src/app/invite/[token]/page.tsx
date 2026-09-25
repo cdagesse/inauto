@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { signInHref } from "@/components/account/require-signin";
 import { acceptInviteAction } from "@/server/networks";
 import { previewInvite } from "@/server/queries/networks";
 
@@ -61,10 +62,7 @@ export default async function InvitePage({
               </button>
             </form>
           ) : (
-            <Link
-              href={`/signin?callbackUrl=${encodeURIComponent(`/invite/${token}`)}`}
-              className="btn primary"
-            >
+            <Link href={signInHref(`/invite/${token}`)} className="btn primary">
               Sign in to accept
             </Link>
           )}

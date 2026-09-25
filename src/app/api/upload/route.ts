@@ -12,7 +12,7 @@ const UPLOADS_PER_HOUR = 40;
 
 /**
  * Client-upload token broker for Vercel Blob. The browser asks here for a
- * short-lived token scoped to one pathname under listings/{userId}/, then
+ * short-lived token scoped to one pathname under listings/{clerkUserId}/, then
  * uploads straight to Blob storage, so the file never passes through a
  * function. Photos are attached to a listing at save time, not here.
  */
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
         }
         const rl = rateLimit(`upload:${user.id}`, UPLOADS_PER_HOUR, 60 * 60 * 1000);
         if (!rl.ok) throw new Error("Too many uploads. Try again in a few minutes.");
-        const prefix = `listings/${user.id}/`;
+        const prefix = `listings/${user.clerkId}/`;
         if (!pathname.startsWith(prefix) || pathname.includes(".."))
           throw new Error("Invalid upload path.");
         return {

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { auth } from "@/auth";
+import { signInHref } from "@/components/account/require-signin";
 import { fmtDate } from "@/components/account/money";
 import { ServiceOrderForm } from "@/components/listings/service-order-form";
 import { listMyServiceOrders } from "@/server/queries/services";
@@ -116,8 +117,7 @@ export default async function ToolsPage({
           <ServiceOrderForm kind="title_vetting" showVin initialVin={initialVin} />
         ) : (
           <p className="note">
-            <Link href={`/signin?callbackUrl=${encodeURIComponent("/tools#vin")}`}>Sign in</Link> to
-            order a title check.
+            <Link href={signInHref("/tools#vin")}>Sign in</Link> to order a title check.
           </p>
         )}
       </section>

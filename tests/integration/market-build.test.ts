@@ -23,7 +23,7 @@ describe.skipIf(!url)("market snapshot from the database", () => {
       expect(input).not.toBeNull();
       expect(input!.generations).toHaveLength(5);
       expect(input!.dealerSales.length).toBeGreaterThan(400);
-      expect(input!.auctions).toHaveLength(18);
+      expect(input!.auctions.length).toBeGreaterThanOrEqual(18); // seed has 18; live pulls add more
       expect(input!.dealerActive.length).toBeGreaterThan(100);
       const snap = buildSnapshot(input!);
       expect(snap.generations["992"].median).toBeGreaterThan(400_000);

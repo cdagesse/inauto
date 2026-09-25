@@ -1,123 +1,95 @@
-import NextAuth, { type NextAuthConfig } from "next-auth";
-import type { Provider } from "next-auth/providers";
-import Google from "next-auth/providers/google";
-import GitHub from "next-auth/providers/github";
-import Credentials from "next-auth/providers/credentials";
-import { DrizzleAdapter } from "@auth/drizzle-adapter";
+import "server-only";
+import { cache } from "react";
 import { eq } from "drizzle-orm";
-import { z } from "zod";
+import { auth as clerkAuth, currentUser } from "@clerk/nextjs/server";
 import { db } from "@/db";
-import { accounts, sessions, users, verificationTokens } from "@/db/schema";
-import { env } from "@/env/server";
+import { users } from "@/db/schema";
 
 /**
- * Auth.js v5. Users, accounts and OAuth links persist in Postgres via the
- * Drizzle adapter; sessions are signed JWTs so an authenticated request
- * costs no database round-trip. Providers appear only when configured.
+ * Clerk owns identity and sessions; the `user` table owns role and account
+ * status. `auth()` resolves the Clerk session to our user row (creating it on
+ * first sight, or attaching the Clerk id to a pre-existing row with the same
+ * email so garages and listings survive the migration). Cached per request.
  */
-const providers: Provider[] = [];
-if (env.AUTH_GOOGLE_ID && env.AUTH_GOOGLE_SECRET) {
-  providers.push(Google({ clientId: env.AUTH_GOOGLE_ID, clientSecret: env.AUTH_GOOGLE_SECRET }));
-}
-if (env.AUTH_GITHUB_ID && env.AUTH_GITHUB_SECRET) {
-  providers.push(GitHub({ clientId: env.AUTH_GITHUB_ID, clientSecret: env.AUTH_GITHUB_SECRET }));
-}
-if (env.devLoginEnabled) {
-  const devSchema = z.object({
-    email: z.string().email(),
-    name: z.string().min(1).max(80).optional(),
-  });
-  providers.push(
-    Credentials({
-      id: "dev",
-      name: "Development sign-in",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        name: { label: "Name", type: "text" },
-      },
-      async authorize(raw) {
-        const parsed = devSchema.safeParse(raw);
-        if (!parsed.success) return null;
-        const email = parsed.data.email.toLowerCase();
-        const [existing] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-        if (existing) return existing;
-        const [created] = await db
-          .insert(users)
-          .values({
-            email,
-            name: parsed.data.name ?? email.split("@")[0],
-            emailVerified: new Date(),
-          })
-          .returning();
-        return created ?? null;
-      },
-    }),
-  );
+export type Role = "user" | "dealer" | "admin";
+export type Status = "active" | "disabled" | "blocked";
+
+export interface SessionUser {
+  id: string; // our uuid
+  clerkId: string;
+  role: Role;
+  status: Status;
+  name: string | null;
+  email: string | null;
+  image: string | null;
 }
 
-export const providerList = providers.map((p) => {
-  const meta = typeof p === "function" ? p() : p;
-  return { id: meta.id, name: meta.name };
-});
-
-export const authConfig: NextAuthConfig = {
-  adapter: DrizzleAdapter(db, {
-    usersTable: users,
-    accountsTable: accounts,
-    sessionsTable: sessions,
-    verificationTokensTable: verificationTokens,
-  }),
-  session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
-  providers,
-  pages: { signIn: "/signin" },
-  trustHost: true,
-  callbacks: {
-    async signIn({ user }) {
-      if (!user.id) return true;
-      const [row] = await db
-        .select({ status: users.status })
-        .from(users)
-        .where(eq(users.id, user.id))
-        .limit(1);
-      return !row || row.status === "active";
-    },
-    async jwt({ token, user }) {
-      if (user) {
-        token.uid = user.id;
-        token.role = (user as { role?: string }).role ?? "user";
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (token.uid) session.user.id = token.uid as string;
-      session.user.role = (token.role as "user" | "dealer" | "admin") ?? "user";
-      return session;
-    },
-  },
+const COLUMNS = {
+  id: users.id,
+  clerkId: users.clerkId,
+  role: users.role,
+  status: users.status,
+  name: users.name,
+  email: users.email,
+  image: users.image,
 };
 
-export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
+async function provision(clerkId: string): Promise<SessionUser | null> {
+  const cu = await currentUser();
+  if (!cu) return null;
+  const email =
+    cu.emailAddresses.find((e) => e.id === cu.primaryEmailAddressId)?.emailAddress ??
+    cu.emailAddresses[0]?.emailAddress ??
+    null;
+  const name = [cu.firstName, cu.lastName].filter(Boolean).join(" ") || cu.username || null;
+  const image = cu.imageUrl ?? null;
+  const lower = email?.toLowerCase() ?? null;
+
+  // Attach to an existing row by email first (users created before Clerk).
+  if (lower) {
+    const [byEmail] = await db
+      .update(users)
+      .set({ clerkId, name: name ?? undefined, image: image ?? undefined })
+      .where(eq(users.email, lower))
+      .returning(COLUMNS);
+    if (byEmail) return byEmail as SessionUser;
+  }
+  const [created] = await db
+    .insert(users)
+    .values({ clerkId, email: lower, name, image, emailVerified: new Date() })
+    .onConflictDoNothing({ target: users.clerkId })
+    .returning(COLUMNS);
+  if (created) return created as SessionUser;
+  const [row] = await db.select(COLUMNS).from(users).where(eq(users.clerkId, clerkId)).limit(1);
+  return (row as SessionUser) ?? null;
+}
+
+/**
+ * Current session, or null. Shape kept compatible with the previous Auth.js
+ * layer (`session.user.id` is our uuid) so call sites need no changes.
+ */
+export const auth = cache(async (): Promise<{ user: SessionUser } | null> => {
+  const { userId } = await clerkAuth();
+  if (!userId) return null;
+  const [row] = await db.select(COLUMNS).from(users).where(eq(users.clerkId, userId)).limit(1);
+  const user = (row as SessionUser | undefined) ?? (await provision(userId));
+  return user ? { user } : null;
+});
 
 /**
  * Returns the signed-in user or throws. Use in server actions and route handlers.
- * Sessions are JWTs, so account status is checked here against the database
- * (one indexed primary-key read) so a disabled or blocked account stops acting
- * immediately, not when its token expires.
+ * Account status comes from our database on every call (one indexed read), so a
+ * disabled or blocked account stops acting immediately regardless of its Clerk session.
  */
-export async function requireUser() {
+export async function requireUser(): Promise<SessionUser> {
   const session = await auth();
-  if (!session?.user?.id) throw new Error("UNAUTHENTICATED");
-  const [row] = await db
-    .select({ status: users.status, role: users.role })
-    .from(users)
-    .where(eq(users.id, session.user.id))
-    .limit(1);
-  if (!row || row.status !== "active") throw new Error("ACCOUNT_DISABLED");
-  return { ...session.user, role: row.role };
+  if (!session) throw new Error("UNAUTHENTICATED");
+  if (session.user.status !== "active") throw new Error("ACCOUNT_DISABLED");
+  return session.user;
 }
 
 /** Like requireUser but also requires the admin role. */
-export async function requireAdmin() {
+export async function requireAdmin(): Promise<SessionUser> {
   const user = await requireUser();
   if (user.role !== "admin") throw new Error("FORBIDDEN");
   return user;

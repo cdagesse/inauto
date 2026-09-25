@@ -5,6 +5,7 @@ import { listings, users } from "@/db/schema";
 import { type ActionResult, fail, toError } from "@/server/result";
 import { roleChangeError, statusChangeError, type Role, type Status } from "../rules";
 import { audit } from "./audit";
+import { syncClerkBan, syncClerkRole } from "./clerk-sync";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -52,6 +53,7 @@ export async function setUserStatus(
       });
       return null;
     });
+    if (!outcome) await syncClerkBan(targetId, next !== "active");
     return outcome ? fail(outcome) : { ok: true };
   } catch (e) {
     return toError(e);
@@ -73,6 +75,7 @@ export async function setUserRole(
       await audit(tx, adminId, `user.role.${next}`, "user", targetId, { from: target.role });
       return null;
     });
+    if (!outcome) await syncClerkRole(targetId, next);
     return outcome ? fail(outcome) : { ok: true };
   } catch (e) {
     return toError(e);

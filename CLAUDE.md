@@ -4,6 +4,7 @@
 - Before any commit: `pnpm typecheck && pnpm lint && pnpm test`. CI enforces zero lint warnings.
 - Schema changes: edit `src/db/schema.ts`, run `pnpm db:generate`, commit the migration. Never hand-edit `drizzle/`.
 - Every server action: `"use server"`, Zod-validate input, `requireUser()`, scope by user id in the WHERE clause, return `{ ok } | { ok: false, error }`.
+- Auth is Clerk (`@clerk/nextjs`). Always go through `auth()` / `requireUser()` / `requireAdmin()` in `src/auth.ts`, which map the Clerk session to our `user` row; role and status live in our database, never in Clerk. `src/proxy.ts` is the Clerk middleware.
 - Third-party API calls (Visor, Old Cars Data) happen only in `src/jobs`, never in a request path. Store raw responses first. Respect the monthly budgets.
 - The valuation engine (`src/lib/valuation/engine.ts`) is pure. The worked example in the spec is a unit test; do not change tunables in code, change `valuation_config`.
 - Design tokens live in `src/app/globals.css`. Dark is the default; `data-theme="light"` opts in. Fonts: Archivo (display), Instrument Sans (body), IBM Plex Mono (numbers/labels).

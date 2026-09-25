@@ -2,6 +2,7 @@ import "@/env/load";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+import { createClerkClient } from "@clerk/backend";
 import { adminActions, users } from "./schema";
 
 /**
@@ -21,7 +22,7 @@ async function main() {
   try {
     const db = drizzle(sql);
     const [user] = await db
-      .select({ id: users.id, role: users.role })
+      .select({ id: users.id, role: users.role, clerkId: users.clerkId })
       .from(users)
       .where(eq(users.email, email.toLowerCase()))
       .limit(1);
@@ -43,6 +44,17 @@ async function main() {
       });
     });
     console.log(`${email}: ${user.role} -> ${role}`);
+    // Mirror to Clerk publicMetadata so the header's Admin link updates on next load.
+    if (user.clerkId && process.env.CLERK_SECRET_KEY) {
+      try {
+        const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
+        await clerk.users.updateUserMetadata(user.clerkId, { publicMetadata: { role } });
+        console.log("clerk publicMetadata.role synced");
+      } catch (e) {
+        console.warn("clerk sync failed:", e instanceof Error ? e.message : e);
+      }
+    } else if (!user.clerkId)
+      console.log("no clerk id on this user yet; header link syncs on next sign-in");
   } finally {
     await sql.end();
   }

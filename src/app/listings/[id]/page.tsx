@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
+import { signInHref } from "@/components/account/require-signin";
 import { fmtDate, mi, usd } from "@/components/account/money";
 import { BidForm } from "@/components/listings/bid-form";
 import { Countdown } from "@/components/listings/countdown";
@@ -63,7 +64,7 @@ export default async function ListingPage({
       : null;
   const minBid = l.highBid ? l.highBid + minimumIncrement(l.highBid) : 100;
   const guidance = l.priceGuidance as PriceGuidance | null;
-  const signinHref = `/signin?callbackUrl=${encodeURIComponent(`/listings/${l.id}`)}`;
+  const signinHref = signInHref(`/listings/${l.id}`);
   const marketPrice =
     l.status === "sold"
       ? (l.soldPrice ?? l.highBid ?? l.askingPrice)
