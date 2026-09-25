@@ -72,6 +72,15 @@ export const authConfig: NextAuthConfig = {
   pages: { signIn: "/signin" },
   trustHost: true,
   callbacks: {
+    async signIn({ user }) {
+      if (!user.id) return true;
+      const [row] = await db
+        .select({ status: users.status })
+        .from(users)
+        .where(eq(users.id, user.id))
+        .limit(1);
+      return !row || row.status === "active";
+    },
     async jwt({ token, user }) {
       if (user) {
         token.uid = user.id;
@@ -89,9 +98,27 @@ export const authConfig: NextAuthConfig = {
 
 export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
 
-/** Returns the signed-in user or throws. Use in server actions and route handlers. */
+/**
+ * Returns the signed-in user or throws. Use in server actions and route handlers.
+ * Sessions are JWTs, so account status is checked here against the database
+ * (one indexed primary-key read) so a disabled or blocked account stops acting
+ * immediately, not when its token expires.
+ */
 export async function requireUser() {
   const session = await auth();
   if (!session?.user?.id) throw new Error("UNAUTHENTICATED");
-  return session.user;
+  const [row] = await db
+    .select({ status: users.status, role: users.role })
+    .from(users)
+    .where(eq(users.id, session.user.id))
+    .limit(1);
+  if (!row || row.status !== "active") throw new Error("ACCOUNT_DISABLED");
+  return { ...session.user, role: row.role };
+}
+
+/** Like requireUser but also requires the admin role. */
+export async function requireAdmin() {
+  const user = await requireUser();
+  if (user.role !== "admin") throw new Error("FORBIDDEN");
+  return user;
 }

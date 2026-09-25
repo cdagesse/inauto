@@ -31,6 +31,8 @@ const updatedAt = () =>
 /* ------------------------------------------------------------------ */
 
 export const userRole = pgEnum("user_role", ["user", "dealer", "admin"]);
+/** active: normal. disabled: cannot sign in or act (soft off switch). blocked: banned; listings hidden. */
+export const userStatus = pgEnum("user_status", ["active", "disabled", "blocked"]);
 
 export const users = pgTable("user", {
   id: id(),
@@ -39,6 +41,9 @@ export const users = pgTable("user", {
   emailVerified: timestamp("email_verified", { mode: "date" }),
   image: text("image"),
   role: userRole("role").notNull().default("user"),
+  status: userStatus("status").notNull().default("active"),
+  statusReason: text("status_reason"),
+  statusChangedAt: timestamp("status_changed_at", { withTimezone: true }),
   handle: text("handle").unique(),
   createdAt: createdAt(),
 });
@@ -91,6 +96,15 @@ export const makes = pgTable("make", {
   slug: text("slug").notNull().unique(),
 });
 
+/** none: catalog entry only. requested: a visitor asked for a report. building: job running. ready: data present. failed: see reportError. */
+export const reportStatus = pgEnum("report_status", [
+  "none",
+  "requested",
+  "building",
+  "ready",
+  "failed",
+]);
+
 export const models = pgTable(
   "model",
   {
@@ -101,9 +115,22 @@ export const models = pgTable(
     name: text("name").notNull(),
     slug: text("slug").notNull(),
     shortName: text("short_name"),
+    /** Parent line shown above the model name, e.g. "Porsche 911" or "Mercedes-AMG". */
+    parentLine: text("parent_line"),
+    yearStart: integer("year_start"),
+    yearEnd: integer("year_end"),
     published: boolean("published").notNull().default(false),
+    reportStatus: reportStatus("report_status").notNull().default("none"),
+    reportRequestedAt: timestamp("report_requested_at", { withTimezone: true }),
+    reportBuiltAt: timestamp("report_built_at", { withTimezone: true }),
+    reportError: text("report_error"),
+    searchText: text("search_text"),
   },
-  (t) => [uniqueIndex("model_make_slug_idx").on(t.makeId, t.slug)],
+  (t) => [
+    uniqueIndex("model_make_slug_idx").on(t.makeId, t.slug),
+    index("model_search_idx").on(t.searchText),
+    index("model_report_status_idx").on(t.reportStatus),
+  ],
 );
 
 export const generations = pgTable(
@@ -335,6 +362,23 @@ export const listingStatus = pgEnum("listing_status", [
   "withdrawn",
 ]);
 
+/** Append-only audit trail for admin actions. */
+export const adminActions = pgTable(
+  "admin_action",
+  {
+    id: id(),
+    adminId: text("admin_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "set null" }),
+    action: text("action").notNull(),
+    targetType: text("target_type").notNull(),
+    targetId: text("target_id").notNull(),
+    details: jsonb("details"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("admin_action_target_idx").on(t.targetType, t.targetId)],
+);
+
 export const networks = pgTable("network", {
   id: id(),
   ownerId: text("owner_id")
@@ -422,6 +466,9 @@ export const listings = pgTable(
     askingPrice: integer("asking_price"),
     reservePrice: integer("reserve_price"),
     auctionEndsAt: timestamp("auction_ends_at", { withTimezone: true }),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    winningBidId: text("winning_bid_id"),
+    soldPrice: integer("sold_price"),
     /** Snapshot of the pricing guidance shown at listing time (market value, verdict, comps). */
     priceGuidance: jsonb("price_guidance"),
     titleVetted: boolean("title_vetted").notNull().default(false),
@@ -497,6 +544,7 @@ export const serviceStatus = pgEnum("service_status", [
   "in_progress",
   "complete",
   "cancelled",
+  "declined",
 ]);
 
 export const serviceOrders = pgTable(
@@ -512,10 +560,16 @@ export const serviceOrders = pgTable(
     vin: text("vin"),
     details: jsonb("details"),
     result: jsonb("result"),
+    reviewerId: text("reviewer_id").references(() => users.id, { onDelete: "set null" }),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    reviewNote: text("review_note"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [index("service_order_user_idx").on(t.userId, t.createdAt)],
+  (t) => [
+    index("service_order_user_idx").on(t.userId, t.createdAt),
+    index("service_order_kind_status_idx").on(t.kind, t.status, t.createdAt),
+  ],
 );
 
 /* ------------------------------------------------------------------ */
