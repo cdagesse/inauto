@@ -26,6 +26,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   experimental: { serverActions: { bodySizeLimit: "1mb" } },
+  images: {
+    remotePatterns: [{ protocol: "https", hostname: "**.public.blob.vercel-storage.com" }],
+  },
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },

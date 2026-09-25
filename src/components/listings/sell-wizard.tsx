@@ -6,6 +6,7 @@ import { mi, usd } from "@/components/account/money";
 import type { PriceGuidance } from "@/lib/valuation/types";
 import { createListing } from "@/server/listings";
 import { getPriceGuidance } from "@/server/pricing";
+import { PhotoUpload } from "./photo-upload";
 import { verdictClass, verdictLabel } from "./verdict";
 
 type Net = { id: string; name: string };
@@ -55,7 +56,8 @@ export function SellWizard({ networks }: { networks: Net[] }) {
     reserve: "",
     asking: "",
   });
-  const [listing, setListing] = useState({ title: "", description: "", photos: "", location: "" });
+  const [listing, setListing] = useState({ title: "", description: "", location: "" });
+  const [photos, setPhotos] = useState<string[]>([]);
   const [guidance, setGuidance] = useState<PriceGuidance | null>(null);
   const [guidanceState, setGuidanceState] = useState<"idle" | "loading" | "none" | "ready">("idle");
   const [marketHref, setMarketHref] = useState<string | null>(null);
@@ -150,10 +152,7 @@ export function SellWizard({ networks }: { networks: Net[] }) {
           listing.title.trim() ||
           `${year} ${car.make} ${car.model}${car.trim ? ` ${car.trim}` : ""}`,
         description: listing.description.trim() || null,
-        photos: listing.photos
-          .split(/\s+/)
-          .map((s) => s.trim())
-          .filter(Boolean),
+        photos,
         location: listing.location.trim() || null,
         askingPrice: sale.type === "auction" ? null : Math.round(Number(sale.asking)) || null,
         reservePrice: sale.type === "auction" ? Math.round(Number(sale.reserve)) || null : null,
@@ -496,15 +495,8 @@ export function SellWizard({ networks }: { networks: Net[] }) {
             />
           </div>
           <div className="fld">
-            <label htmlFor="s-photos">Photo URLs (one per line, https only)</label>
-            <textarea
-              id="s-photos"
-              rows={3}
-              value={listing.photos}
-              onChange={(e) => setListing({ ...listing, photos: e.target.value })}
-              className="mono"
-            />
-            <span className="hint">Direct photo upload is coming; paste image links for now.</span>
+            <span className="lab">Photos</span>
+            <PhotoUpload value={photos} onChange={setPhotos} />
           </div>
           <div className="fld">
             <label htmlFor="s-loc">Location</label>

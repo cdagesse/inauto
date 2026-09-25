@@ -21,6 +21,11 @@ export function UserMenu() {
   }
   return (
     <div className="user-menu">
+      {data.user.role === "admin" ? (
+        <Link href="/admin" className="btn sm">
+          Admin
+        </Link>
+      ) : null}
       <Link href="/garage" className="mono" style={{ color: "var(--ink-2)" }}>
         {data.user.name ?? data.user.email}
       </Link>

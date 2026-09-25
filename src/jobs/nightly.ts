@@ -36,6 +36,8 @@ export interface NightlyOptions {
   now?: Date;
   /** Injected in tests. */
   fetchImpl?: typeof fetch;
+  /** Restrict the run to these model slugs (used by on-demand report builds). */
+  modelSlugs?: string[];
 }
 
 export interface ModelSummary {
@@ -69,6 +71,7 @@ interface CatalogModel {
   makeName: string;
   makeSlug: string;
   name: string;
+  reportStatus: string;
   gens: GenerationRange[];
   aliases: AliasRule[];
 }
@@ -81,6 +84,7 @@ async function loadCatalog(db: Db): Promise<CatalogModel[]> {
       name: models.name,
       makeName: makes.name,
       makeSlug: makes.slug,
+      reportStatus: models.reportStatus,
     })
     .from(models)
     .innerJoin(makes, eq(makes.id, models.makeId));
@@ -436,7 +440,16 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<NightlySumm
   log(`start ${dryRun ? "(dry run)" : "(LIVE)"} job_run=${jobRunId}`);
 
   try {
-    const catalog = await loadCatalog(db);
+    let catalog = await loadCatalog(db);
+    if (opts.modelSlugs?.length) {
+      const wanted = new Set(opts.modelSlugs);
+      catalog = catalog.filter((m) => wanted.has(m.slug));
+    } else {
+      // The catalog holds hundreds of searchable models. A nightly refresh only
+      // spends API budget on models that already have a report (or are mid-build);
+      // new models enter through the on-demand report job.
+      catalog = catalog.filter((m) => m.reportStatus === "ready" || m.reportStatus === "building");
+    }
     if (catalog.length === 0) log("no models with aliases; nothing to pull");
 
     for (const m of catalog) {

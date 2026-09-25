@@ -5,6 +5,9 @@ import { getMarketSnapshot, listMarketModels } from "@/lib/market/source";
 import { ModelMarket } from "@/components/market/model-market";
 import { GenerationGuide } from "@/components/market/tables";
 import { longDate, usd } from "@/components/market/format";
+import { getCatalogModel } from "@/server/queries/catalog";
+import { requestMarketReport } from "@/server/reports";
+import { ReportPending } from "./report-pending";
 
 export const revalidate = 3600;
 
@@ -18,7 +21,15 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
   const { make, model } = await params;
   const s = await getMarketSnapshot(make, model);
-  if (!s) return { title: "Model not found" };
+  if (!s) {
+    const c = await getCatalogModel(make, model);
+    if (!c) return { title: "Model not found" };
+    return {
+      title: `${c.make} ${c.model} market report`,
+      description: `Market report for the ${c.make} ${c.model} is being built from dealer sales and auction results.`,
+      robots: { index: false, follow: false },
+    };
+  }
   const top = s.generations[s.order[0]];
   const title = `${s.make.name} ${s.model.name} prices and market report`;
   const description = `${s.totals.dealerSales} dealer sales and ${s.totals.auctionSales} auction results. ${top.name} median ${usd(top.median)}, ${s.totals.activeNow} for sale now. Data through ${longDate(s.dataThrough)}. Value your ${s.model.shortName} and see whether to auction it, sell to a dealer, or list it yourself.`;
@@ -33,7 +44,43 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
 export default async function ModelPage({ params }: { params: Promise<Params> }) {
   const { make, model } = await params;
   const s = await getMarketSnapshot(make, model);
-  if (!s) notFound();
+  if (!s) {
+    const c = await getCatalogModel(make, model);
+    if (!c) notFound();
+    const years = c.yearStart ? `${c.yearStart} to ${c.yearEnd ?? "present"}` : "";
+    // A first visit (even without JavaScript) queues the report; the action is idempotent.
+    let status = c.reportStatus;
+    if (status === "none") {
+      const r = await requestMarketReport({ makeSlug: c.makeSlug, modelSlug: c.modelSlug });
+      if (r.ok) status = "requested";
+    }
+    return (
+      <>
+        <div className="crumbs">
+          <Link href="/markets" style={{ color: "var(--ink-3)", textDecoration: "none" }}>
+            Markets
+          </Link>{" "}
+          / {c.make} / <b>{c.shortName ?? c.model}</b>
+        </div>
+        <div className="hero">
+          <div>
+            <div className="eyebrow">Market report · Dealer retail and auction, United States</div>
+            <h1 className="hero-title">
+              <span>{c.parentLine ?? c.make}</span>
+              {c.shortName ?? c.model}
+            </h1>
+          </div>
+          <div className="asof">{years}</div>
+        </div>
+        <ReportPending
+          makeSlug={c.makeSlug}
+          modelSlug={c.modelSlug}
+          status={status}
+          error={c.reportError}
+        />
+      </>
+    );
+  }
   const top = s.generations[s.order[0]];
   const jsonLd = {
     "@context": "https://schema.org",

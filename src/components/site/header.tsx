@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ThemeToggle } from "./theme-toggle";
 import { UserMenu } from "./user-menu";
+import { SearchBox } from "./search";
 
 /**
  * No session read here on purpose: reading cookies in the root layout would make
@@ -23,6 +24,7 @@ export function SiteHeader() {
           <Link href="/garage">Garage</Link>
         </nav>
         <div className="bar-right">
+          <SearchBox size="compact" placeholder="Search e.g. Mercedes S63" />
           <ThemeToggle />
           <UserMenu />
         </div>

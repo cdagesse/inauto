@@ -71,17 +71,25 @@ function encodeCursor(row: { createdAt: Date; id: string }): string {
   return Buffer.from(`${row.createdAt.toISOString()}|${row.id}`).toString("base64url");
 }
 
-/** Visibility predicate: public types, plus private listings in networks the viewer belongs to. */
+/**
+ * Visibility predicate: public types, plus private listings in networks the
+ * viewer belongs to. Listings from sellers whose account is not active
+ * (disabled or blocked by an admin) are hidden from everyone but the seller.
+ */
 function visibleTo(viewerId: string | null) {
-  if (!viewerId) return ne(listings.type, "private");
+  const activeSellers = db.select({ id: users.id }).from(users).where(eq(users.status, "active"));
+  if (!viewerId)
+    return and(ne(listings.type, "private"), inArray(listings.sellerId, activeSellers));
   const memberOf = db
     .select({ id: networkMembers.networkId })
     .from(networkMembers)
     .where(eq(networkMembers.userId, viewerId));
   return or(
-    ne(listings.type, "private"),
-    inArray(listings.networkId, memberOf),
     eq(listings.sellerId, viewerId),
+    and(
+      inArray(listings.sellerId, activeSellers),
+      or(ne(listings.type, "private"), inArray(listings.networkId, memberOf)),
+    ),
   );
 }
 

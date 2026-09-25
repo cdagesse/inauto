@@ -11,11 +11,16 @@
  *   - Row fields: id, platform|source|auction_house, url, vin, year, make, model, title,
  *     mileage|miles, price|hammer_price|sold_price|high_bid, status ("sold" | "reserve_not_met" | ...),
  *     ended_at|end_date|date
+ *   - `GET /auctions/live?make=&model=&platform=&page=&per_page=` returns in-progress auctions with
+ *     the same row shape plus current_bid|high_bid, bid_count|bids, reserve_met, starts_at|start_date,
+ *     ends_at|end_date, images|photos|image_url, location, description|summary, trim, color
+ *   - `GET /auctions/{id}/bids` returns `{ data: [{ amount, bidder, placed_at }] }` (or a bare array)
  *
  * TODO verify against https://api.oldcarsdata.com/openapi.json before the first live run.
  */
 import { fetchJson, redactParams } from "./http";
 import { toInt, toIso, toStr, pick } from "./parse";
+import { resolvePlatform } from "./platforms";
 import type { CallRecorder, NormalizedAuctionRow } from "./types";
 
 export const OCD_BASE = "https://api.oldcarsdata.com";
@@ -68,6 +73,123 @@ export function normalizeOcdRow(r: unknown): NormalizedAuctionRow | null {
   };
 }
 
+/** A third-party auction that is (or was) in progress, as we store it in external_listing. */
+export interface NormalizedLiveRow {
+  source: string; // platform key
+  sourceName: string; // platform display name
+  sourceId: string;
+  url: string;
+  title: string;
+  make: string | null;
+  model: string | null;
+  year: number | null;
+  trim: string | null;
+  vin: string | null;
+  miles: number | null;
+  color: string | null;
+  location: string | null;
+  description: string | null;
+  photoUrls: string[];
+  currentBid: number | null;
+  bidCount: number | null;
+  reserveMet: boolean | null;
+  startedAt: string | null; // ISO
+  endsAt: string | null; // ISO
+  status: "live" | "sold" | "rnm" | "withdrawn" | "ended";
+  raw: unknown;
+}
+
+function toBool(v: unknown): boolean | null {
+  if (typeof v === "boolean") return v;
+  if (typeof v === "number") return v !== 0;
+  if (typeof v === "string") {
+    const s = v.trim().toLowerCase();
+    if (["true", "yes", "1", "met"].includes(s)) return true;
+    if (["false", "no", "0", "not met", "not_met"].includes(s)) return false;
+  }
+  return null;
+}
+
+function toPhotoUrls(v: unknown): string[] {
+  const list = Array.isArray(v) ? v : v ? [v] : [];
+  const out: string[] = [];
+  for (const item of list) {
+    const u =
+      typeof item === "string" ? item : toStr(pick(item, "url", "src", "large", "medium", "image"));
+    if (!u) continue;
+    try {
+      if (new URL(u).protocol === "https:") out.push(u);
+    } catch {
+      /* skip */
+    }
+    if (out.length >= 24) break;
+  }
+  return out;
+}
+
+export function normalizeLiveStatus(v: unknown, endsAt: string | null, now = new Date()) {
+  const s = (toStr(v) ?? "").toLowerCase().replace(/[\s-]+/g, "_");
+  if (["live", "active", "open", "in_progress", "running", ""].includes(s)) {
+    return endsAt && new Date(endsAt).getTime() < now.getTime()
+      ? ("ended" as const)
+      : ("live" as const);
+  }
+  if (s === "withdrawn" || s === "cancelled" || s === "canceled") return "withdrawn" as const;
+  if (s === "sold" || s === "won" || s === "completed_sold") return "sold" as const;
+  if (s === "ended" || s === "closed") return "ended" as const;
+  return "rnm" as const;
+}
+
+/** Tolerant mapping of a live-auction row. Returns null only when there is no id or no URL. */
+export function normalizeLiveRow(r: unknown, now = new Date()): NormalizedLiveRow | null {
+  const id = toStr(pick(r, "id", "auction_id", "listing_id"));
+  const url = toStr(pick(r, "url", "link"));
+  if (!id || !url) return null;
+  const platform = resolvePlatform(
+    url,
+    toStr(pick(r, "platform", "source", "auction_house", "site")),
+  );
+  const year = toInt(pick(r, "year"));
+  const make = toStr(pick(r, "make"));
+  const model = toStr(pick(r, "model"));
+  const endsAt = toIso(pick(r, "ends_at", "end_date", "end_time", "ended_at", "closes_at"));
+  const title =
+    toStr(pick(r, "title", "name")) ?? [year, make, model].filter(Boolean).join(" ") ?? "Listing";
+  return {
+    source: platform.key,
+    sourceName:
+      platform.key === "other"
+        ? (toStr(pick(r, "platform", "source")) ?? platform.name)
+        : platform.name,
+    sourceId: id,
+    url,
+    title: title || "Listing",
+    make,
+    model,
+    year,
+    trim: toStr(pick(r, "trim", "variant")),
+    vin: toStr(pick(r, "vin")),
+    miles: toInt(pick(r, "mileage", "miles", "odometer")),
+    color: toStr(pick(r, "color", "exterior_color", "exterior")),
+    location: toStr(pick(r, "location", "city_state", "seller_location")),
+    description: toStr(pick(r, "description", "summary", "excerpt")),
+    photoUrls: toPhotoUrls(pick(r, "images", "photos", "image_urls", "image_url", "thumbnail")),
+    currentBid: toInt(pick(r, "current_bid", "high_bid", "highest_bid", "price")),
+    bidCount: toInt(pick(r, "bid_count", "bids", "num_bids")),
+    reserveMet: toBool(pick(r, "reserve_met", "reserveMet")),
+    startedAt: toIso(pick(r, "starts_at", "start_date", "started_at", "listed_at")),
+    endsAt,
+    status: normalizeLiveStatus(pick(r, "status", "state"), endsAt, now),
+    raw: r,
+  };
+}
+
+export interface LiveAuctionParams {
+  make?: string;
+  model?: string;
+  platform?: string;
+}
+
 export function createOcdClient(o: OcdClientOptions) {
   const base = o.baseUrl ?? OCD_BASE;
   const maxPages = o.maxPages ?? 20;
@@ -116,6 +238,34 @@ export function createOcdClient(o: OcdClientOptions) {
       }
       return out;
     },
+    /** In-progress auctions, optionally filtered. One budget unit per page. */
+    async live(q: LiveAuctionParams = {}, now = new Date()): Promise<NormalizedLiveRow[]> {
+      const out: NormalizedLiveRow[] = [];
+      for (let page = 1; page <= maxPages; page++) {
+        const params: Record<string, string | number> = { page, per_page: perPage };
+        if (q.make) params.make = q.make;
+        if (q.model) params.model = q.model;
+        if (q.platform) params.platform = q.platform;
+        const { res, rs } = await call("/auctions/live", params);
+        for (const r of rs) {
+          const n = normalizeLiveRow(r, now);
+          if (n) out.push(n);
+        }
+        const tp = toInt(pick(res.body, "total_pages", "totalPages"));
+        if (rs.length < perPage) break;
+        if (tp != null && page >= tp) break;
+      }
+      return out;
+    },
+    /** Bid history for one auction. One budget unit. */
+    async bids(id: string): Promise<{ amount: number | null; placedAt: string | null }[]> {
+      const safe = encodeURIComponent(id);
+      const { rs } = await call(`/auctions/${safe}/bids`, {});
+      return rs.map((b) => ({
+        amount: toInt(pick(b, "amount", "bid", "value")),
+        placedAt: toIso(pick(b, "placed_at", "created_at", "time", "date")),
+      }));
+    },
     async makes(): Promise<unknown[]> {
       return (await call("/makes", {})).rs;
     },
@@ -125,3 +275,15 @@ export function createOcdClient(o: OcdClientOptions) {
   };
 }
 export type OcdClient = ReturnType<typeof createOcdClient>;
+
+/** Convenience wrappers matching the job's call sites. */
+export function fetchLiveAuctions(
+  opts: OcdClientOptions,
+  params: LiveAuctionParams = {},
+  now = new Date(),
+): Promise<NormalizedLiveRow[]> {
+  return createOcdClient(opts).live(params, now);
+}
+export function fetchAuctionBids(opts: OcdClientOptions, id: string) {
+  return createOcdClient(opts).bids(id);
+}

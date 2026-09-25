@@ -1,0 +1,1 @@
+ALTER TABLE "admin_action" ALTER COLUMN "admin_id" DROP NOT NULL;

@@ -367,9 +367,8 @@ export const adminActions = pgTable(
   "admin_action",
   {
     id: id(),
-    adminId: text("admin_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "set null" }),
+    /** Nullable so an audit row survives deletion of the admin account. */
+    adminId: text("admin_id").references(() => users.id, { onDelete: "set null" }),
     action: text("action").notNull(),
     targetType: text("target_type").notNull(),
     targetId: text("target_id").notNull(),

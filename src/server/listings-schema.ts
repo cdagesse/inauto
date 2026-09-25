@@ -1,6 +1,29 @@
 import { z } from "zod";
 
 export const PAGE_SIZE = 24;
+export const MAX_PHOTOS = 24;
+
+/** Public-read Blob store host, or any https URL for the paste-a-link fallback. */
+export const BLOB_HOST_SUFFIX = ".public.blob.vercel-storage.com";
+export const photoUrl = z
+  .string()
+  .trim()
+  .max(500)
+  .url()
+  .refine((u) => {
+    try {
+      return new URL(u).protocol === "https:";
+    } catch {
+      return false;
+    }
+  }, "Photo links must be https.");
+export const isBlobUrl = (u: string) => {
+  try {
+    return new URL(u).hostname.endsWith(BLOB_HOST_SUFFIX);
+  } catch {
+    return false;
+  }
+};
 
 export const createListingSchema = z.object({
   type: z.enum(["classified", "auction", "private"]),
@@ -25,7 +48,7 @@ export const createListingSchema = z.object({
   packages: z.array(z.string().max(30)).max(10).default([]),
   title: z.string().trim().min(4, "Title needs at least 4 characters.").max(120),
   description: z.string().trim().max(8000).optional().nullable(),
-  photos: z.array(z.string().url().max(500)).max(40).default([]),
+  photos: z.array(photoUrl).max(MAX_PHOTOS).default([]),
   location: z.string().trim().max(100).optional().nullable(),
   askingPrice: z.number().int().min(0).max(100_000_000).nullable().optional(),
   reservePrice: z.number().int().min(0).max(100_000_000).nullable().optional(),

@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { fmtDate, mi, usd } from "@/components/account/money";
 import { BidForm } from "@/components/listings/bid-form";
-import { timeLeft } from "@/components/listings/listing-card";
+import { Countdown } from "@/components/listings/countdown";
+import { PhotoGallery } from "@/components/listings/photo-gallery";
 import { ServiceOrderForm } from "@/components/listings/service-order-form";
 import { verdictClass, verdictLabel } from "@/components/listings/verdict";
 import type { PriceGuidance } from "@/lib/valuation/types";
@@ -40,7 +41,21 @@ export default async function ListingPage({
   const viewerId = session?.user?.id ?? null;
   const l = await getListingForViewer(id, viewerId);
   if (!l) notFound();
-  const ended = l.ended;
+  const closed = l.status === "sold" || l.status === "ended" || l.status === "withdrawn";
+  const ended = l.ended || closed;
+  const winningMine = l.status === "sold" && l.bids[0]?.mine === true;
+  const outcome =
+    l.type !== "auction"
+      ? null
+      : l.status === "sold"
+        ? `Sold for ${usd(l.soldPrice ?? l.highBid)}${winningMine ? " to you" : ""}`
+        : l.status === "ended"
+          ? l.highBid == null
+            ? "Ended with no bids"
+            : "Ended, reserve not met"
+          : ended
+            ? "Ended, closing shortly"
+            : null;
   const reserveMet =
     l.type === "auction" && l.highBid != null
       ? l.reservePrice == null || l.highBid >= l.reservePrice
@@ -86,8 +101,25 @@ export default async function ListingPage({
               <div className="display num" style={{ fontSize: 36 }}>
                 {l.highBid ? usd(l.highBid) : "No bids"}
               </div>
+              {outcome ? (
+                <div
+                  className={`pill ${l.status === "sold" ? "up" : ""}`}
+                  style={{ marginBottom: 4 }}
+                >
+                  {outcome}
+                </div>
+              ) : null}
               <div className="hint">
-                {l.auctionEndsAt ? timeLeft(l.auctionEndsAt) : "Not started"} ·{" "}
+                {l.auctionEndsAt && !closed ? (
+                  <>
+                    Closes in <Countdown endsAt={l.auctionEndsAt.toISOString()} />
+                  </>
+                ) : l.auctionEndsAt ? (
+                  `Closed ${fmtDate(l.closedAt ?? l.auctionEndsAt)}`
+                ) : (
+                  "Not started"
+                )}{" "}
+                ·{" "}
                 {reserveMet == null
                   ? l.reservePrice
                     ? "Reserve"
@@ -118,24 +150,7 @@ export default async function ListingPage({
 
       <div className="grid-2 listing-body">
         <div>
-          <div className="gallery">
-            {l.photos.length === 0 ? (
-              <div className="photo big">
-                <span className="lab">No photos yet</span>
-              </div>
-            ) : (
-              l.photos.map((p, i) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={i}
-                  src={p}
-                  alt={`${l.title} photo ${i + 1}`}
-                  loading={i === 0 ? "eager" : "lazy"}
-                  className={i === 0 ? "big" : ""}
-                />
-              ))
-            )}
-          </div>
+          <PhotoGallery photos={l.photos} title={l.title} />
           {l.description ? <p className="desc">{l.description}</p> : null}
           <h2 className="sec" style={{ marginTop: 20 }}>
             Specification

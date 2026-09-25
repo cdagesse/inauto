@@ -8,11 +8,13 @@ export function ServiceOrderForm({
   listingId,
   showVin = false,
   label,
+  initialVin,
 }: {
   kind: "title_vetting" | "condition_report";
   listingId?: string;
   showVin?: boolean;
   label?: string;
+  initialVin?: string;
 }) {
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
@@ -38,6 +40,7 @@ export function ServiceOrderForm({
           <input
             id={`vin-${kind}`}
             name="vin"
+            defaultValue={initialVin}
             required
             minLength={11}
             maxLength={17}

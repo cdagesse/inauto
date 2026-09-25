@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { listMarketModels } from "@/lib/market/source";
 import { usd } from "@/components/market/format";
+import { SearchBox } from "@/components/site/search";
 
 export default async function HomePage() {
   const models = await listMarketModels();
@@ -15,17 +16,13 @@ export default async function HomePage() {
           sellers whether to auction, sell to a dealer, or list it themselves. And the tools buyers
           need to not get scammed: title vetting, condition reports, and escrow.
         </p>
-        <form action="/markets" method="get" className="search" role="search">
-          <input
-            type="search"
-            name="q"
-            placeholder="Search a make or model, e.g. Porsche 911 GT3 RS"
-            aria-label="Search models"
-          />
-          <button type="submit" className="btn primary">
-            Search
-          </button>
-        </form>
+        <div className="search" role="search">
+          <SearchBox size="hero" placeholder="Search a make or model, e.g. Mercedes S63" />
+        </div>
+        <p className="note" style={{ marginTop: 8 }}>
+          Start with the make. Pick a model and we build its market report from dealer sales and
+          auction results.
+        </p>
       </section>
 
       <section className="props">

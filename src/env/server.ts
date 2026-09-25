@@ -29,6 +29,9 @@ const schema = z.object({
   VISOR_MONTHLY_BUDGET: z.coerce.number().int().positive().default(2000),
   OCD_API_KEY: optionalString,
   OCD_MONTHLY_BUDGET: z.coerce.number().int().positive().default(10),
+  BLOB_READ_WRITE_TOKEN: optionalString,
+  /** "true" shows third-party listing photos. Off until platform terms are cleared. */
+  EXTERNAL_PHOTOS: optionalString,
 });
 
 const parsed = schema.safeParse(process.env);
@@ -42,4 +45,5 @@ export const env = {
   isProd: parsed.data.NODE_ENV === "production",
   devLoginEnabled: parsed.data.NODE_ENV !== "production" && parsed.data.AUTH_DEV_LOGIN === "true",
   jobsDryRun: parsed.data.JOBS_DRY_RUN !== "false",
+  externalPhotos: parsed.data.EXTERNAL_PHOTOS === "true",
 };

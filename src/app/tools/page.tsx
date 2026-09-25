@@ -17,7 +17,16 @@ const KIND_LABEL = {
   escrow: "Escrow",
 } as const;
 
-export default async function ToolsPage() {
+export default async function ToolsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ vin?: string; kind?: string }>;
+}) {
+  const sp = await searchParams;
+  // Prefill from external listing pages (/tools?vin=…). Only VIN-shaped input is accepted.
+  const initialVin = /^[A-HJ-NPR-Z0-9]{11,17}$/i.test(sp.vin ?? "")
+    ? sp.vin!.toUpperCase()
+    : undefined;
   const session = await auth();
   const orders = session?.user?.id ? await listMyServiceOrders(session.user.id) : [];
   return (
@@ -104,7 +113,7 @@ export default async function ToolsPage() {
           report is ready.
         </p>
         {session?.user ? (
-          <ServiceOrderForm kind="title_vetting" showVin />
+          <ServiceOrderForm kind="title_vetting" showVin initialVin={initialVin} />
         ) : (
           <p className="note">
             <Link href={`/signin?callbackUrl=${encodeURIComponent("/tools#vin")}`}>Sign in</Link> to
