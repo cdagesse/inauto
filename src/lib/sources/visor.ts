@@ -81,8 +81,16 @@ export function errorDetail(body: unknown): string {
 }
 
 /** ILIKE pattern → case-insensitive RegExp ("%GT3 RS%" matches "GT3 RS Weissach"). */
+/**
+ * Trim spellings vary by dealer feed ("AMG S 63", "S63 AMG®", "AMG® S 63"), so both the
+ * pattern and the candidate are compared with spaces, hyphens and ®/™ removed.
+ */
+export function normalizeTrim(v: string): string {
+  return v.replace(/[\s\-®™]/g, "").toLowerCase();
+}
+
 export function patternToRegExp(pattern: string): RegExp {
-  const esc = pattern
+  const esc = normalizeTrim(pattern)
     .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
     .replace(/%/g, ".*")
     .replace(/_/g, ".");
@@ -99,7 +107,9 @@ export function selectTrims(facetBody: unknown, pattern: string): string[] {
       value: toStr(pick(b, "value", "key", "name")),
       count: toInt(pick(b, "count")) ?? 0,
     }))
-    .filter((b): b is { value: string; count: number } => !!b.value && re.test(b.value))
+    .filter(
+      (b): b is { value: string; count: number } => !!b.value && re.test(normalizeTrim(b.value)),
+    )
     .sort((a, b) => b.count - a.count)
     .slice(0, VISOR_MAX_TRIMS)
     .map((b) => b.value);
@@ -196,7 +206,7 @@ export function createVisorClient(o: VisorClientOptions) {
         const n = normalizeVisorRow(r);
         if (!n) continue;
         // Safety net: even with a server-side trim list, keep only rows matching the pattern.
-        if (re && !(n.rawTrim && re.test(n.rawTrim))) continue;
+        if (re && !(n.rawTrim && re.test(normalizeTrim(n.rawTrim)))) continue;
         out.push(n);
       }
       const next = nextOffset(res.body);

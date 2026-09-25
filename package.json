@@ -16,7 +16,8 @@
     "db:migrate": "tsx src/db/migrate.ts",
     "db:seed": "tsx src/db/seed.ts",
     "jobs:nightly": "tsx src/jobs/run-nightly.ts",
-    "users:role": "tsx src/db/set-role.ts"
+    "users:role": "tsx src/db/set-role.ts",
+    "demo:purge": "tsx src/db/purge-demo.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",

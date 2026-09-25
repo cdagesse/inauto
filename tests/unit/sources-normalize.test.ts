@@ -247,8 +247,8 @@ describe("visor normalization", () => {
   });
 
   it("turns an ILIKE pattern into a regexp and selects matching facet trims by count", () => {
-    expect(patternToRegExp("%GT3 RS%").test("GT3 RS Weissach")).toBe(true);
-    expect(patternToRegExp("%GT3 RS%").test("GT3 Touring")).toBe(false);
+    expect(patternToRegExp("%GT3 RS%").test(normalizeTrim("GT3 RS Weissach"))).toBe(true);
+    expect(patternToRegExp("%GT3 RS%").test(normalizeTrim("GT3 Touring"))).toBe(false);
     expect(selectTrims(visorFacets, "%GT3 RS%")).toEqual(["GT3 RS", "GT3 RS Weissach"]);
     expect(selectTrims({}, "%x%")).toEqual([]);
   });
@@ -485,7 +485,7 @@ describe("ocd normalization", () => {
     expect(u.searchParams.get("status")).toBe("sold");
     expect(u.searchParams.get("pagination")).toBe("cursor");
     expect(u.searchParams.get("limit")).toBe("100");
-    expect(u.searchParams.get("sort")).toBe("auction_end_at");
+    expect(u.searchParams.get("sort")).toBeNull(); // verified: the API rejects sort=auction_end_at
     expect(new URL(urls[1]).searchParams.get("status")).toBe("reserve not met");
     expect(metas.length).toBe(2);
   });
@@ -503,7 +503,7 @@ describe("ocd normalization", () => {
     const client = createOcdClient({ apiKey: "k", record: rec, fetchImpl: impl });
     const rows = await client.auctions({ make: "Porsche", model: "911" }, null);
     expect(rows.length).toBe(4);
-    expect(calls).toBe(3); // 1 rejected + 2 unsorted walks (sort stays off after the first rejection)
+    expect(calls).toBe(2); // sort is never attempted, so no wasted call (sort stays off after the first rejection)
   });
 
   it("live(): uses /auctions/live with page params and maps price/bids/end", async () => {
@@ -560,5 +560,36 @@ describe("ocd normalization", () => {
     const client = createOcdClient({ apiKey: "k", record: rec, fetchImpl });
     await expect(client.auctions({ make: "Porsche" }, null)).rejects.toThrow("BudgetExceeded");
     expect(fetched).toBe(0);
+  });
+});
+
+import { normalizeTrim, patternToRegExp as p2r, selectTrims as st } from "@/lib/sources/visor";
+
+describe("trim matching ignores spacing and symbols", () => {
+  const facets = {
+    data: {
+      facets: {
+        trim: [
+          { value: "S 580", count: 4405 },
+          { value: "AMG S 63", count: 391 },
+          { value: "S63 AMG®", count: 93 },
+          { value: "AMG® S 63", count: 40 },
+          { value: "S 63", count: 20 },
+          { value: "S 560", count: 306 },
+        ],
+      },
+    },
+  };
+  it("selects every S63 spelling and nothing else", () => {
+    expect(st(facets, "%S63%").sort()).toEqual(
+      ["AMG S 63", "AMG® S 63", "S 63", "S63 AMG®"].sort(),
+    );
+    expect(st(facets, "%S 63%")).toHaveLength(4);
+  });
+  it("row filter accepts symbol variants", () => {
+    const re = p2r("%GT3 RS%");
+    expect(re.test(normalizeTrim("GT3 RS Weissach"))).toBe(true);
+    expect(re.test(normalizeTrim("GT3-RS"))).toBe(true);
+    expect(re.test(normalizeTrim("GT3 Touring"))).toBe(false);
   });
 });

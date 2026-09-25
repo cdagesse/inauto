@@ -367,8 +367,11 @@ export function createOcdClient(o: OcdClientOptions) {
   const maxPages = o.maxPages ?? 20;
   const perPage = Math.min(o.perPage ?? OCD_PAGE_SIZE, 100);
   const headers = { Authorization: `Bearer ${o.apiKey}` };
-  /** Whether /auctions accepts sort=auction_end_at; flipped off for the client's lifetime on a rejection. */
-  let sortSupported = true;
+  /**
+   * Whether /auctions accepts sort=auction_end_at. Verified 2026-09-25: the API answers
+   * `sort: Invalid option`, so start with it off and never spend a budgeted call to find out.
+   */
+  let sortSupported = false;
 
   async function call(path: string, params: Params, free = false) {
     const qs = new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)]));

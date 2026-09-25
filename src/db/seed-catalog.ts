@@ -14,66 +14,56 @@ type Db = PostgresJsDatabase<typeof schema>;
 export async function seedCatalog(
   db: Db,
 ): Promise<{ makes: number; models: number; generations: number }> {
+  // One multi-row upsert per table: the seed runs against Neon over the network,
+  // so per-row round trips would take minutes.
   const makeIds = new Map<string, string>();
-  for (const m of MAKES) {
-    const [row] = await db
-      .insert(schema.makes)
-      .values({ name: m.name, slug: m.slug })
-      .onConflictDoUpdate({ target: schema.makes.slug, set: { name: m.name } })
-      .returning({ id: schema.makes.id });
-    makeIds.set(m.slug, row!.id);
-  }
+  const makeRows = await db
+    .insert(schema.makes)
+    .values(MAKES.map((m) => ({ name: m.name, slug: m.slug })))
+    .onConflictDoUpdate({ target: schema.makes.slug, set: { name: sql`excluded.name` } })
+    .returning({ id: schema.makes.id, slug: schema.makes.slug });
+  for (const r of makeRows) makeIds.set(r.slug, r.id);
 
   const modelIds = new Map<string, string>();
-  for (const e of CATALOG) {
-    const makeId = makeIds.get(e.makeSlug)!;
-    const values = {
-      makeId,
-      name: e.model,
-      slug: e.modelSlug,
-      shortName: e.shortName ?? null,
-      parentLine: e.parentLine ?? e.make,
-      yearStart: e.yearStart,
-      yearEnd: e.yearEnd,
-      published: true,
-      searchText: searchTextFor(e),
-    };
-    const [row] = await db
+  const modelValues = CATALOG.map((e) => ({
+    makeId: makeIds.get(e.makeSlug)!,
+    name: e.model,
+    slug: e.modelSlug,
+    shortName: e.shortName ?? null,
+    parentLine: e.parentLine ?? e.make,
+    yearStart: e.yearStart,
+    yearEnd: e.yearEnd,
+    published: true,
+    searchText: searchTextFor(e),
+  }));
+  const slugByMakeId = new Map(MAKES.map((m) => [makeIds.get(m.slug)!, m.slug]));
+  for (let i = 0; i < modelValues.length; i += 200) {
+    const rows = await db
       .insert(schema.models)
-      .values(values)
+      .values(modelValues.slice(i, i + 200))
       .onConflictDoUpdate({
         target: [schema.models.makeId, schema.models.slug],
         set: {
-          name: values.name,
-          parentLine: values.parentLine,
-          yearStart: values.yearStart,
-          yearEnd: values.yearEnd,
+          name: sql`excluded.name`,
+          parentLine: sql`excluded.parent_line`,
+          yearStart: sql`excluded.year_start`,
+          yearEnd: sql`excluded.year_end`,
           published: true,
-          searchText: values.searchText,
+          searchText: sql`excluded.search_text`,
           // Keep a curated shortName if one exists.
-          shortName: sql`coalesce(${schema.models.shortName}, ${values.shortName})`,
+          shortName: sql`coalesce(${schema.models.shortName}, excluded.short_name)`,
         },
       })
-      .returning({ id: schema.models.id });
-    modelIds.set(`${e.makeSlug}/${e.modelSlug}`, row!.id);
+      .returning({ id: schema.models.id, makeId: schema.models.makeId, slug: schema.models.slug });
+    for (const r of rows) modelIds.set(`${slugByMakeId.get(r.makeId)}/${r.slug}`, r.id);
   }
 
   const ids = [...modelIds.values()];
-  // Aliases: one row per model per source, updated in place so a corrected catalog fixes
-  // production rows on re-seed. (model_alias has no unique key; match on modelId + source.)
-  const existingAliases = await db
-    .select({
-      id: schema.modelAliases.id,
-      modelId: schema.modelAliases.modelId,
-      source: schema.modelAliases.source,
-    })
-    .from(schema.modelAliases)
-    .where(inArray(schema.modelAliases.modelId, ids));
-  const aliasId = new Map(existingAliases.map((a) => [`${a.modelId}:${a.source}`, a.id]));
-  const aliasRows: (typeof schema.modelAliases.$inferInsert)[] = [];
-  for (const e of CATALOG) {
+
+  // Aliases are fully owned by the catalog: replace them for catalog models in two statements.
+  const aliasRows: (typeof schema.modelAliases.$inferInsert)[] = CATALOG.flatMap((e) => {
     const modelId = modelIds.get(`${e.makeSlug}/${e.modelSlug}`)!;
-    const wanted: (typeof schema.modelAliases.$inferInsert)[] = [
+    return [
       {
         modelId,
         source: "visor",
@@ -90,17 +80,18 @@ export async function seedCatalog(
         rawTrimPattern: encodeOcdKeyword(e.aliases.ocd.keyword, e.aliases.ocd.excludeKeyword),
       },
     ];
-    for (const w of wanted) {
-      const id = aliasId.get(`${modelId}:${w.source}`);
-      if (id) {
-        await db
-          .update(schema.modelAliases)
-          .set({ rawMake: w.rawMake, rawModel: w.rawModel, rawTrimPattern: w.rawTrimPattern })
-          .where(eq(schema.modelAliases.id, id));
-      } else aliasRows.push(w);
-    }
+  });
+  await db
+    .delete(schema.modelAliases)
+    .where(
+      and(
+        inArray(schema.modelAliases.modelId, ids),
+        inArray(schema.modelAliases.source, ["visor", "ocd"]),
+      ),
+    );
+  for (let i = 0; i < aliasRows.length; i += 400) {
+    await db.insert(schema.modelAliases).values(aliasRows.slice(i, i + 400));
   }
-  if (aliasRows.length) await db.insert(schema.modelAliases).values(aliasRows);
 
   const withGens = new Set(
     (
