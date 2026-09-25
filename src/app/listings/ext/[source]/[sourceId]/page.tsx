@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { ExternalDetail, type InAutoRead } from "@/components/listings/external-detail";
+import { MarketBlock } from "@/components/listings/market-block";
+import { packagesFromText } from "@/components/market/market-summary-lib";
 import { env } from "@/env/server";
 import { getMarketSnapshot } from "@/lib/market/source";
 import { isPlatformKey } from "@/lib/sources/platforms";
@@ -67,7 +69,32 @@ export default async function ExternalListingPage({ params }: { params: Params }
     read = { valuation, reportHref, modelName: l.market.modelName, pending: !snapshot };
   }
 
+  const live = l.status === "live";
+  const price = live ? l.currentBid : (l.finalPrice ?? l.currentBid);
+  const priceLabel = l.status === "sold" ? "Sold for" : "Current bid";
+  const market = (
+    <MarketBlock
+      market={l.market}
+      make={l.make}
+      model={l.model}
+      car={{
+        year: l.year,
+        miles: l.miles,
+        price: price ?? null,
+        packages: packagesFromText(`${l.title} ${l.trim ?? ""}`),
+        title: l.title,
+      }}
+      priceLabel={priceLabel}
+    />
+  );
+
   return (
-    <ExternalDetail l={l} read={read} showPhotos={env.externalPhotos} signedIn={!!session?.user} />
+    <ExternalDetail
+      l={l}
+      read={read}
+      showPhotos={env.externalPhotos}
+      signedIn={!!session?.user}
+      market={market}
+    />
   );
 }

@@ -7,12 +7,21 @@ import { useWidth } from "./use-width";
 
 type Tip = { x: number; y: number; html: React.ReactNode };
 
+export interface ScatterHighlight {
+  miles: number;
+  price: number;
+  label: string;
+}
+
 export function ScatterChart({
   snapshot,
   selected,
+  highlight,
 }: {
   snapshot: MarketSnapshot;
   selected: string;
+  /** One extra point (for example the car on a listing page) drawn as a ring on top of the cloud. */
+  highlight?: ScatterHighlight;
 }) {
   const [ref, width] = useWidth<HTMLDivElement>(560);
   const [tip, setTip] = useState<Tip | null>(null);
@@ -35,7 +44,10 @@ export function ScatterChart({
   );
   const all = pts
     .map((p) => [p.miles, p.price / 1000] as const)
-    .concat(auctionsSold.map((r) => [r.miles, r.price / 1000] as const));
+    .concat(auctionsSold.map((r) => [r.miles, r.price / 1000] as const))
+    .concat(
+      highlight && highlight.price > 0 ? [[highlight.miles, highlight.price / 1000] as const] : [],
+    );
   const xmax = Math.max(...all.map((p) => p[0]));
   const xt = niceTicks(0, xmax, 5);
   const ymin = Math.min(...all.map((p) => p[1]));
@@ -171,6 +183,42 @@ export function ScatterChart({
             <text x={lx + 73} y={ly + 4} className="lbl">
               Auction
             </text>
+          </g>
+        )}
+        {highlight && highlight.price > 0 && (
+          <g>
+            <circle
+              cx={xs(Math.min(highlight.miles, xTop))}
+              cy={ys(highlight.price / 1000)}
+              r={9}
+              fill="none"
+              stroke="var(--accent)"
+              strokeWidth={2.5}
+            />
+            <circle
+              cx={xs(Math.min(highlight.miles, xTop))}
+              cy={ys(highlight.price / 1000)}
+              r={3.5}
+              fill="var(--accent)"
+            />
+            <circle
+              cx={xs(Math.min(highlight.miles, xTop))}
+              cy={ys(highlight.price / 1000)}
+              r={14}
+              fill="transparent"
+              onPointerEnter={() =>
+                setTip({
+                  x: xs(Math.min(highlight.miles, xTop)),
+                  y: ys(highlight.price / 1000),
+                  html: (
+                    <>
+                      {highlight.label} · <b>{usd(highlight.price)}</b> · {mi(highlight.miles)} mi
+                    </>
+                  ),
+                })
+              }
+              onPointerLeave={() => setTip(null)}
+            />
           </g>
         )}
         <line x1={M.l} x2={W - M.r} y1={my} y2={my} stroke="var(--ink-2)" strokeDasharray="4 4" />

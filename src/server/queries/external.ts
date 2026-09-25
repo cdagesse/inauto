@@ -171,6 +171,8 @@ export interface ExternalDetail extends ExternalCardData {
     modelSlug: string;
     modelName: string;
     generationCode: string | null;
+    reportStatus: "none" | "requested" | "building" | "ready" | "failed";
+    reportError: string | null;
   } | null;
 }
 
@@ -193,6 +195,8 @@ export async function getExternalListing(
       modelSlug: models.slug,
       modelName: models.name,
       generationCode: generations.code,
+      reportStatus: models.reportStatus,
+      reportError: models.reportError,
     })
     .from(externalListings)
     .leftJoin(models, eq(models.id, externalListings.modelId))
@@ -201,7 +205,7 @@ export async function getExternalListing(
     .where(and(eq(externalListings.source, source), eq(externalListings.sourceId, sourceId)))
     .limit(1);
   if (!r) return null;
-  const { makeSlug, modelSlug, modelName, generationCode, ...rest } = r;
+  const { makeSlug, modelSlug, modelName, generationCode, reportStatus, reportError, ...rest } = r;
   return {
     ...asCard(rest),
     url: rest.url,
@@ -213,8 +217,15 @@ export async function getExternalListing(
     startedAt: rest.startedAt,
     fetchedAt: rest.fetchedAt,
     market:
-      makeSlug && modelSlug && modelName
-        ? { makeSlug, modelSlug, modelName, generationCode: generationCode ?? null }
+      makeSlug && modelSlug && modelName && reportStatus
+        ? {
+            makeSlug,
+            modelSlug,
+            modelName,
+            generationCode: generationCode ?? null,
+            reportStatus,
+            reportError: reportError ?? null,
+          }
         : null,
   };
 }

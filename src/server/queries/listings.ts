@@ -3,7 +3,16 @@ import { and, desc, eq, inArray, lt, ne, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db";
-import { bids, listings, networkMembers, networks, users } from "@/db/schema";
+import {
+  bids,
+  generations,
+  listings,
+  makes,
+  models,
+  networkMembers,
+  networks,
+  users,
+} from "@/db/schema";
 import { type ListingFilter, minimumIncrement, PAGE_SIZE } from "../listings-schema";
 import { type ActionResult, fail, toError } from "../result";
 
@@ -143,10 +152,19 @@ export async function getListingForViewer(id: string, viewerId: string | null) {
       sellerName: users.name,
       networkName: networks.name,
       networkSlug: networks.slug,
+      makeSlug: makes.slug,
+      modelSlug: models.slug,
+      modelName: models.name,
+      generationCode: generations.code,
+      reportStatus: models.reportStatus,
+      reportError: models.reportError,
     })
     .from(listings)
     .innerJoin(users, eq(users.id, listings.sellerId))
     .leftJoin(networks, eq(networks.id, listings.networkId))
+    .leftJoin(models, eq(models.id, listings.modelId))
+    .leftJoin(makes, eq(makes.id, models.makeId))
+    .leftJoin(generations, eq(generations.id, listings.generationId))
     .where(and(eq(listings.id, id), visibleTo(viewerId)))
     .limit(1);
   if (!row) return null;
@@ -168,6 +186,18 @@ export async function getListingForViewer(id: string, viewerId: string | null) {
     sellerName: row.sellerName,
     networkName: row.networkName,
     networkSlug: row.networkSlug,
+    /** Catalog model the seller's car was matched to at listing time, if any. */
+    market:
+      row.makeSlug && row.modelSlug && row.modelName && row.reportStatus
+        ? {
+            makeSlug: row.makeSlug,
+            modelSlug: row.modelSlug,
+            modelName: row.modelName,
+            generationCode: row.generationCode ?? null,
+            reportStatus: row.reportStatus,
+            reportError: row.reportError ?? null,
+          }
+        : null,
     isOwner,
     ended: l.type === "auction" && l.auctionEndsAt ? l.auctionEndsAt.getTime() <= now : false,
     bids: bidRows.map((b) => ({

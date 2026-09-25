@@ -2026,3 +2026,57 @@ svg .lbl {
 .delta.at {
   color: var(--ink-2);
 }
+
+/* market summary */
+.market-summary {
+  margin-top: 28px;
+  border-top: 2px solid var(--ink);
+  padding-top: 8px;
+}
+.market-summary .ms-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-block: 8px 12px;
+}
+.market-summary .gens {
+  padding-block: 4px 14px;
+}
+.market-summary .kpis .kpi:first-child .v {
+  font-size: 34px;
+}
+.this-car {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.this-car .big {
+  font-size: clamp(26px, 4vw, 34px);
+  font-weight: 800;
+  font-stretch: 108%;
+  line-height: 1.1;
+  margin: 4px 0;
+}
+.this-car .delta {
+  font-weight: 600;
+  font-size: 14px;
+}
+.this-car .delta.under {
+  color: var(--up);
+}
+.this-car .delta.over {
+  color: var(--down);
+}
+.this-car .delta.at {
+  color: var(--ink-2);
+}
+.market-summary .note {
+  margin-top: 16px;
+}
+@media (max-width: 640px) {
+  .this-car {
+    grid-template-columns: 1fr;
+  }
+}

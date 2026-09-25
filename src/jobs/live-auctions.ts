@@ -249,6 +249,8 @@ export async function syncLiveAuctions(
               url: values.url,
               status: values.status,
               title: values.title,
+              make: sql`coalesce(excluded.make, ${externalListings.make})`,
+              model: sql`coalesce(excluded.model, ${externalListings.model})`,
               year: values.year,
               trim: values.trim,
               vin: sql`coalesce(${externalListings.vin}, excluded.vin)`,

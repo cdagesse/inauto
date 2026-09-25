@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { fmtDate, mi, usd } from "@/components/account/money";
 import { BidForm } from "@/components/listings/bid-form";
 import { Countdown } from "@/components/listings/countdown";
+import { MarketBlock } from "@/components/listings/market-block";
 import { PhotoGallery } from "@/components/listings/photo-gallery";
 import { ServiceOrderForm } from "@/components/listings/service-order-form";
 import { verdictClass, verdictLabel } from "@/components/listings/verdict";
@@ -63,6 +64,14 @@ export default async function ListingPage({
   const minBid = l.highBid ? l.highBid + minimumIncrement(l.highBid) : 100;
   const guidance = l.priceGuidance as PriceGuidance | null;
   const signinHref = `/signin?callbackUrl=${encodeURIComponent(`/listings/${l.id}`)}`;
+  const marketPrice =
+    l.status === "sold"
+      ? (l.soldPrice ?? l.highBid ?? l.askingPrice)
+      : l.type === "auction"
+        ? l.highBid
+        : l.askingPrice;
+  const marketLabel =
+    l.status === "sold" ? "Sold for" : l.type === "auction" ? "Current bid" : "Asking price";
   return (
     <article>
       <div className="page-head">
@@ -209,6 +218,19 @@ export default async function ListingPage({
               </div>
             </>
           ) : null}
+          <MarketBlock
+            market={l.market}
+            make={l.make}
+            model={l.model}
+            car={{
+              year: l.year,
+              miles: l.miles,
+              price: marketPrice ?? null,
+              packages: l.packages,
+              title: l.title,
+            }}
+            priceLabel={marketLabel}
+          />
         </div>
 
         <aside className="side">

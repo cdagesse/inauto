@@ -24,11 +24,14 @@ export function ExternalDetail({
   read,
   showPhotos,
   signedIn,
+  market,
 }: {
   l: ExternalDetailData;
   read: InAutoRead | null;
   showPhotos: boolean;
   signedIn: boolean;
+  /** Full market data section (KPIs, charts, comps), rendered under the listing details. */
+  market?: React.ReactNode;
 }) {
   const p = PLATFORMS[l.source] ?? PLATFORMS.other;
   const platformName = l.source === "other" ? l.sourceName : p.name;
@@ -149,6 +152,7 @@ export function ExternalDetail({
             Listing details are provided by the platform; InAuto is not the seller. Bid and buy on
             the platform.
           </p>
+          {market}
         </div>
 
         <aside className="side">
