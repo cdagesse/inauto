@@ -8,7 +8,7 @@
  * - never logs secrets: headers are not logged, and URLs are redacted before they appear in errors
  */
 
-export const USER_AGENT = "InAuto/0.1 (+https://inauto.vercel.app)";
+export const USER_AGENT = "InAuto/0.1 (+https://inauto-nu.vercel.app)";
 const TIMEOUT_MS = 20_000;
 const MAX_ATTEMPTS = 3;
 

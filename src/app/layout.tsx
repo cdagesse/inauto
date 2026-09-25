@@ -26,7 +26,7 @@ import { SiteFooter } from "@/components/site/footer";
 import { Providers } from "@/components/site/providers";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://inauto.vercel.app"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://inauto-nu.vercel.app"),
   title: { default: "InAuto", template: "%s · InAuto" },
   description:
     "Collector car market data, pricing tools, and a safer way to buy and sell: classifieds, auctions, private networks, title vetting and condition reports.",
