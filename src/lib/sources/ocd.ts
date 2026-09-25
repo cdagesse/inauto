@@ -1,22 +1,32 @@
 /**
  * Old Cars Data API client (https://api.oldcarsdata.com).
  *
- * Known from the spec: Bearer auth, a real User-Agent is mandatory (403 otherwise),
- * endpoints /auctions, /stats, /makes, /models, /auctions/live, /auctions/{id}/bids,
- * OpenAPI at /openapi.json. Free plan: 20 rows per search, 10 searches a month.
+ * Verified against https://api.oldcarsdata.com/openapi.json:
+ *   - Auth `Authorization: Bearer <OCD_API_KEY>`; a real User-Agent is mandatory.
+ *   - `/makes` and `/models?make=` are PUBLIC (no auth, not counted against the budget).
+ *   - `GET /auctions` params: make, model, vin, seller_username, year_min, year_max, price_min,
+ *     price_max, status, source, keyword, sort, direction, pagination (`cursor` recommended),
+ *     cursor, page, limit (1–100). Cursor response: `meta.has_more`, `meta.next_cursor`;
+ *     page response: `meta.total, meta.page, meta.limit, meta.total_pages`. Rows in `data`.
+ *   - `GET /auctions/live` params: make, model, vin, seller_username, year_min, year_max,
+ *     price_min, price_max, source, keyword, ending_after, ending_before, updated_since, sort,
+ *     direction, page, limit.
+ *   - `GET /auctions/{auction_id}/bids` (integer id): bid_after, bid_before, sort, direction,
+ *     page, limit.
+ *   - Auction object: id, source (platform), url, vin, seller_username, year, listing_make,
+ *     listing_model, ocd_make_name, ocd_model_name, engine, drivetrain, transmission, body_style,
+ *     title_status, mileage, mileage_unit, exterior_color, standard_exterior_color,
+ *     interior_color, modifications, known_flaws, recent_service_history, title, description,
+ *     auction_status (sold | result unavailable | reserve not met | canceled | unknown | active |
+ *     withdrawn), has_reserve, auction_end_at, auction_end_precision, price, currency, city,
+ *     state, zip, country_code, stats { views, watches, likes, bids, unique_bidder_count },
+ *     featured_image_url, created_at, seller_type, listing_details, ownership_history.
+ *   - OCD "models" are LINES (Porsche "911", Mercedes-Benz "S-Class"): variants such as
+ *     "GT3 RS" or "S63" are found with `keyword`. Our alias therefore stores the line in
+ *     rawModel ("" when OCD has no matching line) and the keyword in rawTrimPattern.
  *
- * ASSUMPTIONS:
- *   - `GET /auctions?make=&model=&ended_after=<ISO>&page=&per_page=`
- *   - Response `{ data: Row[], page, total_pages }` (also tolerates a bare array / `{ auctions }`)
- *   - Row fields: id, platform|source|auction_house, url, vin, year, make, model, title,
- *     mileage|miles, price|hammer_price|sold_price|high_bid, status ("sold" | "reserve_not_met" | ...),
- *     ended_at|end_date|date
- *   - `GET /auctions/live?make=&model=&platform=&page=&per_page=` returns in-progress auctions with
- *     the same row shape plus current_bid|high_bid, bid_count|bids, reserve_met, starts_at|start_date,
- *     ends_at|end_date, images|photos|image_url, location, description|summary, trim, color
- *   - `GET /auctions/{id}/bids` returns `{ data: [{ amount, bidder, placed_at }] }` (or a bare array)
- *
- * TODO verify against https://api.oldcarsdata.com/openapi.json before the first live run.
+ * Whether `sort=auction_end_at` is accepted is not stated by the spec; the client tries it and
+ * falls back to unsorted paging (with a page cap) on a validation error.
  */
 import { fetchJson, redactParams } from "./http";
 import { toInt, toIso, toStr, pick } from "./parse";
@@ -24,6 +34,8 @@ import { resolvePlatform } from "./platforms";
 import type { CallRecorder, NormalizedAuctionRow } from "./types";
 
 export const OCD_BASE = "https://api.oldcarsdata.com";
+export const OCD_PAGE_SIZE = 100;
+const KM_TO_MILES = 0.621371;
 
 export interface OcdClientOptions {
   apiKey: string;
@@ -34,41 +46,179 @@ export interface OcdClientOptions {
   perPage?: number;
 }
 
+export class OcdApiError extends Error {
+  constructor(
+    public readonly endpoint: string,
+    public readonly status: number,
+    public readonly detail: string,
+  ) {
+    super(`OCD ${endpoint} returned ${status}${detail ? `: ${detail}` : ""}`);
+    this.name = "OcdApiError";
+  }
+}
+
 function rows(body: unknown): unknown[] {
   if (Array.isArray(body)) return body;
-  const d = pick(body, "data", "auctions", "results", "items");
+  const d = pick(body, "data");
   return Array.isArray(d) ? d : [];
 }
-
-export function normalizeOcdStatus(v: unknown): NormalizedAuctionRow["status"] {
-  const s = (toStr(v) ?? "").toLowerCase().replace(/[\s-]+/g, "_");
-  if (s === "sold" || s === "won" || s === "completed_sold") return "sold";
-  if (s === "withdrawn" || s === "cancelled" || s === "canceled") return "withdrawn";
-  // reserve_not_met, rnm, not_sold, unsold, bid_to, ended
-  return "rnm";
+function meta(body: unknown) {
+  const m = pick(body, "meta");
+  return {
+    hasMore: pick(m, "has_more") === true,
+    nextCursor: toStr(pick(m, "next_cursor")),
+    totalPages: toInt(pick(m, "total_pages")),
+  };
+}
+function errorDetail(body: unknown): string {
+  if (!body || typeof body !== "object") return "";
+  const err = pick(body, "error", "message", "detail");
+  const text =
+    typeof err === "string"
+      ? err
+      : err && typeof err === "object"
+        ? String(pick(err, "message", "code") ?? "")
+        : "";
+  return text.replace(/\s+/g, " ").slice(0, 160);
 }
 
+/* ------------------------------------------------------------------ */
+/* Alias encoding: rawModel = OCD line ("" = any), rawTrimPattern = keyword [!~ exclude] */
+/* ------------------------------------------------------------------ */
+
+export const OCD_EXCLUDE_SEP = " !~ ";
+
+export interface OcdAlias {
+  make: string;
+  /** OCD model line, or "" to match any line of the make. */
+  model: string;
+  keyword: string | null;
+  excludeKeyword: string | null;
+}
+
+export function encodeOcdKeyword(keyword?: string | null, exclude?: string | null): string | null {
+  const k = (keyword ?? "").trim();
+  const x = (exclude ?? "").trim();
+  if (!k && !x) return null;
+  return x ? `${k}${OCD_EXCLUDE_SEP}${x}` : k;
+}
+
+export function parseOcdAlias(a: {
+  rawMake: string;
+  rawModel: string | null;
+  rawTrimPattern: string | null;
+}): OcdAlias {
+  const raw = (a.rawTrimPattern ?? "").trim();
+  const i = raw.indexOf(OCD_EXCLUDE_SEP);
+  const keyword = (i >= 0 ? raw.slice(0, i) : raw).trim() || null;
+  const excludeKeyword = (i >= 0 ? raw.slice(i + OCD_EXCLUDE_SEP.length) : "").trim() || null;
+  return { make: a.rawMake, model: (a.rawModel ?? "").trim(), keyword, excludeKeyword };
+}
+
+const squash = (s: string | null | undefined) => (s ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const hasWord = (text: string, word: string) =>
+  new RegExp(`(^|[^a-z0-9])${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`, "i").test(
+    text,
+  );
+
+/** Does a normalized OCD row belong to this alias? Keyword matching ignores spacing ("S 63" = "S63"). */
+export function ocdRowMatches(
+  alias: OcdAlias,
+  row: {
+    rawMake: string | null;
+    rawModel: string | null;
+    title: string | null;
+    year?: number | null;
+  },
+  years?: { start: number | null; end: number | null },
+): boolean {
+  if (squash(alias.make) !== squash(row.rawMake)) return false;
+  if (alias.model && squash(alias.model) !== squash(row.rawModel)) return false;
+  const title = row.title ?? "";
+  if (alias.keyword && !squash(title).includes(squash(alias.keyword))) return false;
+  if (alias.excludeKeyword && hasWord(title, alias.excludeKeyword)) return false;
+  if (years && row.year != null) {
+    if (years.start != null && row.year < years.start) return false;
+    if (years.end != null && row.year > years.end) return false;
+  }
+  return true;
+}
+
+/** Resolve a row to the first matching OCD alias rule's model id. */
+export function matchOcdRules(
+  rules: {
+    modelId: string;
+    source: string;
+    rawMake: string;
+    rawModel: string | null;
+    rawTrimPattern: string | null;
+  }[],
+  row: { rawMake: string | null; rawModel: string | null; title: string | null },
+): string | null {
+  for (const r of rules) {
+    if (r.source !== "ocd") continue;
+    if (ocdRowMatches(parseOcdAlias(r), row)) return r.modelId;
+  }
+  return null;
+}
+
+/* ------------------------------------------------------------------ */
+/* Normalizers                                                         */
+/* ------------------------------------------------------------------ */
+
+export type OcdStatus = "sold" | "rnm" | "withdrawn" | "active" | "unknown";
+
+/** Map `auction_status` to our vocabulary. "active" and "unknown" are kept distinct for callers. */
+export function normalizeOcdStatus(v: unknown): OcdStatus {
+  const s = (toStr(v) ?? "")
+    .toLowerCase()
+    .replace(/[\s_-]+/g, " ")
+    .trim();
+  if (s === "sold") return "sold";
+  if (s === "reserve not met" || s === "rnm" || s === "not sold" || s === "unsold") return "rnm";
+  if (s === "withdrawn" || s === "canceled" || s === "cancelled") return "withdrawn";
+  if (s === "active" || s === "live") return "active";
+  return "unknown"; // "unknown", "result unavailable", ""
+}
+
+function toMiles(r: unknown): number | null {
+  const n = toInt(pick(r, "mileage"));
+  if (n == null) return null;
+  const unit = (toStr(pick(r, "mileage_unit")) ?? "mi").toLowerCase();
+  return unit.startsWith("k") ? Math.round(n * KM_TO_MILES) : n;
+}
+function isUsd(r: unknown): boolean {
+  const c = toStr(pick(r, "currency"));
+  return !c || c.toUpperCase() === "USD";
+}
+function locationOf(r: unknown): string | null {
+  const parts = [toStr(pick(r, "city")), toStr(pick(r, "state"))].filter(Boolean);
+  return parts.length ? parts.join(", ") : null;
+}
+
+/** An ended auction as we store it in auction_result. Returns null for rows without an id or still active. */
 export function normalizeOcdRow(r: unknown): NormalizedAuctionRow | null {
-  const id = toStr(pick(r, "id", "auction_id", "listing_id"));
+  const id = toStr(pick(r, "id"));
   if (!id) return null;
-  const status = normalizeOcdStatus(pick(r, "status", "result", "outcome"));
-  const price =
-    status === "sold"
-      ? toInt(pick(r, "hammer_price", "sold_price", "price", "final_price", "high_bid"))
-      : toInt(pick(r, "high_bid", "highest_bid", "price", "hammer_price", "final_price"));
+  const s = normalizeOcdStatus(pick(r, "auction_status"));
+  if (s === "active") return null;
+  const status: NormalizedAuctionRow["status"] =
+    s === "sold" ? "sold" : s === "withdrawn" ? "withdrawn" : "rnm";
+  const url = toStr(pick(r, "url"));
   return {
-    source: toStr(pick(r, "platform", "source", "auction_house", "site")) ?? "Unknown",
+    source: resolvePlatform(url, toStr(pick(r, "source"))).name,
     sourceId: id,
-    url: toStr(pick(r, "url", "link")),
+    url,
     vin: toStr(pick(r, "vin")),
     year: toInt(pick(r, "year")),
-    rawMake: toStr(pick(r, "make")),
-    rawModel: toStr(pick(r, "model")),
-    title: toStr(pick(r, "title", "name")),
-    miles: toInt(pick(r, "mileage", "miles", "odometer")),
-    hammerPrice: price,
+    rawMake: toStr(pick(r, "ocd_make_name")) ?? toStr(pick(r, "listing_make")),
+    rawModel: toStr(pick(r, "ocd_model_name")) ?? toStr(pick(r, "listing_model")),
+    title: toStr(pick(r, "title")),
+    miles: toMiles(r),
+    hammerPrice: toInt(pick(r, "price")), // hammer when sold, high bid otherwise
     status,
-    endedAt: toIso(pick(r, "ended_at", "end_date", "end_time", "date", "sold_at")),
+    endedAt: toIso(pick(r, "auction_end_at")),
+    needsReview: s === "unknown" || !isUsd(r),
     raw: r,
   };
 }
@@ -80,8 +230,8 @@ export interface NormalizedLiveRow {
   sourceId: string;
   url: string;
   title: string;
-  make: string | null;
-  model: string | null;
+  make: string | null; // ocd_make_name
+  model: string | null; // ocd_model_name (line)
   year: number | null;
   trim: string | null;
   vin: string | null;
@@ -93,6 +243,7 @@ export interface NormalizedLiveRow {
   currentBid: number | null;
   bidCount: number | null;
   reserveMet: boolean | null;
+  hasReserve: boolean | null;
   startedAt: string | null; // ISO
   endsAt: string | null; // ISO
   status: "live" | "sold" | "rnm" | "withdrawn" | "ended";
@@ -104,8 +255,8 @@ function toBool(v: unknown): boolean | null {
   if (typeof v === "number") return v !== 0;
   if (typeof v === "string") {
     const s = v.trim().toLowerCase();
-    if (["true", "yes", "1", "met"].includes(s)) return true;
-    if (["false", "no", "0", "not met", "not_met"].includes(s)) return false;
+    if (["true", "yes", "1"].includes(s)) return true;
+    if (["false", "no", "0"].includes(s)) return false;
   }
   return null;
 }
@@ -114,8 +265,7 @@ function toPhotoUrls(v: unknown): string[] {
   const list = Array.isArray(v) ? v : v ? [v] : [];
   const out: string[] = [];
   for (const item of list) {
-    const u =
-      typeof item === "string" ? item : toStr(pick(item, "url", "src", "large", "medium", "image"));
+    const u = typeof item === "string" ? item : toStr(pick(item, "url", "src"));
     if (!u) continue;
     try {
       if (new URL(u).protocol === "https:") out.push(u);
@@ -128,78 +278,103 @@ function toPhotoUrls(v: unknown): string[] {
 }
 
 export function normalizeLiveStatus(v: unknown, endsAt: string | null, now = new Date()) {
-  const s = (toStr(v) ?? "").toLowerCase().replace(/[\s-]+/g, "_");
-  if (["live", "active", "open", "in_progress", "running", ""].includes(s)) {
+  const s = normalizeOcdStatus(v);
+  if (s === "active" || (s === "unknown" && !toStr(v))) {
     return endsAt && new Date(endsAt).getTime() < now.getTime()
       ? ("ended" as const)
       : ("live" as const);
   }
-  if (s === "withdrawn" || s === "cancelled" || s === "canceled") return "withdrawn" as const;
-  if (s === "sold" || s === "won" || s === "completed_sold") return "sold" as const;
-  if (s === "ended" || s === "closed") return "ended" as const;
-  return "rnm" as const;
+  if (s === "withdrawn") return "withdrawn" as const;
+  if (s === "sold") return "sold" as const;
+  if (s === "rnm") return "rnm" as const;
+  // "unknown" / "result unavailable" with an explicit value: the auction is over, result pending.
+  return "ended" as const;
 }
 
-/** Tolerant mapping of a live-auction row. Returns null only when there is no id or no URL. */
+/** Mapping of a live-auction row. Returns null only when there is no id or no URL. */
 export function normalizeLiveRow(r: unknown, now = new Date()): NormalizedLiveRow | null {
-  const id = toStr(pick(r, "id", "auction_id", "listing_id"));
-  const url = toStr(pick(r, "url", "link"));
+  const id = toStr(pick(r, "id"));
+  const url = toStr(pick(r, "url"));
   if (!id || !url) return null;
-  const platform = resolvePlatform(
-    url,
-    toStr(pick(r, "platform", "source", "auction_house", "site")),
-  );
+  const platform = resolvePlatform(url, toStr(pick(r, "source")));
   const year = toInt(pick(r, "year"));
-  const make = toStr(pick(r, "make"));
-  const model = toStr(pick(r, "model"));
-  const endsAt = toIso(pick(r, "ends_at", "end_date", "end_time", "ended_at", "closes_at"));
-  const title =
-    toStr(pick(r, "title", "name")) ?? [year, make, model].filter(Boolean).join(" ") ?? "Listing";
+  const make = toStr(pick(r, "ocd_make_name")) ?? toStr(pick(r, "listing_make"));
+  const model = toStr(pick(r, "ocd_model_name")) ?? toStr(pick(r, "listing_model"));
+  const endsAt = toIso(pick(r, "auction_end_at"));
+  const title = toStr(pick(r, "title")) ?? [year, make, model].filter(Boolean).join(" ");
+  const stats = pick(r, "stats");
   return {
     source: platform.key,
     sourceName:
-      platform.key === "other"
-        ? (toStr(pick(r, "platform", "source")) ?? platform.name)
-        : platform.name,
+      platform.key === "other" ? (toStr(pick(r, "source")) ?? platform.name) : platform.name,
     sourceId: id,
     url,
     title: title || "Listing",
     make,
     model,
     year,
-    trim: toStr(pick(r, "trim", "variant")),
+    trim: toStr(pick(r, "listing_model")) === model ? null : toStr(pick(r, "listing_model")),
     vin: toStr(pick(r, "vin")),
-    miles: toInt(pick(r, "mileage", "miles", "odometer")),
-    color: toStr(pick(r, "color", "exterior_color", "exterior")),
-    location: toStr(pick(r, "location", "city_state", "seller_location")),
-    description: toStr(pick(r, "description", "summary", "excerpt")),
-    photoUrls: toPhotoUrls(pick(r, "images", "photos", "image_urls", "image_url", "thumbnail")),
-    currentBid: toInt(pick(r, "current_bid", "high_bid", "highest_bid", "price")),
-    bidCount: toInt(pick(r, "bid_count", "bids", "num_bids")),
-    reserveMet: toBool(pick(r, "reserve_met", "reserveMet")),
-    startedAt: toIso(pick(r, "starts_at", "start_date", "started_at", "listed_at")),
+    miles: toMiles(r),
+    color: toStr(pick(r, "exterior_color")) ?? toStr(pick(r, "standard_exterior_color")),
+    location: locationOf(r),
+    description: toStr(pick(r, "description")),
+    photoUrls: toPhotoUrls(pick(r, "featured_image_url")),
+    currentBid: toInt(pick(r, "price")),
+    bidCount: toInt(pick(stats, "bids")),
+    reserveMet: null, // has_reserve says only whether a reserve exists
+    hasReserve: toBool(pick(r, "has_reserve")),
+    startedAt: toIso(pick(r, "created_at")),
     endsAt,
-    status: normalizeLiveStatus(pick(r, "status", "state"), endsAt, now),
+    status: normalizeLiveStatus(pick(r, "auction_status"), endsAt, now),
     raw: r,
   };
 }
 
-export interface LiveAuctionParams {
-  make?: string;
+/* ------------------------------------------------------------------ */
+/* Client                                                              */
+/* ------------------------------------------------------------------ */
+
+export interface OcdAuctionQuery {
+  make: string;
+  /** OCD line; omit or "" to search the whole make. */
   model?: string;
-  platform?: string;
+  keyword?: string | null;
+  yearMin?: number | null;
+  yearMax?: number | null;
+}
+
+export interface LiveAuctionParams extends Partial<OcdAuctionQuery> {
+  /** ISO timestamp; only auctions updated since then (used for the unfiltered "all" sweep). */
+  updatedSince?: string;
+  source?: string;
+}
+
+type Params = Record<string, string | number>;
+
+function queryParams(q: Partial<OcdAuctionQuery>): Params {
+  const p: Params = {};
+  if (q.make) p.make = q.make;
+  if (q.model) p.model = q.model;
+  if (q.keyword) p.keyword = q.keyword;
+  if (q.yearMin != null) p.year_min = q.yearMin;
+  if (q.yearMax != null) p.year_max = q.yearMax;
+  return p;
 }
 
 export function createOcdClient(o: OcdClientOptions) {
   const base = o.baseUrl ?? OCD_BASE;
   const maxPages = o.maxPages ?? 20;
-  const perPage = o.perPage ?? 100;
+  const perPage = Math.min(o.perPage ?? OCD_PAGE_SIZE, 100);
   const headers = { Authorization: `Bearer ${o.apiKey}` };
+  /** Whether /auctions accepts sort=auction_end_at; flipped off for the client's lifetime on a rejection. */
+  let sortSupported = true;
 
-  async function call(path: string, params: Record<string, string | number>) {
-    const url = `${base}${path}?${new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)]))}`;
-    await o.record.reserve(path);
-    const res = await fetchJson(url, { headers, fetchImpl: o.fetchImpl });
+  async function call(path: string, params: Params, free = false) {
+    const qs = new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)]));
+    const url = `${base}${path}${qs.size ? `?${qs}` : ""}`;
+    await o.record.reserve(path, { free });
+    const res = await fetchJson(url, { headers: free ? {} : headers, fetchImpl: o.fetchImpl });
     const rs = rows(res.body);
     await o.record.record({
       endpoint: path,
@@ -209,68 +384,107 @@ export function createOcdClient(o: OcdClientOptions) {
       rowCount: rs.length,
       body: res.body,
     });
-    if (!res.ok) throw new Error(`OCD ${path} returned ${res.status}`);
+    if (!res.ok) throw new OcdApiError(path, res.status, errorDetail(res.body));
     return { res, rs };
   }
 
-  return {
-    /** Auction results for a make/model that ended after `since` (ISO). One budget unit per page. */
-    async auctions(
-      q: { make: string; model: string },
-      since: string,
-    ): Promise<NormalizedAuctionRow[]> {
-      const out: NormalizedAuctionRow[] = [];
-      for (let page = 1; page <= maxPages; page++) {
-        const { res, rs } = await call("/auctions", {
-          make: q.make,
-          model: q.model,
-          ended_after: since,
-          page,
-          per_page: perPage,
-        });
-        for (const r of rs) {
-          const n = normalizeOcdRow(r);
-          if (n) out.push(n);
+  /**
+   * Cursor-paged walk over /auctions. `since` (ISO) stops the walk once a page's newest row is
+   * older than it, which only works when the API honours newest-first sorting; otherwise the
+   * walk relies on the page cap.
+   */
+  async function walkAuctions(
+    baseParams: Params,
+    since: string | null,
+    out: NormalizedAuctionRow[],
+    seen: Set<string>,
+  ) {
+    let cursor: string | null = null;
+    for (let page = 0; page < maxPages; page++) {
+      const sorted = sortSupported;
+      const params: Params = { ...baseParams, pagination: "cursor", limit: perPage };
+      if (sorted) {
+        params.sort = "auction_end_at";
+        params.direction = "desc";
+      }
+      if (cursor) params.cursor = cursor;
+      let result: Awaited<ReturnType<typeof call>>;
+      try {
+        result = await call("/auctions", params);
+      } catch (e) {
+        if (sorted && e instanceof OcdApiError && (e.status === 400 || e.status === 422)) {
+          sortSupported = false; // sort not accepted: retry this page unsorted
+          page--;
+          continue;
         }
-        const tp = toInt(pick(res.body, "total_pages", "totalPages"));
-        if (rs.length < perPage) break;
-        if (tp != null && page >= tp) break;
+        throw e;
+      }
+      let oldest: number | null = null;
+      for (const r of result.rs) {
+        const n = normalizeOcdRow(r);
+        if (!n || seen.has(n.sourceId)) continue;
+        seen.add(n.sourceId);
+        const t = n.endedAt ? new Date(n.endedAt).getTime() : null;
+        if (t != null) oldest = oldest == null ? t : Math.min(oldest, t);
+        if (since && t != null && t < new Date(since).getTime()) continue;
+        out.push(n);
+      }
+      const m = meta(result.res.body);
+      if (sorted && since && oldest != null && oldest < new Date(since).getTime()) break;
+      if (!m.hasMore || !m.nextCursor) break;
+      cursor = m.nextCursor;
+    }
+  }
+
+  return {
+    /**
+     * Ended auctions (sold and reserve-not-met, plus withdrawn) for a query, newest first, back to
+     * `since` (ISO) or the page cap. One budget unit per page.
+     */
+    async auctions(q: OcdAuctionQuery, since: string | null): Promise<NormalizedAuctionRow[]> {
+      const out: NormalizedAuctionRow[] = [];
+      const seen = new Set<string>();
+      // Two status-scoped walks keep each one short; unknown statuses are dropped by the normalizer.
+      for (const status of ["sold", "reserve not met"]) {
+        await walkAuctions({ ...queryParams(q), status }, since, out, seen);
       }
       return out;
     },
-    /** In-progress auctions, optionally filtered. One budget unit per page. */
+    /** In-progress auctions. One budget unit per page. */
     async live(q: LiveAuctionParams = {}, now = new Date()): Promise<NormalizedLiveRow[]> {
       const out: NormalizedLiveRow[] = [];
+      const params: Params = { ...queryParams(q), limit: perPage };
+      if (q.updatedSince) params.updated_since = q.updatedSince;
+      if (q.source) params.source = q.source;
       for (let page = 1; page <= maxPages; page++) {
-        const params: Record<string, string | number> = { page, per_page: perPage };
-        if (q.make) params.make = q.make;
-        if (q.model) params.model = q.model;
-        if (q.platform) params.platform = q.platform;
-        const { res, rs } = await call("/auctions/live", params);
+        const { res, rs } = await call("/auctions/live", { ...params, page });
         for (const r of rs) {
           const n = normalizeLiveRow(r, now);
           if (n) out.push(n);
         }
-        const tp = toInt(pick(res.body, "total_pages", "totalPages"));
+        const m = meta(res.body);
         if (rs.length < perPage) break;
-        if (tp != null && page >= tp) break;
+        if (m.totalPages != null && page >= m.totalPages) break;
+        if (m.hasMore === false) break;
       }
       return out;
     },
-    /** Bid history for one auction. One budget unit. */
-    async bids(id: string): Promise<{ amount: number | null; placedAt: string | null }[]> {
-      const safe = encodeURIComponent(id);
-      const { rs } = await call(`/auctions/${safe}/bids`, {});
+    /** Bid history for one auction (integer id). One budget unit. */
+    async bids(id: string | number): Promise<{ amount: number | null; placedAt: string | null }[]> {
+      const safe = encodeURIComponent(String(id));
+      const { rs } = await call(`/auctions/${safe}/bids`, { limit: perPage });
       return rs.map((b) => ({
-        amount: toInt(pick(b, "amount", "bid", "value")),
-        placedAt: toIso(pick(b, "placed_at", "created_at", "time", "date")),
+        amount: toInt(pick(b, "amount", "bid_amount", "price")),
+        placedAt: toIso(pick(b, "bid_at", "placed_at", "created_at")),
       }));
     },
-    async makes(): Promise<unknown[]> {
-      return (await call("/makes", {})).rs;
+    /** Public: make names. Not counted against the budget. */
+    async makes(): Promise<string[]> {
+      return (await call("/makes", {}, true)).rs.map(String);
     },
-    async models(make: string): Promise<unknown[]> {
-      return (await call("/models", { make })).rs;
+    /** Public: model lines for a make. Not counted against the budget. */
+    async models(make: string): Promise<string[]> {
+      return (await call("/models", { make }, true)).rs.map(String);
     },
   };
 }
@@ -284,6 +498,6 @@ export function fetchLiveAuctions(
 ): Promise<NormalizedLiveRow[]> {
   return createOcdClient(opts).live(params, now);
 }
-export function fetchAuctionBids(opts: OcdClientOptions, id: string) {
+export function fetchAuctionBids(opts: OcdClientOptions, id: string | number) {
   return createOcdClient(opts).bids(id);
 }

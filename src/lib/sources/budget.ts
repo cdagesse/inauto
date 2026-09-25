@@ -69,7 +69,11 @@ export function budgetedRecorder(
   log?: (m: string) => void,
 ): CallRecorder {
   return {
-    async reserve(endpoint) {
+    async reserve(endpoint, opts) {
+      if (opts?.free) {
+        log?.(`${source} ${endpoint}: free endpoint, not counted`);
+        return;
+      }
       const used = await reserveCall(db, source, monthlyCap);
       log?.(`${source} ${endpoint}: budget ${used}/${monthlyCap}`);
     },

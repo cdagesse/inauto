@@ -67,7 +67,7 @@ export async function processReportRequests(opts: ReportJobOptions = {}): Promis
 
     let error: string | undefined;
     try {
-      const run = await runNightly({ dryRun, modelSlugs: [m.slug], log, db });
+      const run = await runNightly({ dryRun, modelSlugs: [m.slug], initial: true, log, db });
       runs.push(run);
       const modelErrors = run.errors.filter((e) => e.includes(label));
       if (modelErrors.length) error = modelErrors.join("; ");

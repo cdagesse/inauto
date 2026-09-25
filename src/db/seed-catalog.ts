@@ -2,6 +2,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "./schema";
 import { CATALOG, MAKES, searchTextFor } from "@/data/catalog";
+import { encodeOcdKeyword } from "@/lib/sources/ocd";
 
 type Db = PostgresJsDatabase<typeof schema>;
 
@@ -58,31 +59,45 @@ export async function seedCatalog(
   }
 
   const ids = [...modelIds.values()];
+  // Aliases: one row per model per source, updated in place so a corrected catalog fixes
+  // production rows on re-seed. (model_alias has no unique key; match on modelId + source.)
   const existingAliases = await db
-    .select({ modelId: schema.modelAliases.modelId, source: schema.modelAliases.source })
+    .select({
+      id: schema.modelAliases.id,
+      modelId: schema.modelAliases.modelId,
+      source: schema.modelAliases.source,
+    })
     .from(schema.modelAliases)
     .where(inArray(schema.modelAliases.modelId, ids));
-  const has = new Set(existingAliases.map((a) => `${a.modelId}:${a.source}`));
+  const aliasId = new Map(existingAliases.map((a) => [`${a.modelId}:${a.source}`, a.id]));
   const aliasRows: (typeof schema.modelAliases.$inferInsert)[] = [];
   for (const e of CATALOG) {
     const modelId = modelIds.get(`${e.makeSlug}/${e.modelSlug}`)!;
-    if (!has.has(`${modelId}:visor`)) {
-      aliasRows.push({
+    const wanted: (typeof schema.modelAliases.$inferInsert)[] = [
+      {
         modelId,
         source: "visor",
         rawMake: e.aliases.visor.make,
         rawModel: e.aliases.visor.model,
         rawTrimPattern: e.aliases.visor.trimPattern ?? null,
-      });
-    }
-    if (!has.has(`${modelId}:ocd`)) {
-      aliasRows.push({
+      },
+      {
         modelId,
         source: "ocd",
         rawMake: e.aliases.ocd.make,
-        rawModel: e.aliases.ocd.model,
-        rawTrimPattern: null,
-      });
+        // "" = no OCD line: the job searches the whole make by keyword and year range.
+        rawModel: e.aliases.ocd.lineUnverified ? "" : e.aliases.ocd.model,
+        rawTrimPattern: encodeOcdKeyword(e.aliases.ocd.keyword, e.aliases.ocd.excludeKeyword),
+      },
+    ];
+    for (const w of wanted) {
+      const id = aliasId.get(`${modelId}:${w.source}`);
+      if (id) {
+        await db
+          .update(schema.modelAliases)
+          .set({ rawMake: w.rawMake, rawModel: w.rawModel, rawTrimPattern: w.rawTrimPattern })
+          .where(eq(schema.modelAliases.id, id));
+      } else aliasRows.push(w);
     }
   }
   if (aliasRows.length) await db.insert(schema.modelAliases).values(aliasRows);

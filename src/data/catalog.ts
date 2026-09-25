@@ -5,7 +5,11 @@
  *
  * Visor aliases name the source's base model plus a trim pattern (ILIKE), because
  * Visor files "911 GT3 RS" as make=Porsche, model=911, trim="GT3 RS". Old Cars
- * Data aliases name the model as the auction titles spell it.
+ * Data aliases name OCD's model LINE (Porsche "911", Mercedes-Benz "S-Class") plus a
+ * `keyword` for the variant ("GT3 RS", "S63"); lines come from the public
+ * `/models?make=` endpoint (see OCD_LINES below and src/lib/sources/ocd-validate.ts).
+ * A model with `lineUnverified` has no matching OCD line; the job then searches the
+ * whole make by keyword and year range.
  */
 export interface CatalogEntry {
   make: string;
@@ -18,9 +22,299 @@ export interface CatalogEntry {
   yearEnd: number | null;
   aliases: {
     visor: { make: string; model: string; trimPattern?: string };
-    ocd: { make: string; model: string };
+    ocd: {
+      make: string;
+      /** OCD model line. When `lineUnverified` is true this is only our own model name. */
+      model: string;
+      keyword?: string;
+      /** Rows whose title contains this word are NOT this model (e.g. "RS" for the plain GT3). */
+      excludeKeyword?: string;
+      lineUnverified?: boolean;
+    };
   };
   searchTerms: string[];
+}
+
+/** Old Cars Data alias override: `line` (null = no OCD line, search the make by keyword), keyword, exclude. */
+interface OcdOverride {
+  line?: string | null;
+  kw?: string;
+  not?: string;
+  make?: string;
+}
+
+/** Makes whose OCD spelling differs from ours. */
+/** Visor files sub-brands under the parent make (Mercedes-AMG cars are make=Mercedes-Benz, model=S63 etc.). */
+const VISOR_MAKE: Record<string, string> = { "Mercedes-AMG": "Mercedes-Benz" };
+
+const OCD_MAKE: Record<string, string> = {
+  "Mercedes-AMG": "Mercedes-Benz",
+  "De Tomaso": "DeTomaso",
+};
+
+/**
+ * Per-model OCD alias overrides keyed by "Make|Model". Models absent from this map use their own
+ * name as the OCD line, which is right when OCD lists a line by that name (Ferrari "F40",
+ * McLaren "720S", BMW "M2"). Verified with src/lib/sources/ocd-validate.ts.
+ */
+const OCD_MAP: Record<string, OcdOverride> = {
+  // Porsche: OCD lines are 356, 550 Spyder, 718, 911, 912, 914, 918 Spyder, 924, 928, 930, 944,
+  // 959, 964, 968, 991, 992, 996, 997, Boxster, Carrera GT, Cayenne, Cayman, Macan, Panamera, Taycan
+  "Porsche|911 GT3 RS": { line: "911", kw: "GT3 RS" },
+  "Porsche|911 GT3": { line: "911", kw: "GT3", not: "RS" },
+  "Porsche|911 GT2 RS": { line: "911", kw: "GT2 RS" },
+  "Porsche|911 Turbo S": { line: "911", kw: "Turbo S" },
+  "Porsche|911 Turbo": { line: "911", kw: "Turbo", not: "Turbo S" },
+  "Porsche|911 Carrera GTS": { line: "911", kw: "GTS" },
+  "Porsche|911 Carrera": { line: "911", kw: "Carrera" },
+  "Porsche|911 S/T": { line: "911", kw: "S/T" },
+  "Porsche|911 Dakar": { line: "911", kw: "Dakar" },
+  "Porsche|911 R": { line: "911", kw: "911 R" },
+  "Porsche|911 (964)": { line: "964" },
+  "Porsche|911 (993)": { line: "911", kw: "993" },
+  "Porsche|911 (G-body)": { line: "911" },
+  "Porsche|718 Cayman GT4 RS": { line: "Cayman", kw: "GT4 RS" },
+  "Porsche|718 Cayman GT4": { line: "Cayman", kw: "GT4", not: "RS" },
+  "Porsche|718 Spyder RS": { line: "718", kw: "Spyder RS" },
+  "Porsche|718 Boxster Spyder": { line: "Boxster", kw: "Spyder", not: "RS" },
+  "Porsche|Cayman GTS": { line: "Cayman", kw: "GTS" },
+  "Porsche|Taycan Turbo S": { line: "Taycan", kw: "Turbo S" },
+  "Porsche|Cayenne Turbo GT": { line: "Cayenne", kw: "Turbo GT" },
+  "Porsche|Macan GTS": { line: "Macan", kw: "GTS" },
+  "Porsche|Panamera Turbo S": { line: "Panamera", kw: "Turbo S" },
+  "Porsche|944 Turbo": { line: "944", kw: "Turbo" },
+  // Mercedes-AMG (filed under Mercedes-Benz): lines S-Class, E-Class, C-Class, G-Class, SL-Class,
+  // CLS AMG, GLE-Class, AMG GT, SLS AMG, AMG, A-Class, CLA AMG, GLA-Class
+  "Mercedes-AMG|S63": { line: "S-Class", kw: "S63" },
+  "Mercedes-AMG|S65": { line: "S-Class", kw: "S65" },
+  "Mercedes-AMG|E63": { line: "E-Class", kw: "E63" },
+  "Mercedes-AMG|C63": { line: "C-Class", kw: "C63" },
+  "Mercedes-AMG|G63": { line: "G-Class", kw: "G63" },
+  "Mercedes-AMG|G65": { line: "G-Class", kw: "G65" },
+  "Mercedes-AMG|SL63": { line: "SL-Class", kw: "SL63" },
+  "Mercedes-AMG|SL65": { line: "SL-Class", kw: "SL65" },
+  "Mercedes-AMG|CLS63": { line: "CLS AMG", kw: "CLS63" },
+  "Mercedes-AMG|GLE63": { line: "GLE-Class", kw: "GLE63" },
+  "Mercedes-AMG|GT 63": { line: "AMG GT", kw: "GT 63" },
+  "Mercedes-AMG|AMG GT": { line: "AMG GT", not: "63" },
+  "Mercedes-AMG|AMG GT Black Series": { line: "AMG GT", kw: "Black Series" },
+  "Mercedes-AMG|SLS AMG": { line: "SLS AMG" },
+  "Mercedes-AMG|AMG One": { line: "AMG", kw: "One" },
+  "Mercedes-AMG|A45": { line: "A-Class", kw: "A45" },
+  "Mercedes-AMG|CLA45": { line: "CLA AMG", kw: "45" },
+  "Mercedes-AMG|GLA45": { line: "GLA-Class", kw: "45" },
+  // Mercedes-Benz
+  "Mercedes-Benz|280SL": { line: "SL-Class", kw: "280SL" },
+  "Mercedes-Benz|230SL": { line: "SL-Class", kw: "230SL" },
+  "Mercedes-Benz|560SL": { line: "560", kw: "SL" },
+  "Mercedes-Benz|450SL": { line: "SL-Class", kw: "450SL" },
+  "Mercedes-Benz|190E 2.3-16": { line: "190", kw: "16" },
+  "Mercedes-Benz|G550": { line: "G-Class", kw: "550" },
+  "Mercedes-Benz|G500": { line: "G-Class", kw: "500" },
+  "Mercedes-Benz|CLK63 Black Series": { line: "CLK AMG", kw: "Black Series" },
+  "Mercedes-Benz|600": { line: null, kw: "600" },
+  // BMW: lines include 1-Series, 3-Series, 4-Series, 6-Series, 8-Series, E30 M3, M2, M3, M5, Z3, Z4, Z8, X3, X5, XM, Alpina
+  "BMW|M3 (E30)": { line: "E30 M3" },
+  "BMW|M3 (E46)": { line: "M3" },
+  "BMW|M4": { line: "4-Series", kw: "M4" },
+  "BMW|M5 (E39)": { line: "M5" },
+  "BMW|M6": { line: "6-Series", kw: "M6" },
+  "BMW|M8": { line: "8-Series", kw: "M8" },
+  "BMW|1M": { line: "1-Series", kw: "1M" },
+  "BMW|Z3 M": { line: "Z3", kw: "M" },
+  "BMW|Z4 M": { line: "Z4", kw: "M" },
+  "BMW|X5 M": { line: "X5", kw: "X5 M" },
+  "BMW|X3 M": { line: "X3", kw: "X3 M" },
+  "BMW|Alpina B7": { line: "Alpina", kw: "B7" },
+  // Ferrari
+  "Ferrari|296 GTB": { line: "296" },
+  "Ferrari|F8 Tributo": { line: "F8" },
+  "Ferrari|488": { line: "488", not: "Pista" },
+  "Ferrari|488 Pista": { line: "488", kw: "Pista" },
+  "Ferrari|458": { line: "458", not: "Speciale" },
+  "Ferrari|458 Speciale": { line: "458", kw: "Speciale" },
+  "Ferrari|Enzo": { line: null, kw: "Enzo" },
+  "Ferrari|550 Maranello": { line: "550" },
+  "Ferrari|575M": { line: "575" },
+  "Ferrari|Dino 246": { line: "Dino", kw: "246" },
+  "Ferrari|Daytona": { line: "365", kw: "Daytona" },
+  "Ferrari|250": { line: "250 GT" },
+  // Lamborghini
+  "Lamborghini|Huracan": { line: "Huracán" },
+  "Lamborghini|Huracan STO": { line: "Huracán", kw: "STO" },
+  "Lamborghini|Huracan Performante": { line: "Huracán", kw: "Performante" },
+  "Lamborghini|Aventador SVJ": { line: "Aventador", kw: "SVJ" },
+  "Lamborghini|Temerario": { line: null, kw: "Temerario" },
+  "Lamborghini|Murcielago": { line: "Murciélago" },
+  "Lamborghini|Miura": { line: null, kw: "Miura" },
+  // McLaren
+  "McLaren|750S": { line: null, kw: "750S" },
+  "McLaren|Senna": { line: null, kw: "Senna" },
+  "McLaren|Elva": { line: null, kw: "Elva" },
+  "McLaren|F1": { line: null, kw: "F1" },
+  // Aston Martin
+  "Aston Martin|DB12": { line: null, kw: "DB12" },
+  "Aston Martin|Valkyrie": { line: null, kw: "Valkyrie" },
+  "Aston Martin|One-77": { line: null, kw: "One-77" },
+  // Audi
+  "Audi|RS6 Avant": { line: "RS6 Avant" },
+  "Audi|RS e-tron GT": { line: "e-Tron", kw: "RS" },
+  "Audi|Quattro": { line: "Ur-Quattro" },
+  // Nissan / Datsun
+  "Nissan|GT-R Nismo": { line: "GT-R", kw: "Nismo" },
+  "Nissan|Skyline GT-R": { line: "Skyline", kw: "GT-R" },
+  "Nissan|Z": { line: null, kw: "Nissan Z" },
+  "Nissan|240SX": { line: "Silvia", kw: "240SX" },
+  "Datsun|240Z": { line: "Z", kw: "240Z" },
+  "Datsun|260Z": { line: "Z", kw: "260Z" },
+  "Datsun|280Z": { line: "Z", kw: "280Z" },
+  // Toyota / Lexus
+  "Toyota|Supra (A80)": { line: "Supra" },
+  "Toyota|GR Supra": { line: "Supra" },
+  "Toyota|GR Corolla": { line: "Corolla", kw: "GR" },
+  "Toyota|Land Cruiser": { line: null, kw: "Land Cruiser" },
+  "Toyota|Celica GT-Four": { line: "Celica", kw: "GT-Four" },
+  "Toyota|Tacoma TRD Pro": { line: "Tacoma", kw: "TRD Pro" },
+  "Lexus|IS F": { line: "IS", kw: "IS F" },
+  "Lexus|LC 500": { line: "LC" },
+  "Lexus|RC F": { line: "RC", kw: "RC F" },
+  "Lexus|GS F": { line: "GS", kw: "GS F" },
+  "Lexus|SC 430": { line: "SC", kw: "430" },
+  "Lexus|LX 570": { line: "LX", kw: "570" },
+  // Honda / Acura (OCD files every NSX under Acura)
+  "Honda|Civic Si": { line: "Civic Si" },
+  "Honda|NSX": { make: "Acura", line: "NSX" },
+  "Acura|NSX (NC1)": { line: "NSX" },
+  "Acura|Integra Type R": { line: "Integra", kw: "Type R" },
+  "Acura|Integra Type S": { line: "Integra", kw: "Type S" },
+  "Acura|TL Type S": { line: "TL", kw: "Type-S" },
+  // Chevrolet
+  "Chevrolet|Corvette C8": { line: "Corvette" },
+  "Chevrolet|Corvette C8 Z06": { line: "Corvette", kw: "Z06" },
+  "Chevrolet|Corvette C7": { line: "Corvette" },
+  "Chevrolet|Corvette C6": { line: "Corvette" },
+  "Chevrolet|Corvette C5": { line: "Corvette" },
+  "Chevrolet|Corvette C4": { line: "Corvette" },
+  "Chevrolet|Corvette C3": { line: "Corvette" },
+  "Chevrolet|Corvette C2": { line: "Corvette" },
+  "Chevrolet|Corvette C1": { line: "Corvette" },
+  "Chevrolet|Camaro ZL1": { line: "Camaro", kw: "ZL1" },
+  "Chevrolet|Camaro SS": { line: "Camaro", kw: "SS" },
+  "Chevrolet|Camaro (1st gen)": { line: "Camaro" },
+  "Chevrolet|Chevelle SS": { line: "Chevelle", kw: "SS" },
+  "Chevrolet|Nova SS": { line: "Nova", kw: "SS" },
+  "Chevrolet|Bel Air": { line: "Tri-5", kw: "Bel Air" },
+  "Chevrolet|C10": { line: "C/K", kw: "C10" },
+  "Chevrolet|Blazer K5": { line: "Blazer", kw: "K5" },
+  // Ford / Shelby
+  "Ford|GT (2017)": { line: "GT" },
+  "Ford|GT (2005)": { line: "GT" },
+  "Ford|Mustang Shelby GT500": { line: "Mustang", kw: "GT500" },
+  "Ford|Mustang Shelby GT350": { line: "Mustang", kw: "GT350" },
+  "Ford|Mustang Dark Horse": { line: "Mustang", kw: "Dark Horse" },
+  "Ford|Mustang GTD": { line: "Mustang", kw: "GTD" },
+  "Ford|Mustang Mach 1": { line: "Mustang", kw: "Mach 1" },
+  "Ford|Mustang Boss 302": { line: "Mustang", kw: "Boss 302" },
+  "Ford|Mustang (1st gen)": { line: "Mustang" },
+  "Ford|Bronco (1st gen)": { line: "Bronco" },
+  "Ford|Bronco Raptor": { line: "Bronco", kw: "Raptor" },
+  "Ford|F-150 Raptor": { line: "F-Series", kw: "Raptor" },
+  "Ford|F-150 Lightning": { line: "F-Series", kw: "Lightning" },
+  "Ford|GT40": { line: null, kw: "GT40" },
+  "Shelby|GT500": { line: null, kw: "GT500" },
+  // Dodge
+  "Dodge|Viper ACR": { line: "Viper", kw: "ACR" },
+  "Dodge|Challenger SRT Hellcat": { line: "Challenger", kw: "Hellcat" },
+  "Dodge|Challenger SRT Demon": { line: "Challenger", kw: "Demon" },
+  "Dodge|Charger SRT Hellcat": { line: "Charger", kw: "Hellcat" },
+  "Dodge|Charger (1968-70)": { line: "Charger" },
+  "Dodge|Challenger (1970-74)": { line: "Challenger" },
+  "Dodge|Durango SRT Hellcat": { line: "Durango", kw: "Hellcat" },
+  // Cadillac
+  "Cadillac|CT5-V Blackwing": { line: "CT5", kw: "Blackwing" },
+  "Cadillac|CT4-V Blackwing": { line: "CT4", kw: "Blackwing" },
+  "Cadillac|CTS-V": { line: "CTS", kw: "CTS-V" },
+  "Cadillac|ATS-V": { line: "ATS", kw: "ATS-V" },
+  "Cadillac|Escalade-V": { line: "Escalade", kw: "Escalade-V" },
+  // Tesla
+  "Tesla|Model S Plaid": { line: "Model S", kw: "Plaid" },
+  // Land Rover / Jeep
+  "Land Rover|Defender (classic)": { line: "Defender" },
+  "Land Rover|Range Rover Classic": { line: "Range Rover" },
+  "Land Rover|Range Rover SV": { line: "Range Rover", kw: "SV" },
+  "Land Rover|Range Rover Sport SVR": { line: "Range Rover Sport", kw: "SVR" },
+  "Jeep|Wrangler Rubicon 392": { line: "Wrangler", kw: "392" },
+  "Jeep|Grand Cherokee Trackhawk": { line: "Grand Cherokee", kw: "Trackhawk" },
+  "Jeep|Grand Wagoneer (SJ)": { line: "Wagoneer/Grand Wagoneer (1963–1991)" },
+  // Jaguar
+  "Jaguar|E-Type": { line: "XKE" },
+  "Jaguar|F-Type R": { line: "F-TYPE", kw: "R" },
+  "Jaguar|F-Type": { line: "F-TYPE" },
+  // Lotus
+  "Lotus|Evija": { line: null, kw: "Evija" },
+  // Alfa Romeo
+  "Alfa Romeo|Giulia Quadrifoglio": { line: "Giulia", kw: "Quadrifoglio" },
+  "Alfa Romeo|Stelvio Quadrifoglio": { line: "Stelvio", kw: "Quadrifoglio" },
+  "Alfa Romeo|8C Competizione": { line: "8C" },
+  "Alfa Romeo|Spider (Duetto)": { line: "105 Series", kw: "Spider" },
+  "Alfa Romeo|Giulia (classic)": { line: "Giulia" },
+  // Maserati
+  "Maserati|MC12": { line: null, kw: "MC12" },
+  // Bentley
+  "Bentley|Continental GT Speed": { line: "Continental GT", kw: "Speed" },
+  // Rolls-Royce
+  "Rolls-Royce|Spectre": { line: null, kw: "Spectre" },
+  // Bugatti: OCD lists no lines for the make
+  "Bugatti|Chiron": { line: null, kw: "Chiron" },
+  "Bugatti|Veyron": { line: null, kw: "Veyron" },
+  "Bugatti|EB110": { line: null, kw: "EB110" },
+  // Mazda / Subaru / Mitsubishi
+  "Mazda|RX-7 (FD)": { line: "RX-7" },
+  "Mazda|MX-5 Miata": { line: "MX-5" },
+  "Mazda|Mazdaspeed3": { line: "Mazda3", kw: "Mazdaspeed" },
+  "Subaru|WRX STI": { line: "WRX", kw: "STI" },
+  "Subaru|WRX": { line: "WRX", not: "STI" },
+  "Subaru|Impreza 22B": { line: "Impreza", kw: "22B" },
+  "Mitsubishi|3000GT VR-4": { line: "3000GT", kw: "VR-4" },
+  "Mitsubishi|Eclipse GSX": { line: "Eclipse", kw: "GSX" },
+  // Volkswagen / Mini
+  "Volkswagen|Golf R": { line: "Golf", kw: "Golf R" },
+  "Volkswagen|Golf GTI": { line: "GTI" },
+  "Volkswagen|R32": { line: "Golf", kw: "R32" },
+  "Volkswagen|Beetle (classic)": { line: "Beetle" },
+  "Mini|John Cooper Works GP": { line: "Cooper", kw: "GP" },
+  "Mini|John Cooper Works": { line: "Cooper", kw: "John Cooper Works" },
+  "Mini|Cooper (classic)": { line: "Classic Mini" },
+  // Pontiac / Buick / GMC
+  "Pontiac|GTO (2004-06)": { line: "GTO" },
+  "Pontiac|Firebird Trans Am": { line: "Firebird", kw: "Trans Am" },
+  "Pontiac|Solstice GXP": { line: "Solstice", kw: "GXP" },
+  "Buick|GNX": { line: "Grand National", kw: "GNX" },
+  // Small makes
+  "International|Scout": { line: null, kw: "Scout" },
+  "Rivian|R1T": { line: "R1", kw: "R1T" },
+  "Genesis|GV80": { make: "Hyundai", line: "Genesis", kw: "GV80" },
+  "Hyundai|Elantra N": { line: "Elantra", kw: "N" },
+  "Kia|Stinger GT": { line: "Stinger", kw: "GT" },
+  "Morgan|3 Wheeler": { line: "3-Wheeler" },
+  "MG|MGA": { line: "A" },
+  "Saleen|S7": { line: null, kw: "S7" },
+  "Pagani|Huayra": { line: null, kw: "Huayra" },
+  "Pagani|Zonda": { line: null, kw: "Zonda" },
+  "Pagani|Utopia": { line: null, kw: "Utopia" },
+  "Koenigsegg|Agera": { line: null, kw: "Agera" },
+  "Koenigsegg|Jesko": { line: null, kw: "Jesko" },
+  "Koenigsegg|Regera": { line: null, kw: "Regera" },
+};
+
+function ocdAliasFor(makeName: string, model: string): CatalogEntry["aliases"]["ocd"] {
+  const o = OCD_MAP[`${makeName}|${model}`];
+  const make = o?.make ?? OCD_MAKE[makeName] ?? makeName;
+  if (!o) return { make, model };
+  if (o.line === null) {
+    return { make, model, keyword: o.kw ?? model, excludeKeyword: o.not, lineUnverified: true };
+  }
+  return { make, model: o.line ?? model, keyword: o.kw, excludeKeyword: o.not };
 }
 
 /** [model, yearStart, yearEnd, searchTerms?, visor?: {model, trim?}, shortName?, parentLine?, slug?] */
@@ -61,12 +355,12 @@ function make(
     aliases: {
       visor: visor
         ? {
-            make: name,
+            make: VISOR_MAKE[name] ?? name,
             model: visor.model,
             trimPattern: visor.trim ? `%${visor.trim}%` : undefined,
           }
-        : { make: name, model },
-      ocd: { make: name, model },
+        : { make: VISOR_MAKE[name] ?? name, model },
+      ocd: ocdAliasFor(name, model),
     },
     searchTerms: [...makeTerms, ...terms],
   }));

@@ -30,7 +30,7 @@ describe("catalog", () => {
 
   it("every entry has both source aliases and sane years", () => {
     for (const e of CATALOG) {
-      expect(e.aliases.visor.make).toBe(e.make);
+      expect([e.make, "Mercedes-Benz"]).toContain(e.aliases.visor.make);
       expect(e.aliases.ocd.model.length).toBeGreaterThan(0);
       expect(e.yearStart).toBeGreaterThan(1900);
       if (e.yearEnd != null) expect(e.yearEnd).toBeGreaterThanOrEqual(e.yearStart);

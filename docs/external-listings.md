@@ -13,7 +13,7 @@ Dry run (`JOBS_DRY_RUN=true`, the default) makes no API calls; only the end-time
 
 ## Assumptions to verify
 
-The `/auctions/live` and `/auctions/{id}/bids` request and response shapes are assumptions (see the header of `src/lib/sources/ocd.ts`). Check them against `https://api.oldcarsdata.com/openapi.json` before the first live run and adjust `normalizeLiveRow` if field names differ. The normalizer is tolerant of missing fields, so a wrong guess degrades to blank fields rather than a crash.
+The `/auctions/live` request and row shapes are verified against `https://api.oldcarsdata.com/openapi.json` (see the header of `src/lib/sources/ocd.ts` and docs/pipeline.md). `price` is the current bid, `stats.bids` the bid count, `auction_end_at` the end time, `featured_image_url` the only photo; `has_reserve` says whether a reserve exists, not whether it is met, so `reserve_met` stays null.
 
 ## Licensing and content
 

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, gte, inArray, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull } from "drizzle-orm";
 import { db as defaultDb, type Db } from "@/db";
 import {
   auctionResults,
@@ -14,7 +14,7 @@ import {
 } from "@/db/schema";
 import { env } from "@/env/server";
 import { BudgetExceeded, withBudget } from "@/lib/sources/budget";
-import { createOcdClient } from "@/lib/sources/ocd";
+import { createOcdClient, ocdRowMatches, parseOcdAlias } from "@/lib/sources/ocd";
 import { createVisorClient } from "@/lib/sources/visor";
 import type { NormalizedAuctionRow, NormalizedDealerRow } from "@/lib/sources/types";
 import { classify } from "./lib/clean";
@@ -38,6 +38,14 @@ export interface NightlyOptions {
   fetchImpl?: typeof fetch;
   /** Restrict the run to these model slugs (used by on-demand report builds). */
   modelSlugs?: string[];
+  /**
+   * First pull for a model: Visor sold window widens to `initialSoldDays` (default 365) and
+   * Old Cars Data walks back without a cursor (to the page cap). Used by report builds.
+   */
+  initial?: boolean;
+  /** Visor `sold_within_days` for a routine run (default 2, overlapping the previous night). */
+  soldWindowDays?: number;
+  initialSoldDays?: number;
 }
 
 export interface ModelSummary {
@@ -51,6 +59,8 @@ export interface ModelSummary {
   generationsAggregated: string[];
   warnings: CheckWarning[];
   budgetStopped: string[];
+  /** Source failures for this model (status + short detail, never a key). The other source still runs. */
+  errors: string[];
 }
 
 export interface NightlySummary {
@@ -72,6 +82,8 @@ interface CatalogModel {
   makeSlug: string;
   name: string;
   reportStatus: string;
+  yearStart: number | null;
+  yearEnd: number | null;
   gens: GenerationRange[];
   aliases: AliasRule[];
 }
@@ -85,6 +97,8 @@ async function loadCatalog(db: Db): Promise<CatalogModel[]> {
       makeName: makes.name,
       makeSlug: makes.slug,
       reportStatus: models.reportStatus,
+      yearStart: models.yearStart,
+      yearEnd: models.yearEnd,
     })
     .from(models)
     .innerJoin(makes, eq(makes.id, models.makeId));
@@ -159,7 +173,7 @@ function toDealerInsert(m: CatalogModel, r: NormalizedDealerRow) {
     price: r.price,
     color: r.color,
     isPts: detectPts(r.rawTrim, r.color),
-    packages: detectPackages(r.rawTrim),
+    packages: detectPackages([r.rawTrim, r.optionsText].filter(Boolean).join(" ")),
     dealerName: r.dealerName,
     state: r.state,
     daysOnMarket: r.daysOnMarket,
@@ -183,24 +197,61 @@ function toAuctionInsert(m: CatalogModel, r: NormalizedAuctionRow) {
     status: r.status,
     endedAt: r.endedAt ? new Date(r.endedAt) : null,
     packages: detectPackages(r.title),
-    needsReview: g.needsReview,
+    needsReview: g.needsReview || r.needsReview,
     rawJson: r.raw as object,
   };
 }
 
-/** Pull from both sources for one model. Returns normalized rows that matched an alias. */
+/** Model years the catalog says this model spans (null bound = open). */
+function yearRange(m: CatalogModel) {
+  const start = m.yearStart ?? (m.gens.length ? Math.min(...m.gens.map((g) => g.yearStart)) : null);
+  const end = m.yearEnd ?? (m.gens.length ? Math.max(...m.gens.map((g) => g.yearEnd)) : null);
+  return { start, end };
+}
+function yearList(r: { start: number | null; end: number | null }, now: Date): number[] {
+  if (r.start == null) return [];
+  const end = r.end ?? now.getUTCFullYear() + 1;
+  if (end - r.start > 30) return [];
+  return Array.from({ length: end - r.start + 1 }, (_, i) => r.start! + i);
+}
+function inYears(year: number | null, r: { start: number | null; end: number | null }) {
+  if (year == null) return true; // let the cleaner flag it
+  if (r.start != null && year < r.start) return false;
+  if (r.end != null && year > r.end) return false;
+  return true;
+}
+/** Error text safe for logs and job summaries: message only, never headers or keys. */
+function describe(e: unknown): string {
+  const msg = e instanceof Error ? e.message : String(e);
+  return msg.replace(/\s+/g, " ").slice(0, 300);
+}
+
+interface PullOptions {
+  initial: boolean;
+  soldWindowDays: number;
+  initialSoldDays: number;
+}
+
+/**
+ * Pull from both sources for one model. Each source runs in its own try/catch: a Visor
+ * failure is recorded in `errors` and the Old Cars Data pull still happens, and vice versa.
+ * Returns normalized rows that matched an alias and fall inside the model's year range.
+ */
 async function pull(
   db: Db,
   m: CatalogModel,
   log: (s: string) => void,
   now: Date,
+  po: PullOptions,
   fetchImpl?: typeof fetch,
 ) {
   const sold: NormalizedDealerRow[] = [];
   const active: NormalizedDealerRow[] = [];
   const auctions: NormalizedAuctionRow[] = [];
   const budgetStopped: string[] = [];
+  const errors: string[] = [];
   let unmatched = 0;
+  const years = yearRange(m);
 
   const visorAliases = m.aliases.filter((a) => a.source === "visor");
   if (env.VISOR_API_KEY && visorAliases.length) {
@@ -211,29 +262,27 @@ async function pull(
         env.VISOR_MONTHLY_BUDGET,
         async (record) => {
           const client = createVisorClient({ apiKey: env.VISOR_API_KEY!, record, fetchImpl });
+          const days = po.initial ? po.initialSoldDays : po.soldWindowDays;
           for (const a of visorAliases) {
-            const trim = a.rawTrimPattern?.replace(/%/g, "").trim() || undefined;
-            const q = { make: a.rawMake, model: a.rawModel, trim };
-            for (const r of await client.sold(q, 2)) {
-              if (
-                matchAlias(m.aliases, "visor", {
-                  make: r.rawMake,
-                  model: r.rawModel,
-                  text: r.rawTrim,
-                })
-              )
-                sold.push(r);
+            const q = {
+              make: a.rawMake,
+              model: a.rawModel,
+              trimPattern: a.rawTrimPattern,
+              years: yearList(years, now),
+            };
+            const keep = (r: NormalizedDealerRow) =>
+              inYears(r.year, years) &&
+              matchAlias(m.aliases, "visor", {
+                make: r.rawMake,
+                model: r.rawModel,
+                text: r.rawTrim,
+              });
+            for (const r of await client.sold(q, days)) {
+              if (keep(r)) sold.push(r);
               else unmatched++;
             }
             for (const r of await client.active(q)) {
-              if (
-                matchAlias(m.aliases, "visor", {
-                  make: r.rawMake,
-                  model: r.rawModel,
-                  text: r.rawTrim,
-                })
-              )
-                active.push(r);
+              if (keep(r)) active.push(r);
               else unmatched++;
             }
           }
@@ -244,23 +293,27 @@ async function pull(
       if (e instanceof BudgetExceeded) {
         budgetStopped.push(e.message);
         log(`stop: ${e.message}`);
-      } else throw e;
+      } else {
+        errors.push(`visor: ${describe(e)}`);
+        log(`error ${m.slug} visor: ${describe(e)}`);
+      }
     }
   } else log(`visor: skipped for ${m.slug} (no key or no alias)`);
 
   const ocdAliases = m.aliases.filter((a) => a.source === "ocd");
   if (env.OCD_API_KEY && ocdAliases.length) {
-    // Cursor: newest ended_at we already hold for this model, minus a 2-day overlap.
-    const [last] = await db
-      .select({ endedAt: auctionResults.endedAt })
-      .from(auctionResults)
-      .where(eq(auctionResults.modelId, m.id))
-      .orderBy(desc(auctionResults.endedAt))
-      .limit(1);
-    const since = new Date(
-      (last?.endedAt?.getTime() ?? now.getTime() - 365 * DAY) - 2 * DAY,
-    ).toISOString();
     try {
+      // Cursor: newest ended_at we already hold for this model, minus a 2-day overlap.
+      // First pulls (report builds) walk back without a cursor, to the client's page cap.
+      const [last] = await db
+        .select({ endedAt: auctionResults.endedAt })
+        .from(auctionResults)
+        .where(eq(auctionResults.modelId, m.id))
+        .orderBy(desc(auctionResults.endedAt))
+        .limit(1);
+      const since = po.initial
+        ? null
+        : new Date((last?.endedAt?.getTime() ?? now.getTime() - 365 * DAY) - 2 * DAY).toISOString();
       await withBudget(
         db,
         "ocd",
@@ -268,11 +321,19 @@ async function pull(
         async (record) => {
           const client = createOcdClient({ apiKey: env.OCD_API_KEY!, record, fetchImpl });
           for (const a of ocdAliases) {
-            for (const r of await client.auctions({ make: a.rawMake, model: a.rawModel }, since)) {
-              if (
-                matchAlias(m.aliases, "ocd", { make: r.rawMake, model: r.rawModel, text: r.title })
-              )
-                auctions.push(r);
+            const alias = parseOcdAlias(a);
+            const rows = await client.auctions(
+              {
+                make: alias.make,
+                model: alias.model || undefined,
+                keyword: alias.keyword,
+                yearMin: years.start,
+                yearMax: years.end,
+              },
+              since,
+            );
+            for (const r of rows) {
+              if (ocdRowMatches(alias, r, years)) auctions.push(r);
               else unmatched++;
             }
           }
@@ -283,11 +344,14 @@ async function pull(
       if (e instanceof BudgetExceeded) {
         budgetStopped.push(e.message);
         log(`stop: ${e.message}`);
-      } else throw e;
+      } else {
+        errors.push(`ocd: ${describe(e)}`);
+        log(`error ${m.slug} ocd: ${describe(e)}`);
+      }
     }
   } else log(`ocd: skipped for ${m.slug} (no key or no alias)`);
 
-  return { sold, active, auctions, unmatched, budgetStopped };
+  return { sold, active, auctions, unmatched, budgetStopped, errors };
 }
 
 /** Re-run cleaning over every non-manual dealer sale and auction result of the model. */
@@ -431,6 +495,11 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<NightlySumm
   const startedAt = now.toISOString();
   const errors: string[] = [];
   const summaries: ModelSummary[] = [];
+  const po: PullOptions = {
+    initial: opts.initial ?? false,
+    soldWindowDays: opts.soldWindowDays ?? 2,
+    initialSoldDays: opts.initialSoldDays ?? 365,
+  };
 
   const [run] = await db
     .insert(jobRuns)
@@ -464,17 +533,20 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<NightlySumm
         generationsAggregated: [],
         warnings: [],
         budgetStopped: [],
+        errors: [],
       };
       try {
         if (dryRun) {
           log(`${s.model}: dry run, skipping API pulls`);
         } else {
-          const p = await pull(db, m, log, now, opts.fetchImpl);
+          const p = await pull(db, m, log, now, po, opts.fetchImpl);
           s.visorSold = p.sold.length;
           s.visorActive = p.active.length;
           s.ocdAuctions = p.auctions.length;
           s.unmatchedRows = p.unmatched;
           s.budgetStopped = p.budgetStopped;
+          s.errors = p.errors;
+          for (const err of p.errors) errors.push(`${s.model}: ${err}`);
 
           // Dedupe on the unique indexes: one row per source listing / per source+id.
           if (p.sold.length) {
@@ -543,6 +615,3 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<NightlySumm
   log(`done: ${summaries.length} models, ${errors.length} errors`);
   return summary;
 }
-
-/** Keep `sql` referenced for future raw aggregations without an unused-import lint. */
-export const _sql = sql;

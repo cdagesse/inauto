@@ -4,7 +4,7 @@
  * - 20 s timeout via AbortController
  * - retry with jittered exponential backoff on 429 / 5xx / network errors (3 attempts)
  * - always sends a real User-Agent (Old Cars Data returns 403 without one)
- * - captures rate-limit headers into a plain object for logging
+ * - captures rate-limit, usage and pricing headers into a plain object for logging
  * - never logs secrets: headers are not logged, and URLs are redacted before they appear in errors
  */
 
@@ -59,7 +59,16 @@ export function extractRateLimit(headers: Headers): Record<string, string> {
   const out: Record<string, string> = {};
   headers.forEach((v, k) => {
     const lk = k.toLowerCase();
-    if (lk.startsWith("x-ratelimit") || lk.startsWith("ratelimit") || lk === "retry-after")
+    if (
+      lk.startsWith("x-ratelimit") ||
+      lk.startsWith("ratelimit") ||
+      lk === "retry-after" ||
+      lk.startsWith("x-visor") ||
+      lk.startsWith("x-usage") ||
+      lk.startsWith("x-billing") ||
+      lk.startsWith("x-price") ||
+      lk.startsWith("x-request-id")
+    )
       out[lk] = v;
   });
   return out;

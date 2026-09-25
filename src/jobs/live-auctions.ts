@@ -13,13 +13,13 @@ import {
 import { env } from "@/env/server";
 import { BudgetExceeded, withBudget } from "@/lib/sources/budget";
 import { reconcileDecision } from "@/lib/sources/live";
-import { createOcdClient, type NormalizedLiveRow } from "@/lib/sources/ocd";
 import {
-  assignGeneration,
-  matchAlias,
-  type AliasRule,
-  type GenerationRange,
-} from "./lib/normalize";
+  createOcdClient,
+  matchOcdRules,
+  parseOcdAlias,
+  type NormalizedLiveRow,
+} from "@/lib/sources/ocd";
+import { assignGeneration, type AliasRule, type GenerationRange } from "./lib/normalize";
 
 /**
  * Live auctions sync: pulls in-progress third-party auctions from Old Cars
@@ -92,13 +92,17 @@ async function loadCatalog(
         })),
     });
   }
-  const rules: AliasRule[] = aliases.map((a) => ({
-    modelId: a.modelId,
-    source: a.source,
-    rawMake: a.rawMake,
-    rawModel: a.rawModel,
-    rawTrimPattern: a.rawTrimPattern,
-  }));
+  // Most specific first: keyworded aliases (S63) before bare lines (S-Class) so a row lands on
+  // the narrow model when both would match.
+  const rules: AliasRule[] = aliases
+    .map((a) => ({
+      modelId: a.modelId,
+      source: a.source,
+      rawMake: a.rawMake,
+      rawModel: a.rawModel,
+      rawTrimPattern: a.rawTrimPattern,
+    }))
+    .sort((x, y) => (y.rawTrimPattern?.length ?? 0) - (x.rawTrimPattern?.length ?? 0));
   return { rules, byId };
 }
 
@@ -154,15 +158,21 @@ async function pull(
       async (record) => {
         const client = createOcdClient({ apiKey: env.OCD_API_KEY!, record, fetchImpl });
         if (scope === "all") {
-          rows.push(...(await client.live({}, now)));
+          // One sweep of everything that changed since the last run (default: 36 hours back).
+          const updatedSince = new Date(now.getTime() - 36 * 3_600_000).toISOString();
+          rows.push(...(await client.live({ updatedSince }, now)));
           return;
         }
+        // Catalog scope: one query per distinct make + line (keywords are applied client-side).
         const seen = new Set<string>();
         for (const a of rules) {
-          const key = `${a.rawMake}|${a.rawModel}`.toLowerCase();
+          const alias = parseOcdAlias(a);
+          const key = `${alias.make}|${alias.model}`.toLowerCase();
           if (seen.has(key)) continue;
           seen.add(key);
-          rows.push(...(await client.live({ make: a.rawMake, model: a.rawModel }, now)));
+          rows.push(
+            ...(await client.live({ make: alias.make, model: alias.model || undefined }, now)),
+          );
         }
       },
       log,
@@ -217,7 +227,11 @@ export async function syncLiveAuctions(
       const uniq = new Map<string, NormalizedLiveRow>();
       for (const r of res.rows) uniq.set(`${r.source}|${r.sourceId}`, r);
       for (const r of uniq.values()) {
-        const modelId = matchAlias(rules, "ocd", { make: r.make, model: r.model, text: r.title });
+        const modelId = matchOcdRules(rules, {
+          rawMake: r.make,
+          rawModel: r.model,
+          title: r.title,
+        });
         let generationId: string | null = null;
         if (modelId) {
           matched++;
