@@ -14,24 +14,21 @@ export type LogoType = "full" | "badge" | "wordmark";
 export const LOGO_PX: Record<LogoSize, number> = { xs: 64, sm: 128, md: 256, lg: 512, xl: 1024 };
 
 /**
- * Our catalog slugs that differ from Motomarks brand ids. Motomarks uses
- * lowercase hyphenated brand names ("mercedes-benz", "land-rover"); sub-brands
- * and tuner lines that Motomarks does not carry map to their parent brand.
+ * Motomarks uses lowercase hyphenated brand ids ("mercedes-benz", "land-rover")
+ * and carries every make in our catalog under the same slug, including
+ * Mercedes-AMG, Alpina and Maybach. These aliases only cover informal spellings
+ * that reach us through free-text listing makes.
  */
 const ALIASES: Record<string, string> = {
-  "mercedes-amg": "mercedes-benz",
   mercedes: "mercedes-benz",
-  "mercedes-maybach": "maybach",
-  "bmw-m": "bmw",
-  "audi-sport": "audi",
+  merc: "mercedes-benz",
+  amg: "mercedes-amg",
   chevy: "chevrolet",
   vw: "volkswagen",
   alfa: "alfa-romeo",
   aston: "aston-martin",
-  "land-rover-range-rover": "land-rover",
   "range-rover": "land-rover",
-  ruf: "ruf",
-  shelby: "shelby",
+  rolls: "rolls-royce",
 };
 
 export function slugifyMake(name: string): string {

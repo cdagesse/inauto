@@ -8,11 +8,13 @@ describe("brand logo helpers", () => {
     expect(slugifyMake("Citroën")).toBe("citroen");
   });
 
-  it("maps sub-brands to the Motomarks parent id", () => {
-    expect(motomarksId("Mercedes-AMG")).toBe("mercedes-benz");
-    expect(motomarksId("mercedes-amg")).toBe("mercedes-benz");
+  it("keeps catalog slugs and maps informal spellings to the Motomarks id", () => {
+    expect(motomarksId("Mercedes-AMG")).toBe("mercedes-amg");
+    expect(motomarksId("Mercedes")).toBe("mercedes-benz");
+    expect(motomarksId("Chevy")).toBe("chevrolet");
     expect(motomarksId("Porsche")).toBe("porsche");
     expect(motomarksId("Land Rover")).toBe("land-rover");
+    expect(motomarksId("Range Rover")).toBe("land-rover");
   });
 
   it("returns null without a token and a CDN url with one", () => {

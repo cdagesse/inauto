@@ -51,7 +51,8 @@ export function BrandLogo({
       height={dim}
       loading="lazy"
       decoding="async"
-      referrerPolicy="no-referrer"
+      // Motomarks validates publishable tokens against the Referer; never strip it.
+      referrerPolicy="strict-origin-when-cross-origin"
       onError={() => setFailed(true)}
       style={{ width: dim, height: dim }}
     />
