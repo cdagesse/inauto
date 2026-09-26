@@ -1,11 +1,33 @@
 import Link from "next/link";
-import { listMarketModels } from "@/lib/market/source";
+import { ExternalCard } from "@/components/listings/external-card";
+import { ListingCard } from "@/components/listings/listing-card";
 import { usd } from "@/components/market/format";
+import { BrandLogo } from "@/components/site/brand-logo";
 import { SearchBox } from "@/components/site/search";
+import { env } from "@/env/server";
+import { listMarketModels } from "@/lib/market/source";
+import { listExternalListings } from "@/server/queries/external";
+import { listActiveListings } from "@/server/queries/listings";
+
+/**
+ * The home page shows the newest active listings, so it is regenerated every
+ * 10 minutes and whenever a listing is created, published, withdrawn or sold.
+ * No session is read here on purpose: that keeps the page static at the CDN,
+ * so only public (non private-network) listings appear.
+ */
+export const revalidate = 600;
+
+const OWN_LIMIT = 8;
+const EXTERNAL_LIMIT = 4;
 
 export default async function HomePage() {
-  const models = await listMarketModels();
+  const [models, own, external] = await Promise.all([
+    listMarketModels(),
+    listActiveListings(null, {}, OWN_LIMIT).catch(() => ({ rows: [], nextCursor: null })),
+    listExternalListings({ limit: EXTERNAL_LIMIT }).catch(() => ({ rows: [], nextCursor: null })),
+  ]);
   const featured = models[0];
+  const live = external.rows.filter((l) => l.status === "live");
   return (
     <>
       <section className="home-hero">
@@ -23,6 +45,58 @@ export default async function HomePage() {
           Start with the make. Pick a model and we build its market report from dealer sales and
           auction results.
         </p>
+      </section>
+
+      <section className="shelf home-listings" aria-labelledby="latest-h">
+        <div className="page-head" style={{ paddingBlock: "28px 12px" }}>
+          <div>
+            <div className="eyebrow">For sale now</div>
+            <h2 id="latest-h" className="sec" style={{ marginTop: 6 }}>
+              Latest listings
+            </h2>
+            <p className="sub" style={{ margin: "4px 0 0" }}>
+              The newest cars listed on InAuto, each priced against real dealer and auction sales.
+            </p>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Link href="/listings" className="btn">
+              Browse all
+            </Link>
+            <Link href="/sell" className="btn primary">
+              Sell yours
+            </Link>
+          </div>
+        </div>
+        {own.rows.length === 0 ? (
+          <div className="panel empty-shelf">
+            <b className="display">No active listings yet.</b>
+            <p className="note" style={{ margin: "4px 0 10px" }}>
+              Value your car in a minute and be the first to list it. Free, priced against real
+              sales, with title vetting and inspection for buyers.
+            </p>
+            <Link href="/sell" className="btn primary">
+              Value and list my car
+            </Link>
+          </div>
+        ) : (
+          <div className="car-grid">
+            {own.rows.map((l) => (
+              <ListingCard key={l.id} l={l} />
+            ))}
+          </div>
+        )}
+        {live.length > 0 ? (
+          <>
+            <h3 className="sec" style={{ fontSize: 18, marginTop: 28 }}>
+              Live auctions on other platforms
+            </h3>
+            <div className="car-grid" style={{ marginTop: 10 }}>
+              {live.map((l) => (
+                <ExternalCard key={l.id} l={l} showPhotos={env.externalPhotos} />
+              ))}
+            </div>
+          </>
+        ) : null}
       </section>
 
       <section className="props">
@@ -61,12 +135,15 @@ export default async function HomePage() {
             Featured market report
           </div>
           <Link href={`/${featured.make.slug}/${featured.model.slug}`} className="panel featured">
-            <div>
-              <div className="eyebrow">{featured.make.name}</div>
-              <div className="name">{featured.model.name}</div>
-              <div className="note" style={{ margin: 0 }}>
-                {featured.totals.dealerSales} dealer sales · {featured.totals.auctionSales} auction
-                sales · {featured.totals.activeNow} for sale today
+            <div className="with-logo">
+              <BrandLogo make={featured.make.slug} px={56} />
+              <div>
+                <div className="eyebrow">{featured.make.name}</div>
+                <div className="name">{featured.model.name}</div>
+                <div className="note" style={{ margin: 0 }}>
+                  {featured.totals.dealerSales} dealer sales · {featured.totals.auctionSales}{" "}
+                  auction sales · {featured.totals.activeNow} for sale today
+                </div>
               </div>
             </div>
             <div>

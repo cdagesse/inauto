@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { motomarksToken } from "@/lib/brand/logo";
 
 export function SiteFooter() {
+  const logos = !!motomarksToken();
   return (
     <footer className="wrap site-footer">
       <div>
@@ -11,6 +13,16 @@ export function SiteFooter() {
         <p className="note">
           Market data from dealer listings (Visor) and auction results (Old Cars Data). Estimates
           are not offers. Always vet the title and get a condition report before you send money.
+          {logos ? (
+            <>
+              {" "}
+              Brand logos by{" "}
+              <a href="https://motomarks.io" rel="noopener noreferrer" target="_blank">
+                Motomarks
+              </a>
+              . All automotive brand logos and trademarks are property of their respective owners.
+            </>
+          ) : null}
         </p>
       </div>
       <nav aria-label="Footer">

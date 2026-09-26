@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { mi, usd } from "@/components/account/money";
+import { BrandLogo } from "@/components/site/brand-logo";
 
 export interface ListingCardData {
   id: string;
@@ -50,8 +51,11 @@ export function ListingCard({ l }: { l: ListingCardData }) {
       <h3 className="display" style={{ fontSize: 18, margin: "2px 0 4px" }}>
         {l.title}
       </h3>
-      <div className="hint">
-        {l.year} {l.make} {l.model} · {mi(l.miles)} mi{l.location ? ` · ${l.location}` : ""}
+      <div className="hint with-logo sm">
+        <BrandLogo make={l.make} px={18} />
+        <span>
+          {l.year} {l.make} {l.model} · {mi(l.miles)} mi{l.location ? ` · ${l.location}` : ""}
+        </span>
       </div>
       <div className="num price">
         {l.type === "auction" ? (

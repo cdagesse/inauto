@@ -6,7 +6,16 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
  * rendering happens. Cron, health, search and outbound-click routes never run
  * through Clerk (see the matcher), so bearer-guarded jobs stay independent.
  */
-const isProtected = createRouteMatcher(["/admin(.*)", "/garage(.*)", "/sell(.*)", "/networks(.*)"]);
+/**
+ * /sell and /sell/{make}/{model} (the picker and the valuation page) are public so
+ * anyone can value a car; only the listing wizard at /sell/list needs a session.
+ */
+const isProtected = createRouteMatcher([
+  "/admin(.*)",
+  "/garage(.*)",
+  "/sell/list(.*)",
+  "/networks(.*)",
+]);
 
 export default clerkMiddleware(async (auth, req) => {
   if (isProtected(req)) await auth.protect();

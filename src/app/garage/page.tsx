@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireSignedIn } from "@/components/account/require-signin";
 import { fmtDate, mi, usd } from "@/components/account/money";
 import { GarageCarForm } from "@/components/garage/car-form";
+import { BrandLogo } from "@/components/site/brand-logo";
 import { listMarketModels } from "@/lib/market/source";
 import { deleteGarageCarForm, moveGarageCarForm } from "@/server/forms";
 import { listGarage } from "@/server/queries/garage";
@@ -64,7 +65,7 @@ export default async function GaragePage({
           </h1>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <Link href="/sell" className="btn primary">
+          <Link href="/sell/list" className="btn primary">
             List a car
           </Link>
           <a href="#add-car" className="btn">
@@ -91,7 +92,10 @@ export default async function GaragePage({
                   const market = marketFor(c.make, c.model);
                   return (
                     <article key={c.id} className="panel car-card">
-                      <div className="lab">{c.nickname ?? shelf.title}</div>
+                      <div className="lab with-logo sm">
+                        <BrandLogo make={c.make} px={20} />
+                        <span>{c.nickname ?? shelf.title}</span>
+                      </div>
                       <h3 className="display" style={{ fontSize: 20, margin: "2px 0 4px" }}>
                         {c.year ? `${c.year} ` : ""}
                         {c.make} {c.model}
@@ -194,8 +198,8 @@ export default async function GaragePage({
         <p className="sub">Cars you have listed for sale on InAuto.</p>
         {mine.length === 0 ? (
           <p className="note">
-            No listings yet. <Link href="/sell">List a car</Link> to get pricing guidance and reach
-            buyers.
+            No listings yet. <Link href="/sell/list">List a car</Link> to get pricing guidance and
+            reach buyers.
           </p>
         ) : (
           <div className="tw">

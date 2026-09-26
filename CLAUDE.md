@@ -9,3 +9,5 @@
 - The valuation engine (`src/lib/valuation/engine.ts`) is pure. The worked example in the spec is a unit test; do not change tunables in code, change `valuation_config`.
 - Design tokens live in `src/app/globals.css`. Dark is the default; `data-theme="light"` opts in. Fonts: Archivo (display), Instrument Sans (body), IBM Plex Mono (numbers/labels).
 - Reference material: `docs/reference/paddock-index-spec.md` and `docs/reference/gt3rs-prototype.html`.
+- Brand logos: `BrandLogo` in `src/components/site/brand-logo.tsx` (Motomarks CDN via `NEXT_PUBLIC_MOTOMARKS_TOKEN`, monogram fallback). Never hotlink logos any other way; slug aliases live in `src/lib/brand/logo.ts`.
+- Sell flow: `/sell` is the public picker, `/sell/{make}/{model}?year&gen&miles` the valuation page (ValuationTool in `mode="sell"`), `/sell/list` the sign-in gated listing wizard, prefilled from the query string.
