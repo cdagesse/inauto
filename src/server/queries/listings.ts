@@ -102,7 +102,12 @@ function visibleTo(viewerId: string | null) {
   );
 }
 
-export async function listActiveListings(viewerId: string | null, filter: ListingFilter) {
+export async function listActiveListings(
+  viewerId: string | null,
+  filter: ListingFilter,
+  limit: number = PAGE_SIZE,
+) {
+  const size = Math.max(1, Math.min(limit, PAGE_SIZE));
   const cur = decodeCursor(filter.cursor);
   const conds = [eq(listings.status, "active"), visibleTo(viewerId)];
   if (filter.type) conds.push(eq(listings.type, filter.type));
@@ -136,9 +141,9 @@ export async function listActiveListings(viewerId: string | null, filter: Listin
     .from(listings)
     .where(and(...conds))
     .orderBy(desc(listings.createdAt), desc(listings.id))
-    .limit(PAGE_SIZE + 1);
-  const hasMore = rows.length > PAGE_SIZE;
-  const page = hasMore ? rows.slice(0, PAGE_SIZE) : rows;
+    .limit(size + 1);
+  const hasMore = rows.length > size;
+  const page = hasMore ? rows.slice(0, size) : rows;
   const last = page[page.length - 1];
   return { rows: page, nextCursor: hasMore && last ? encodeCursor(last) : null };
 }

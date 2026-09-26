@@ -5,6 +5,7 @@ import { getMarketSnapshot, listMarketModels } from "@/lib/market/source";
 import { ModelMarket } from "@/components/market/model-market";
 import { GenerationGuide } from "@/components/market/tables";
 import { longDate, usd } from "@/components/market/format";
+import { BrandLogo } from "@/components/site/brand-logo";
 import { getCatalogModel } from "@/server/queries/catalog";
 import { requestMarketReport } from "@/server/reports";
 import { ReportPending } from "./report-pending";
@@ -63,12 +64,17 @@ export default async function ModelPage({ params }: { params: Promise<Params> })
           / {c.make} / <b>{c.shortName ?? c.model}</b>
         </div>
         <div className="hero">
-          <div>
-            <div className="eyebrow">Market report · Dealer retail and auction, United States</div>
-            <h1 className="hero-title">
-              <span>{c.parentLine ?? c.make}</span>
-              {c.shortName ?? c.model}
-            </h1>
+          <div className="with-logo">
+            <BrandLogo make={c.makeSlug} px={64} />
+            <div>
+              <div className="eyebrow">
+                Market report · Dealer retail and auction, United States
+              </div>
+              <h1 className="hero-title">
+                <span>{c.parentLine ?? c.make}</span>
+                {c.shortName ?? c.model}
+              </h1>
+            </div>
           </div>
           <div className="asof">{years}</div>
         </div>
@@ -115,12 +121,15 @@ export default async function ModelPage({ params }: { params: Promise<Params> })
       </div>
 
       <div className="hero">
-        <div>
-          <div className="eyebrow">Market report · Dealer retail and auction, United States</div>
-          <h1 className="hero-title">
-            <span>{s.model.parentLine}</span>
-            {s.model.shortName}
-          </h1>
+        <div className="with-logo">
+          <BrandLogo make={s.make.slug} px={64} />
+          <div>
+            <div className="eyebrow">Market report · Dealer retail and auction, United States</div>
+            <h1 className="hero-title">
+              <span>{s.model.parentLine}</span>
+              {s.model.shortName}
+            </h1>
+          </div>
         </div>
         <div className="asof">
           Data through {longDate(s.dataThrough)}

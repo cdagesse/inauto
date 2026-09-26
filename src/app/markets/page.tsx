@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { listMarketModels } from "@/lib/market/source";
 import { usd } from "@/components/market/format";
+import { BrandLogo } from "@/components/site/brand-logo";
 
 export const metadata: Metadata = {
   title: "Markets",
@@ -55,7 +56,10 @@ export default async function MarketsPage({
             href={`/${m.make.slug}/${m.model.slug}`}
             className="panel model-card"
           >
-            <span className="eyebrow">{m.make.name}</span>
+            <span className="card-brand">
+              <BrandLogo make={m.make.slug} px={28} />
+              <span className="eyebrow">{m.make.name}</span>
+            </span>
             <span className="name">{m.model.name}</span>
             <span className="price">{usd(m.headline)}</span>
             <span className="note" style={{ margin: 0 }}>

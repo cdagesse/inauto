@@ -33,24 +33,45 @@ type Sale = {
 
 const STEPS = ["The car", "How to sell", "Price", "Listing"];
 
-export function SellWizard({ networks }: { networks: Net[] }) {
+/** Values carried over from the sell picker / valuation page (all optional). */
+export interface SellWizardInitial {
+  make?: string;
+  model?: string;
+  year?: string;
+  trim?: string;
+  miles?: string;
+  type?: Sale["type"];
+  weissach?: boolean;
+  colorClass?: Car["colorClass"];
+  condition?: Car["condition"];
+  history?: Car["history"];
+}
+
+export function SellWizard({
+  networks,
+  initial = {},
+}: {
+  networks: Net[];
+  initial?: SellWizardInitial;
+}) {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [car, setCar] = useState<Car>({
-    make: "Porsche",
-    model: "911 GT3 RS",
-    year: "2025",
-    trim: "",
-    miles: "",
+    make: initial.make ?? "Porsche",
+    model: initial.model ?? "911 GT3 RS",
+    year: initial.year ?? "2025",
+    trim: initial.trim ?? "",
+    miles: initial.miles ?? "",
     vin: "",
     color: "",
-    colorClass: "std",
-    condition: "ex",
-    history: "clean",
-    weissach: false,
+    colorClass: initial.colorClass ?? "std",
+    condition: initial.condition ?? "ex",
+    history: initial.history ?? "clean",
+    weissach: initial.weissach ?? false,
   });
   const [sale, setSale] = useState<Sale>({
-    type: "classified",
+    type:
+      initial.type && (initial.type !== "private" || networks.length) ? initial.type : "classified",
     networkId: networks[0]?.id ?? "",
     auctionDays: 7,
     reserve: "",

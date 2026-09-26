@@ -19,6 +19,8 @@ pnpm db:seed                            # Porsche 911 GT3 RS catalog + fixture m
 pnpm dev
 ```
 
+Brand logos come from the [Motomarks](https://motomarks.io) image CDN when `NEXT_PUBLIC_MOTOMARKS_TOKEN` is set (a publishable token, safe in the browser). Without it every make renders as a monogram tile, and the footer attribution line is hidden. The free tier requires the attribution link, which the footer shows automatically.
+
 Sign-in is Clerk (installed from the Vercel Marketplace). The development instance accepts test accounts: sign up with an email like `you+clerk_test@example.com` and use the verification code `424242`. No real mail is sent.
 
 ## Commands

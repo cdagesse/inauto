@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { mi, usd } from "@/components/account/money";
+import { BrandLogo } from "@/components/site/brand-logo";
 import type { ExternalCardData } from "@/server/queries/external";
 import { PlatformMark, SourceBadge } from "./source-badge";
 import { timeLeft } from "./listing-card";
@@ -27,10 +28,13 @@ export function ExternalCard({ l, showPhotos }: { l: ExternalCardData; showPhoto
       <h3 className="display" style={{ fontSize: 18, margin: "2px 0 4px" }}>
         {l.title}
       </h3>
-      <div className="hint">
-        {[l.year, l.make, l.model].filter(Boolean).join(" ")}
-        {l.miles != null ? ` · ${mi(l.miles)} mi` : ""}
-        {l.location ? ` · ${l.location}` : ""}
+      <div className="hint with-logo sm">
+        {l.make ? <BrandLogo make={l.make} px={18} /> : null}
+        <span>
+          {[l.year, l.make, l.model].filter(Boolean).join(" ")}
+          {l.miles != null ? ` · ${mi(l.miles)} mi` : ""}
+          {l.location ? ` · ${l.location}` : ""}
+        </span>
       </div>
       <div className="num price">
         {price ? (

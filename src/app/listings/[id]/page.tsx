@@ -1,3 +1,4 @@
+import { BrandLogo } from "@/components/site/brand-logo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -92,12 +93,15 @@ export default async function ListingPage({
               </span>
             ) : null}
           </div>
-          <h1
-            className="display"
-            style={{ fontSize: "clamp(28px,5vw,44px)", margin: "6px 0 0", lineHeight: 1 }}
-          >
-            {l.title}
-          </h1>
+          <div className="with-logo" style={{ marginTop: 6 }}>
+            <BrandLogo make={l.make} px={44} />
+            <h1
+              className="display"
+              style={{ fontSize: "clamp(28px,5vw,44px)", margin: 0, lineHeight: 1 }}
+            >
+              {l.title}
+            </h1>
+          </div>
           <p className="sub" style={{ marginTop: 8 }}>
             {l.year} {l.make} {l.model}
             {l.trim ? ` ${l.trim}` : ""} · {mi(l.miles)} miles{l.location ? ` · ${l.location}` : ""}{" "}

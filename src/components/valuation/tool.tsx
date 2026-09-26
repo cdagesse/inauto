@@ -54,20 +54,74 @@ function Seg<T extends string>({
   );
 }
 
-export function ValuationTool({ snapshot }: { snapshot: MarketSnapshot }) {
-  const [gen, selectGen] = useGeneration(snapshot.model.slug, snapshot.order, snapshot.order[0]);
+export interface ValuationInitial {
+  generation?: string;
+  year?: number;
+  miles?: number;
+}
+
+/** Builds the /sell/list link that carries the car into the listing wizard. */
+export function listHrefFor(
+  snapshot: MarketSnapshot,
+  inputs: { year: number; miles: number; generation: string; packages: string[] },
+  extra: Record<string, string | undefined> = {},
+) {
+  const p = new URLSearchParams();
+  p.set("make", snapshot.make.name);
+  p.set("model", snapshot.model.name);
+  p.set("year", String(inputs.year));
+  p.set("miles", String(inputs.miles));
+  const gen = snapshot.generations[inputs.generation];
+  if (gen && snapshot.order.length > 1) p.set("trim", gen.name);
+  if (inputs.packages.includes("weissach")) p.set("weissach", "1");
+  for (const [k, v] of Object.entries(extra)) if (v) p.set(k, v);
+  return `/sell/list?${p.toString()}`;
+}
+
+export function ValuationTool({
+  snapshot,
+  initial,
+  mode = "market",
+}: {
+  snapshot: MarketSnapshot;
+  /** Pre-selected generation, year and mileage (from the sell picker). */
+  initial?: ValuationInitial;
+  /** "sell" adds a list-with-InAuto call to action to every channel. */
+  mode?: "market" | "sell";
+}) {
+  const initialGen =
+    initial?.generation && snapshot.order.includes(initial.generation)
+      ? initial.generation
+      : snapshot.order[0];
+  const [gen, selectGen] = useGeneration(
+    mode === "sell" ? `sell:${snapshot.model.slug}` : snapshot.model.slug,
+    snapshot.order,
+    initialGen,
+  );
   const G = snapshot.generations[gen];
   const years = snapshot.years[gen] ?? [];
   const offersWeissach = G.packages.includes("weissach");
 
   const [form, setForm] = useState<FormState>(() => ({
-    year: years[0],
-    miles: String(Math.round(G.medianMiles / 100) * 100),
+    year: initial?.year && years.includes(initial.year) ? initial.year : years[0],
+    miles: String(
+      initial?.miles != null && initial.miles >= 0
+        ? Math.round(initial.miles)
+        : Math.round(G.medianMiles / 100) * 100,
+    ),
     weissach: false,
     colorClass: "std",
     condition: "ex",
     history: "clean",
   }));
+
+  // In sell mode the picker's choice wins over whatever this browser stored last time.
+  const seeded = useRef(false);
+  useEffect(() => {
+    if (seeded.current || mode !== "sell") return;
+    seeded.current = true;
+    if (initialGen !== gen) selectGen(initialGen);
+  }, [mode, initialGen, gen, selectGen]);
 
   // When the generation changes (from the pills or the select), reset year, miles and package.
   const lastGen = useRef(gen);
@@ -122,6 +176,12 @@ export function ValuationTool({ snapshot }: { snapshot: MarketSnapshot }) {
     .map((a) => `${a.label} ${a.pct > 0 ? "+" : ""}${Math.round(a.pct * 100)}%`)
     .join(", ");
   const short = snapshot.model.shortName;
+  const sell = mode === "sell";
+  const listHref = listHrefFor(snapshot, inputs, {
+    colorClass: form.colorClass,
+    condition: form.condition,
+    history: form.history,
+  });
 
   return (
     <div className="val">
@@ -259,6 +319,11 @@ export function ValuationTool({ snapshot }: { snapshot: MarketSnapshot }) {
               Buyer also pays a {usd(v.auction.buyerFee)} fee on top. About 3 to 6 weeks from
               submission to payment. {gapTxt}.
             </div>
+            {sell ? (
+              <a className="btn sm chan-cta" href={`${listHref}&type=auction`}>
+                Run the auction on InAuto
+              </a>
+            ) : null}
           </div>
 
           <div className={`chan${best === "dealer" ? " best" : ""}`}>
@@ -284,6 +349,11 @@ export function ValuationTool({ snapshot }: { snapshot: MarketSnapshot }) {
               Paid in a day or two, no fees. Dealers are sharpest when a generation turns fast;{" "}
               {G.name} cars sell in a median {G.daysToSell} days.
             </div>
+            {sell ? (
+              <a className="btn sm chan-cta" href={`${listHref}&type=classified`}>
+                List it and let dealers bid
+              </a>
+            ) : null}
           </div>
 
           <div className="chan">
@@ -304,8 +374,33 @@ export function ValuationTool({ snapshot }: { snapshot: MarketSnapshot }) {
               Most money on paper, but plan on {v.privateSale.minDays} or more days, strangers at
               your house, and handling payment and title yourself.
             </div>
+            {sell ? (
+              <a className="btn sm primary chan-cta" href={`${listHref}&type=classified`}>
+                List it on InAuto
+              </a>
+            ) : null}
           </div>
         </div>
+
+        {sell ? (
+          <div className="rec sell-pitch">
+            <b>Whichever path you pick, list it on InAuto first.</b>
+            <p>
+              Listing is free. Your {short} is priced against the {v.basis} on this page, so buyers
+              trust the number, and every buyer can order title vetting and an inspection before
+              they commit. Run it as a classified or a 7 or 14 day auction, and keep the{" "}
+              {usd(v.auction.listingFee)} platform fee.
+            </p>
+            <div className="pitch-ctas">
+              <a className="btn primary" href={listHref}>
+                List my {form.year} {short}
+              </a>
+              <a className="btn" href={`/${snapshot.make.slug}/${snapshot.model.slug}`}>
+                Full {short} market report
+              </a>
+            </div>
+          </div>
+        ) : null}
 
         <div className="adj">
           <div className="tw">

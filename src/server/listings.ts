@@ -72,6 +72,7 @@ export async function createListing(raw: unknown): Promise<ActionResult<{ id: st
       })
       .returning({ id: listings.id });
     revalidatePath("/listings");
+    revalidatePath("/");
     return { ok: true, data: { id: row.id } };
   } catch (e) {
     return toError(e);
@@ -97,6 +98,7 @@ export async function publishListing(fd: FormData): Promise<ActionResult> {
         ),
       );
     revalidatePath("/listings");
+    revalidatePath("/");
     revalidatePath(`/listings/${parsed.data.id}`);
     return { ok: true };
   } catch (e) {
@@ -120,6 +122,7 @@ async function setStatus(fd: FormData, status: "withdrawn" | "sold"): Promise<Ac
         ),
       );
     revalidatePath("/listings");
+    revalidatePath("/");
     revalidatePath(`/listings/${parsed.data.id}`);
     return { ok: true };
   } catch (e) {

@@ -2080,3 +2080,112 @@ svg .lbl {
     grid-template-columns: 1fr;
   }
 }
+
+/* brand logos (Motomarks) and the sell flow */
+.brand-logo {
+  display: inline-block;
+  flex: none;
+  border-radius: 8px;
+  object-fit: contain;
+  background: var(--card);
+  border: 1px solid var(--rule-2);
+  padding: 3px;
+  box-sizing: border-box;
+}
+.brand-logo.mono-tile {
+  display: inline-grid;
+  place-items: center;
+  font-family: var(--display);
+  font-stretch: 112%;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--ink-2);
+  background: color-mix(in srgb, var(--ink) 6%, var(--card));
+  line-height: 1;
+  user-select: none;
+}
+.with-logo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+.with-logo > :last-child {
+  min-width: 0;
+}
+.with-logo.sm {
+  gap: 6px;
+  align-items: center;
+}
+.with-logo.sm .brand-logo {
+  border-radius: 5px;
+  padding: 2px;
+}
+.card-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.home-listings .empty-shelf {
+  padding: 24px;
+}
+.home-listings .empty-shelf b {
+  font-size: 20px;
+}
+.sell-hero {
+  padding-block: 40px 20px;
+}
+.sell-hero .sub {
+  margin-top: 14px;
+}
+.sell-picker {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+}
+.picker-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.sell-picker .grid-3 .fld {
+  justify-content: end;
+}
+.sell-picker .btn.primary {
+  width: 100%;
+  justify-content: center;
+}
+.chan .chan-cta {
+  margin-top: 12px;
+  width: 100%;
+  justify-content: center;
+}
+.sell-pitch {
+  margin-top: 18px;
+}
+.pitch-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.kpi-cta {
+  display: grid;
+  gap: 8px;
+  align-content: center;
+}
+.kpi-cta .btn {
+  justify-content: center;
+}
+.why-inauto {
+  border-top: 1px solid var(--rule);
+}
+@media (max-width: 760px) {
+  .sell-picker .grid-3 {
+    grid-template-columns: 1fr;
+  }
+  .with-logo .brand-logo:not(.sm) {
+    width: 44px !important;
+    height: 44px !important;
+  }
+}
