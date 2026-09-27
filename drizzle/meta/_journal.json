@@ -36,6 +36,13 @@
       "when": 1790339892899,
       "tag": "0004_flippant_black_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790535851087,
+      "tag": "0005_common_eddie_brock",
+      "breakpoints": true
     }
   ]
 }

@@ -10,6 +10,12 @@
 import { SEGMENTS, type Segment, segmentForMake } from "@/data/segments";
 import type { MarketSnapshot } from "./types";
 
+/** What the tree needs from a snapshot; stored summaries satisfy it. */
+export type TreeSnapshot = Pick<
+  MarketSnapshot,
+  "make" | "model" | "dataThrough" | "totals" | "order" | "generations" | "monthly"
+>;
+
 export interface TrendPoint {
   month: string; // YYYY-MM
   partial: boolean;
@@ -78,19 +84,19 @@ function median(a: number[]): number | null {
   return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
 }
 
-export function headlineOf(s: MarketSnapshot): number {
+export function headlineOf(s: TreeSnapshot): number {
   const first = s.order.map((c) => s.generations[c]).find((g) => g && g.median > 0);
   return first?.median ?? 0;
 }
 
 /** Union of months across snapshots, sorted, trimmed to the last TREND_MONTHS. */
-export function monthAxis(snapshots: MarketSnapshot[]): string[] {
+export function monthAxis(snapshots: TreeSnapshot[]): string[] {
   const set = new Set<string>();
   for (const s of snapshots) for (const m of s.monthly) set.add(m.month);
   return [...set].sort().slice(-TREND_MONTHS);
 }
 
-export function aggregate(snapshots: MarketSnapshot[], months: string[]): NodeStats {
+export function aggregate(snapshots: TreeSnapshot[], months: string[]): NodeStats {
   let dealerSales = 0;
   let auctionSales = 0;
   let activeNow = 0;
@@ -160,7 +166,7 @@ function byVolume<T extends { stats: NodeStats | null; name?: string }>(a: T, b:
 }
 
 export function buildMarketTree(
-  snapshots: MarketSnapshot[],
+  snapshots: TreeSnapshot[],
   catalog: CatalogMakeCount[],
 ): MarketTree {
   const months = monthAxis(snapshots);
@@ -170,7 +176,7 @@ export function buildMarketTree(
   );
 
   // Every catalog make gets a node, with or without data.
-  const makeNodes = new Map<string, MakeNode & { snaps: MarketSnapshot[] }>();
+  const makeNodes = new Map<string, MakeNode & { snaps: TreeSnapshot[] }>();
   for (const c of catalog) {
     makeNodes.set(c.slug, {
       name: c.name,

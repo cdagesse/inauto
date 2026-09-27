@@ -4,6 +4,7 @@ import { db as defaultDb, type Db } from "@/db";
 import { auctionResults, dealerSales, makes, models } from "@/db/schema";
 import { env } from "@/env/server";
 import { runNightly, type NightlySummary } from "./nightly";
+import { rebuildSnapshot } from "@/lib/market/store";
 
 export interface ReportJobOptions {
   dryRun?: boolean;
@@ -77,6 +78,11 @@ export async function processReportRequests(opts: ReportJobOptions = {}): Promis
 
     const ready = await hasData(db, m.id);
     if (ready) {
+      try {
+        await rebuildSnapshot(m.makeSlug, m.slug, db);
+      } catch (e) {
+        log(`snapshot ${label}: ${e instanceof Error ? e.message : String(e)}`);
+      }
       await db
         .update(models)
         .set({ reportStatus: "ready", reportBuiltAt: sql`now()`, reportError: null })

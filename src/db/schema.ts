@@ -290,6 +290,22 @@ export const rawFetches = pgTable(
 );
 
 /** Calls consumed per source per calendar month; jobs stop cleanly at the configured budget. */
+/**
+ * Precomputed market reports, one per model, rebuilt by the nightly job (and
+ * when a report first becomes ready). Pages read these instead of aggregating
+ * tens of thousands of rows per request. `summary` is the slim subset the
+ * Markets drill-down needs; `snapshot` is the full MarketSnapshot.
+ */
+export const marketSnapshots = pgTable("market_snapshot", {
+  modelId: text("model_id")
+    .primaryKey()
+    .references(() => models.id, { onDelete: "cascade" }),
+  builtAt: timestamp("built_at", { withTimezone: true }).notNull().defaultNow(),
+  dataThrough: text("data_through").notNull(), // YYYY-MM-DD
+  summary: jsonb("summary").notNull(),
+  snapshot: jsonb("snapshot").notNull(),
+});
+
 export const apiBudgets = pgTable(
   "api_budget",
   {
