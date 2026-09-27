@@ -62,8 +62,15 @@ const isVin = (v: string) => /^[A-HJ-NPR-Z0-9]{11,17}$/.test(v);
 /** Admin test orders may use Vitu's sandbox test strings (e.g. "DIALTEST10", "Z038981"). */
 const isTestString = (v: string) => /^[A-Z0-9 .-]{5,17}$/i.test(v);
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
-/** Sandbox creates sometimes answer inquiryId 0; treat that as "unknown, resolve by refNumber". */
-const realId = (id: number | null | undefined) => (typeof id === "number" && id > 0 ? id : null);
+/**
+ * Sandbox creates answer inquiryId 0 (NMVTIS) or 999999 (MVR: a portal mock served while the
+ * application's registration to the product is pending); both mean "resolve by refNumber".
+ */
+const PLACEHOLDER_IDS = new Set([0, 999999]);
+const realId = (id: number | null | undefined) =>
+  typeof id === "number" && id > 0 && !PLACEHOLDER_IDS.has(id) ? id : null;
+const PLACEHOLDER_NOTE =
+  "Vitu answered the create with a placeholder id, so no inquiry was made. Vitu's portal does this while the application's registration to this product is pending or unapproved: check the application's APIs in the developer portal, and set VITU_MVR_LOCATION_ID if the account has locations.";
 
 /**
  * Fulfils title-vetting orders through Vitu. Two independent, asynchronous parts:
@@ -178,6 +185,7 @@ export async function runTitleVetting(
             details.nmvtis = { ...ref, inquiryId } satisfies InquiryRef;
             touched = true;
           }
+          if (!inquiryId) notes.push(PLACEHOLDER_NOTE);
           const record = inquiryId
             ? await loadNmvtisRecord(nmvtis, inquiryId).catch(soft("load record"))
             : null;
@@ -257,10 +265,7 @@ export async function runTitleVetting(
               ? await loadUnifiedRecord(mvr, inquiryId).catch(soft("load record"))
               : null;
             if (record) details.mvrRecord = record;
-            if (!inquiryId)
-              notes.push(
-                "no inquiry id yet (create answered 0 and refNumber lookup found nothing)",
-              );
+            if (!inquiryId) notes.push(PLACEHOLDER_NOTE);
             const summary: MvrSummary = summarizeMvr(record, {
               vin,
               state: ref.state ?? state ?? "",

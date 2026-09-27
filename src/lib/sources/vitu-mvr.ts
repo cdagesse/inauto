@@ -59,7 +59,10 @@ export async function createMvrInquiry(
     c,
     "POST",
     c.createPath,
-    inquiryBody(req, c.stateExtras?.[req.state.toUpperCase()]),
+    inquiryBody(req, {
+      ...(c.stateExtras?.["*"] ?? {}),
+      ...(c.stateExtras?.[req.state.toUpperCase()] ?? {}),
+    }),
   );
   return { inquiryId: pickNumber(raw, ["inquiryId", "id"]), raw };
 }
