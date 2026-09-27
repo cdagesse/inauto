@@ -56,7 +56,14 @@ const schema = z.object({
   /** LoadInquiryById path with "{id}", for processedDate/error. Optional; the record's content is the fallback signal. */
   VITU_MVR_INQUIRY_PATH: z.string().default("/inquiry/id/{id}"),
   VITU_MVR_LOAD_BY_REF_PATH: z.string().default("/inquiry/refNumber/{ref}"),
-  VITU_MVR_LOCATION_ID: optionalString,
+  /** Vitu location number (integer); anything but digits is stripped. Sent as x-location-id. */
+  VITU_MVR_LOCATION_ID: z
+    .string()
+    .optional()
+    .transform((v) => {
+      const d = (v ?? "").replace(/[^0-9]/g, "");
+      return d ? d : undefined;
+    }),
   /** JSON: per-state extra InquiryDTO fields, e.g. {"TX":{"dealerNumber":150786,"sellerUserName":"x"}} */
   VITU_MVR_STATE_EXTRAS: optionalString,
   /** Shared secret for Vitu callbacks: the HMAC key registered via SetCallbackSecurity (32–64 chars) and the ?key= fallback. */
