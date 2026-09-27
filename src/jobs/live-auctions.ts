@@ -54,12 +54,12 @@ export interface LiveAuctionsSummary {
   errors: string[];
 }
 
-interface CatalogModel {
+export interface CatalogModel {
   id: string;
   gens: GenerationRange[];
 }
 
-async function loadCatalog(
+export async function loadCatalog(
   db: Db,
 ): Promise<{ rules: AliasRule[]; byId: Map<string, CatalogModel> }> {
   const rows = await db
@@ -134,6 +134,63 @@ function toInsert(r: NormalizedLiveRow, modelId: string | null, generationId: st
     rawJson: r.raw as object,
     fetchedAt: new Date(),
   };
+}
+
+/**
+ * Upsert normalized rows into external_listing, matching each to a catalog model and
+ * generation when the alias rules allow. Shared by the live sync and the one-time backfill.
+ */
+export async function upsertExternalRows(
+  db: Db,
+  rows: NormalizedLiveRow[],
+  rules: AliasRule[],
+  byId: Map<string, CatalogModel>,
+): Promise<{ upserted: number; matched: number }> {
+  let upserted = 0;
+  let matched = 0;
+  for (const r of rows) {
+    const modelId = matchOcdRules(rules, { rawMake: r.make, rawModel: r.model, title: r.title });
+    let generationId: string | null = null;
+    if (modelId) {
+      matched++;
+      const m = byId.get(modelId);
+      if (m && m.gens.length > 0)
+        generationId = assignGeneration(m.gens, r.year, r.title).generationId;
+    }
+    const values = toInsert(r, modelId, generationId);
+    await db
+      .insert(externalListings)
+      .values(values)
+      .onConflictDoUpdate({
+        target: [externalListings.source, externalListings.sourceId],
+        set: {
+          url: values.url,
+          status: values.status,
+          title: values.title,
+          make: sql`coalesce(excluded.make, ${externalListings.make})`,
+          model: sql`coalesce(excluded.model, ${externalListings.model})`,
+          year: values.year,
+          trim: values.trim,
+          vin: sql`coalesce(${externalListings.vin}, excluded.vin)`,
+          miles: values.miles,
+          color: values.color,
+          location: values.location,
+          description: values.description,
+          photoUrls: values.photoUrls,
+          currentBid: values.currentBid,
+          bidCount: values.bidCount,
+          reserveMet: values.reserveMet,
+          startedAt: values.startedAt,
+          endsAt: values.endsAt,
+          modelId: sql`coalesce(excluded.model_id, ${externalListings.modelId})`,
+          generationId: sql`coalesce(excluded.generation_id, ${externalListings.generationId})`,
+          rawJson: values.rawJson,
+          fetchedAt: values.fetchedAt,
+        },
+      });
+    upserted++;
+  }
+  return { upserted, matched };
 }
 
 /** Pull live auctions within budget. Returns normalized rows; never throws on budget stop. */
@@ -226,52 +283,9 @@ export async function syncLiveAuctions(
       // Dedupe within the pull (paging overlap) on source+sourceId, last one wins.
       const uniq = new Map<string, NormalizedLiveRow>();
       for (const r of res.rows) uniq.set(`${r.source}|${r.sourceId}`, r);
-      for (const r of uniq.values()) {
-        const modelId = matchOcdRules(rules, {
-          rawMake: r.make,
-          rawModel: r.model,
-          title: r.title,
-        });
-        let generationId: string | null = null;
-        if (modelId) {
-          matched++;
-          const m = byId.get(modelId);
-          if (m && m.gens.length > 0)
-            generationId = assignGeneration(m.gens, r.year, r.title).generationId;
-        }
-        const values = toInsert(r, modelId, generationId);
-        await db
-          .insert(externalListings)
-          .values(values)
-          .onConflictDoUpdate({
-            target: [externalListings.source, externalListings.sourceId],
-            set: {
-              url: values.url,
-              status: values.status,
-              title: values.title,
-              make: sql`coalesce(excluded.make, ${externalListings.make})`,
-              model: sql`coalesce(excluded.model, ${externalListings.model})`,
-              year: values.year,
-              trim: values.trim,
-              vin: sql`coalesce(${externalListings.vin}, excluded.vin)`,
-              miles: values.miles,
-              color: values.color,
-              location: values.location,
-              description: values.description,
-              photoUrls: values.photoUrls,
-              currentBid: values.currentBid,
-              bidCount: values.bidCount,
-              reserveMet: values.reserveMet,
-              startedAt: values.startedAt,
-              endsAt: values.endsAt,
-              modelId: sql`coalesce(excluded.model_id, ${externalListings.modelId})`,
-              generationId: sql`coalesce(excluded.generation_id, ${externalListings.generationId})`,
-              rawJson: values.rawJson,
-              fetchedAt: values.fetchedAt,
-            },
-          });
-        upserted++;
-      }
+      const u = await upsertExternalRows(db, [...uniq.values()], rules, byId);
+      upserted = u.upserted;
+      matched = u.matched;
     } else {
       log("dry run: no API calls; running end-time and reconcile steps only");
     }

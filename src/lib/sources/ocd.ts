@@ -73,7 +73,8 @@ function rows(body: unknown): unknown[] {
 function meta(body: unknown) {
   const m = pick(body, "meta");
   return {
-    hasMore: pick(m, "has_more") === true,
+    // Cursor responses carry has_more; page responses (/auctions/live) carry total_pages only.
+    hasMore: pick(m, "has_more") == null ? null : pick(m, "has_more") === true,
     nextCursor: toStr(pick(m, "next_cursor")),
     totalPages: toInt(pick(m, "total_pages")),
   };
@@ -452,7 +453,7 @@ export function createOcdClient(o: OcdClientOptions) {
       }
       const m = meta(result.res.body);
       if (sorted && since && oldest != null && oldest < new Date(since).getTime()) break;
-      if (!m.hasMore || !m.nextCursor) break;
+      if (m.hasMore !== true || !m.nextCursor) break;
       cursor = m.nextCursor;
     }
   }
