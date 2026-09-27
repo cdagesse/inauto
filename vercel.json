@@ -20,7 +20,7 @@
     },
     {
       "path": "/api/jobs/live-auctions",
-      "schedule": "0 * * * *"
+      "schedule": "45 8 * * *"
     }
   ]
 }
