@@ -25,13 +25,10 @@ export async function loadMoreListings(
   }
 }
 
-const externalSchema = z.object({
+const externalSchema = listingFilterSchema.omit({ type: true, cursor: true }).extend({
   source: z.enum(PLATFORM_KEYS).optional(),
-  make: z.string().trim().min(1).max(60).optional(),
   cursor: z.string().max(160).optional(),
   limit: z.number().int().min(1).max(48).optional(),
-  when: z.enum(["live", "past"]).optional(),
-  result: z.enum(["sold", "unsold"]).optional(),
 });
 
 /** Public, read-only. Next page of platform auctions (live first, then settled). */
