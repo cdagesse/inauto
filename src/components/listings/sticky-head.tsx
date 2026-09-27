@@ -20,8 +20,13 @@ export function StickyHead({
   useEffect(() => {
     const el = sentinel.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
+    const headH =
+      document.querySelector<HTMLElement>("header.site-head")?.getBoundingClientRect().height ?? 0;
+    // The sentinel counts as gone once it has slid a little way under the sticky site
+    // header; at load it sits just below the header and must still count as visible.
     const io = new IntersectionObserver(([entry]) => setStuck(!entry?.isIntersecting), {
       threshold: 0,
+      rootMargin: `-${Math.max(0, Math.round(headH) - 12)}px 0px 0px 0px`,
     });
     io.observe(el);
     return () => io.disconnect();
