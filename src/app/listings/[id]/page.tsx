@@ -1,5 +1,6 @@
 import { BrandLogo } from "@/components/site/brand-logo";
 import { StickyHead } from "@/components/listings/sticky-head";
+import { RecordView } from "@/components/home/recent-views";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -99,6 +100,19 @@ export default async function ListingPage({
   return (
     <article className={l.isOwner || session?.user?.role === "admin" ? "has-owner-bar" : undefined}>
       {error ? <p className="err">{error}</p> : null}
+      <RecordView
+        item={{
+          key: `listing:${l.id}`,
+          href: `/listings/${l.id}`,
+          title: l.title,
+          sub: `${l.year} ${l.make} ${l.model}${l.trim ? ` ${l.trim}` : ""} · ${mi(l.miles)} miles`,
+          price: marketPrice ?? null,
+          currency: "USD",
+          priceLabel: marketLabel,
+          photo: l.photos[0] ?? null,
+          badge: "On InAuto",
+        }}
+      />
       <StickyHead photo={l.photos[0] ?? null}>
         <div className="head-main">
           <div className="eyebrow">

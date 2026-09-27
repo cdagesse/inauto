@@ -5,6 +5,7 @@ import { usd } from "@/components/market/format";
 import { BrandLogo } from "@/components/site/brand-logo";
 import { SearchBox } from "@/components/site/search";
 import { FeaturedHero } from "@/components/home/featured-hero";
+import { RecentlyViewed } from "@/components/home/recent-views";
 import { autoFeatured, listFeatured } from "@/server/queries/featured";
 import { env } from "@/env/server";
 import { listMarketModels } from "@/lib/market/source";
@@ -105,6 +106,8 @@ export default async function HomePage() {
           </>
         ) : null}
       </section>
+
+      <RecentlyViewed />
 
       <section className="props">
         <div className="panel prop">
