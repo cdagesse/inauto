@@ -6,7 +6,7 @@ Features and fixes as they ship, newest first. One line per change, with the pul
 
 ### Features
 
-- UrCar logo in the header and footer, white wordmark in dark mode and dark wordmark in light mode (#46)
+- UrCar logo in the header and footer, white wordmark in dark mode and dark wordmark in light mode (#46, wide versions #47)
 
 - Mobile pass: home hero, Buy page header and source menu, car-page headers and sticky bar all fit a 390px phone (#45)
 

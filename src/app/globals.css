@@ -3470,3 +3470,15 @@ header.site-head {
 .bar {
   padding-block: 10px;
 }
+/* wide wordmark logos */
+.brand-img {
+  height: 34px;
+}
+.brand-sm .brand-img {
+  height: 26px;
+}
+@media (max-width: 520px) {
+  .brand-img {
+    height: 28px;
+  }
+}
