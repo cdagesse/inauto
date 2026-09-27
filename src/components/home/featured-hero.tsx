@@ -8,7 +8,7 @@ import type { FeaturedCar } from "@/server/queries/featured";
 /** Rotating card of featured cars for the home hero. Pauses while hovered or focused. */
 export function FeaturedHero({
   cars,
-  interval = 6000,
+  interval = 5000,
 }: {
   cars: FeaturedCar[];
   interval?: number;
@@ -39,7 +39,13 @@ export function FeaturedHero({
           aria-hidden="true"
         />
         <div className="featured-body">
-          <span className="pill accent">{car.featured ? "Featured" : "Just listed"}</span>
+          <span className="pill accent">
+            {car.featured
+              ? "Featured"
+              : car.views
+                ? `Trending · ${car.views.toLocaleString("en-US")} views this week`
+                : "Just listed"}
+          </span>
           <span className="lab featured-badge">{car.badge}</span>
           <h3 className="display">{car.title}</h3>
           <p className="hint">{car.sub}</p>

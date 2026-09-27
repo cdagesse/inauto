@@ -3303,3 +3303,35 @@ header.site-head {
 .recent-views {
   padding-top: 8px;
 }
+
+/* hero carousel: bigger photo, controls under it */
+.home-hero.with-featured {
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 1fr);
+  gap: 28px;
+}
+.featured {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+}
+.featured-card {
+  width: 100%;
+  aspect-ratio: 16 / 11;
+}
+.featured-nav {
+  margin-top: 0;
+  justify-content: center;
+}
+@media (max-width: 900px) {
+  .featured-card {
+    aspect-ratio: 4 / 3;
+  }
+}
+/* one column: card above, controls below (an older .featured rule set two columns) */
+.featured {
+  grid-template-columns: 1fr;
+  align-items: stretch;
+}
+.featured-body .pill.accent {
+  margin-bottom: 4px;
+}
