@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HeaderHeight } from "./header-height";
 import { ThemeToggle } from "./theme-toggle";
 import { UserMenu } from "./user-menu";
 import { SearchBox } from "./search";
@@ -10,8 +11,9 @@ import { SearchBox } from "./search";
  */
 export function SiteHeader() {
   return (
-    <header className="wrap">
-      <div className="bar">
+    <header className="site-head">
+      <HeaderHeight />
+      <div className="wrap bar">
         <Link href="/" className="brand">
           <i aria-hidden="true" />
           InAuto

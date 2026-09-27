@@ -3254,3 +3254,48 @@ table.compare td.down {
     gap: 20px;
   }
 }
+
+/* sticky site header; sticky elements below it sit under --site-head-h */
+:root {
+  --site-head-h: 67px;
+}
+header.site-head {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--paper);
+}
+.sticky-head {
+  top: var(--site-head-h);
+}
+/* the sticky-thumb must not hold its intrinsic width before it appears */
+.sticky-thumb {
+  flex: 0 0 0px;
+  min-width: 0;
+  max-width: 0;
+}
+.sticky-head.stuck .sticky-thumb {
+  flex-basis: 72px;
+  max-width: 72px;
+}
+/* Buy page: the filter row stays reachable while scrolling */
+@media (min-width: 721px) {
+  .filters {
+    position: sticky;
+    top: var(--site-head-h);
+    z-index: 25;
+    background: var(--paper);
+    padding-top: 8px;
+    margin-top: -8px;
+  }
+}
+/* the title block takes the remaining width so it starts at the photo's left edge */
+.page-head.compact .head-main {
+  flex: 1 1 auto;
+}
+.sticky-thumb {
+  margin-right: -20px;
+}
+.sticky-head.stuck .sticky-thumb {
+  margin-right: 0;
+}
