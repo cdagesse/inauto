@@ -14,12 +14,73 @@ interface ModelHit {
   modelSlug: string;
   ready: boolean;
 }
-type Hit = { kind: "make"; make: MakeHit } | { kind: "model"; model: ModelHit };
+/** A suggestion row. `group` decides the section; `href` is where it goes. */
+interface Hit {
+  group: "listings" | "market";
+  key: string;
+  href: string;
+  main: string;
+  small: string;
+  detail: string;
+}
+
+/** Turns catalog matches into two sections: cars for sale, then market reports. */
+export function buildHits(term: string, data: { makes: MakeHit[]; models: ModelHit[] }): Hit[] {
+  // Once the user has typed past the make (e.g. "BMW M"), makes stop being useful.
+  const bare = !/\s\S/.test(term.trim());
+  const makes = bare ? data.makes : [];
+  const listings: Hit[] = [
+    ...makes.map((m) => ({
+      group: "listings" as const,
+      key: `l-make-${m.slug}`,
+      href: `/listings?make=${encodeURIComponent(m.name)}`,
+      main: m.name,
+      small: "",
+      detail: "All cars for sale",
+    })),
+    ...data.models.map((m) => ({
+      group: "listings" as const,
+      key: `l-model-${m.makeSlug}/${m.modelSlug}`,
+      href: `/listings?make=${encodeURIComponent(m.make)}&model=${encodeURIComponent(m.model)}`,
+      main: m.model,
+      small: m.make,
+      detail: "Cars for sale",
+    })),
+  ];
+  const market: Hit[] = [
+    ...makes.map((m) => ({
+      group: "market" as const,
+      key: `m-make-${m.slug}`,
+      href: `/markets?q=${encodeURIComponent(m.name)}`,
+      main: m.name,
+      small: "",
+      detail: "All reports",
+    })),
+    ...data.models.map((m) => ({
+      group: "market" as const,
+      key: `m-model-${m.makeSlug}/${m.modelSlug}`,
+      href: `/${m.makeSlug}/${m.modelSlug}`,
+      main: m.model,
+      small: m.make,
+      detail: m.ready ? "Market report" : "Build report",
+    })),
+  ];
+  return [...listings.slice(0, 5), ...market.slice(0, 5)];
+}
+
+/** Where a bare Enter goes: a make match → its listings; else the first suggestion; else the market search. */
+export function defaultHref(term: string, data: { makes: MakeHit[]; models: ModelHit[] }): string {
+  const t = term.trim().toLowerCase();
+  const make = data.makes.find((m) => m.name.toLowerCase() === t);
+  if (make) return `/listings?make=${encodeURIComponent(make.name)}`;
+  const first = buildHits(term, data)[0];
+  return first ? first.href : `/markets?q=${encodeURIComponent(term.trim())}`;
+}
 
 /**
- * Typeahead over the make/model catalog. Typing "Mercedes" suggests the makes;
- * picking one fills the box with "Mercedes-AMG " so the user can continue with
- * "S63"; picking a model navigates to its market report (built on demand).
+ * Typeahead over the make/model catalog in two sections: cars for sale (the
+ * default) and market reports. "BMW" + Enter goes to BMW listings; "BMW M3"
+ * offers M3 listings and the M3 market report.
  */
 export function SearchBox({
   size = "compact",
@@ -36,6 +97,10 @@ export function SearchBox({
   const abortRef = useRef<AbortController | null>(null);
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<Hit[]>([]);
+  const [data, setData] = useState<{ makes: MakeHit[]; models: ModelHit[] }>({
+    makes: [],
+    models: [],
+  });
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const [loading, setLoading] = useState(false);
@@ -54,13 +119,9 @@ export function SearchBox({
     try {
       const res = await fetch(`/api/search?q=${encodeURIComponent(term)}`, { signal: ctrl.signal });
       if (!res.ok) throw new Error(String(res.status));
-      const data = (await res.json()) as { makes: MakeHit[]; models: ModelHit[] };
-      // Once the user has typed past the make (e.g. "Mercedes-AMG S6"), makes stop being useful.
-      const showMakes = !/\s\S/.test(term);
-      const next: Hit[] = [
-        ...(showMakes ? data.makes.map((m) => ({ kind: "make", make: m }) as Hit) : []),
-        ...data.models.map((m) => ({ kind: "model", model: m }) as Hit),
-      ];
+      const payload = (await res.json()) as { makes: MakeHit[]; models: ModelHit[] };
+      const next = buildHits(term, payload);
+      setData(payload);
       setHits(next);
       setActive(next.length ? 0 : -1);
       setOpen(true);
@@ -77,21 +138,15 @@ export function SearchBox({
   }, [q, search]);
 
   function choose(hit: Hit) {
-    if (hit.kind === "make") {
-      setQ(`${hit.make.name} `);
-      setOpen(true);
-      inputRef.current?.focus();
-      return;
-    }
     setOpen(false);
-    router.push(`/${hit.model.makeSlug}/${hit.model.modelSlug}`);
+    router.push(hit.href);
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (!open || hits.length === 0) {
       if (e.key === "Enter" && q.trim().length >= 2) {
         e.preventDefault();
-        router.push(`/markets?q=${encodeURIComponent(q.trim())}`);
+        router.push(defaultHref(q, data));
       }
       return;
     }
@@ -103,8 +158,12 @@ export function SearchBox({
       setActive((a) => (a - 1 + hits.length) % hits.length);
     } else if (e.key === "Enter") {
       e.preventDefault();
-      const hit = hits[active] ?? hits[0];
-      if (hit) choose(hit);
+      // With nothing highlighted, a bare make goes straight to its listings.
+      if (active < 0) router.push(defaultHref(q, data));
+      else {
+        const hit = hits[active] ?? hits[0];
+        if (hit) choose(hit);
+      }
     } else if (e.key === "Escape") {
       setOpen(false);
     }
@@ -139,13 +198,12 @@ export function SearchBox({
       {open && hits.length > 0 && (
         <ul id={listId} role="listbox" className="sbox-list">
           {hits.map((h, i) => {
-            const isMake = h.kind === "make";
-            const prevKind = i > 0 ? hits[i - 1]!.kind : null;
+            const prevGroup = i > 0 ? hits[i - 1]!.group : null;
             return (
-              <li key={isMake ? `m-${h.make.slug}` : `x-${h.model.makeSlug}/${h.model.modelSlug}`}>
-                {prevKind !== h.kind && (
+              <li key={h.key}>
+                {prevGroup !== h.group && (
                   <div className="sbox-group" aria-hidden="true">
-                    {isMake ? "Makes" : "Models"}
+                    {h.group === "listings" ? "Cars for sale" : "Market reports"}
                   </div>
                 )}
                 <button
@@ -158,19 +216,11 @@ export function SearchBox({
                   onMouseEnter={() => setActive(i)}
                   onClick={() => choose(h)}
                 >
-                  {isMake ? (
-                    <>
-                      <b>{h.make.name}</b>
-                      <small>All models</small>
-                    </>
-                  ) : (
-                    <>
-                      <span>
-                        <small>{h.model.make}</small> <b>{h.model.model}</b>
-                      </span>
-                      <small>{h.model.ready ? "Market report" : "Build report"}</small>
-                    </>
-                  )}
+                  <span>
+                    {h.small ? <small>{h.small} </small> : null}
+                    <b>{h.main}</b>
+                  </span>
+                  <small>{h.detail}</small>
                 </button>
               </li>
             );

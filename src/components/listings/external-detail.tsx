@@ -10,6 +10,7 @@ import { Countdown } from "./countdown";
 import { ExpandToggle } from "./expandable";
 import { PlatformMark, SourceBadge } from "./source-badge";
 import { StickyHead } from "./sticky-head";
+import { RecordView } from "@/components/home/recent-views";
 
 export interface InAutoRead {
   valuation: ValuationResult | null;
@@ -68,6 +69,21 @@ export function ExternalDetail({
 
   return (
     <article className="external-page">
+      <RecordView
+        item={{
+          key: `external:${l.id}`,
+          href: `/listings/ext/${l.source}/${encodeURIComponent(l.sourceId)}`,
+          title: l.title,
+          sub: [carLine, l.miles != null ? `${mi(l.miles)} miles` : null]
+            .filter(Boolean)
+            .join(" · "),
+          price: headline ?? null,
+          currency: l.currency,
+          priceLabel: live ? "Current bid" : "Final bid",
+          photo: photos[0] ?? null,
+          badge: live ? `Live on ${platformName}` : platformName,
+        }}
+      />
       <StickyHead photo={photos[0] ?? null}>
         <div className="head-main">
           <div className="eyebrow">

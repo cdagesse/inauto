@@ -6,6 +6,10 @@ Features and fixes as they ship, newest first. One line per change, with the pul
 
 ### Features
 
+- Search suggestions in two sections, cars for sale first then market reports; Enter on a make opens its listings, "BMW M3" offers M3 listings and the M3 report (#41)
+- Home page "Recently viewed" row from the cars the visitor opened in this browser (#41)
+- Sticky site header on every page; Buy page filter row stays pinned under it (#40)
+
 - Home page hero rotates through admin-featured cars; "Feature on home page" toggle in the admin bar on listing and auction pages; `/admin/featured` to manage the set (#39)
 - Garage sections become tabs with counts; single Garage link with an icon; sun/moon theme toggle (#38)
 - Listing and auction pages: sticky header, the car's photo slides in on scroll (#37)

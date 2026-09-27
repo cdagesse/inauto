@@ -3275,3 +3275,7 @@ header.site-head {
 .sticky-head.stuck .sticky-thumb {
   margin-right: 0;
 }
+
+.recent-views {
+  padding-top: 8px;
+}
