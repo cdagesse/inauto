@@ -59,6 +59,8 @@ export interface TestInputs {
 }
 
 const isVin = (v: string) => /^[A-HJ-NPR-Z0-9]{11,17}$/.test(v);
+/** Admin test orders may use Vitu's sandbox test strings (e.g. "DIALTEST10", "Z038981"). */
+const isTestString = (v: string) => /^[A-Z0-9 .-]{5,17}$/i.test(v);
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 /**
  * Sandbox creates answer inquiryId 0 (NMVTIS) or 999999 (MVR: a portal mock served while the
@@ -128,7 +130,8 @@ export async function runTitleVetting(
 
   for (const o of rows) {
     const vin = (o.vin ?? "").trim().toUpperCase();
-    if (!isVin(vin)) {
+    const isTest = !!(o.details as { test?: unknown } | null)?.test;
+    if (!(isVin(vin) || (isTest && isTestString(vin)))) {
       log(`skip ${o.id}: no usable VIN`);
       continue;
     }
@@ -147,13 +150,17 @@ export async function runTitleVetting(
       try {
         if (!ref) {
           const refNumber = randomUUID();
-          const created = await createNmvtisInquiry(nmvtis, { vin, refNumber });
+          let http: unknown = null;
+          const created = await createNmvtisInquiry(
+            { ...nmvtis, onResponse: (i) => (http = i) },
+            { vin, refNumber },
+          );
           details.nmvtis = {
             refNumber,
             inquiryId: created.inquiryId,
             createdAt: new Date().toISOString(),
           } satisfies InquiryRef;
-          details.nmvtisCreateResponse = created.raw;
+          details.nmvtisCreateResponse = { body: created.raw, http };
           touched = true;
           out.processed.push({ id: o.id, step: "nmvtis-created" });
         } else {
@@ -221,14 +228,18 @@ export async function runTitleVetting(
         try {
           if (!ref) {
             const refNumber = randomUUID();
-            const created = await createMvrInquiry(mvr, { state: state!, vin, refNumber });
+            let http: unknown = null;
+            const created = await createMvrInquiry(
+              { ...mvr, onResponse: (i) => (http = i) },
+              { state: state!, vin, refNumber },
+            );
             details.mvr = {
               refNumber,
               inquiryId: created.inquiryId,
               state: state!,
               createdAt: new Date().toISOString(),
             } satisfies InquiryRef;
-            details.mvrCreateResponse = created.raw;
+            details.mvrCreateResponse = { body: created.raw, http };
             touched = true;
             out.processed.push({ id: o.id, step: "mvr-created" });
           } else {

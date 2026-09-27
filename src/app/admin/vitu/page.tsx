@@ -39,7 +39,7 @@ export default async function AdminVitu({
               name="vin"
               required
               maxLength={17}
-              placeholder="17 characters"
+              placeholder="17-char VIN or sandbox test string"
               className="mono"
             />
           </label>

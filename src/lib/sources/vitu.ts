@@ -23,6 +23,13 @@ export interface VituConfig {
   authUrl: string;
   scope: string;
   fetchImpl?: typeof fetch;
+  /** Called with every non-token response's status and headers (for diagnostics). */
+  onResponse?: (info: {
+    method: string;
+    url: string;
+    status: number;
+    headers: Record<string, string>;
+  }) => void;
 }
 
 export interface NmvtisConfig extends VituConfig {
@@ -95,6 +102,18 @@ export async function vituCall<T>(
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   const text = await res.text();
+  if (c.onResponse) {
+    const headers: Record<string, string> = {};
+    res.headers.forEach((val, key) => {
+      headers[key] = val;
+    });
+    c.onResponse({
+      method,
+      url: `${c.apiBase.replace(/\/$/, "")}${path}`,
+      status: res.status,
+      headers,
+    });
+  }
   if (!res.ok) throw new VituError("report", res.status, text.slice(0, 500));
   if (!text.trim()) return {} as T;
   try {
