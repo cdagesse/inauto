@@ -6,6 +6,8 @@ import { useGeneration } from "@/components/market/use-generation";
 import { yearOverride } from "@/lib/valuation/config";
 import { fmtMiles, usd, usdK, valuate } from "@/lib/valuation/engine";
 import type { ColorClass, Condition, History, ValuationInputs } from "@/lib/valuation/types";
+import { compareVenues } from "@/lib/market/venues";
+import { VenueTable } from "@/components/market/venue-table";
 
 interface FormState {
   year: number;
@@ -177,6 +179,10 @@ export function ValuationTool({
     .join(", ");
   const short = snapshot.model.shortName;
   const sell = mode === "sell";
+  const venues = useMemo(
+    () => (sell ? compareVenues(snapshot, { generation: gen, miles: inputs.miles }) : null),
+    [sell, snapshot, gen, inputs.miles],
+  );
   const listHref = listHrefFor(snapshot, inputs, {
     colorClass: form.colorClass,
     condition: form.condition,
@@ -319,6 +325,12 @@ export function ValuationTool({
               Buyer also pays a {usd(v.auction.buyerFee)} fee on top. About 3 to 6 weeks from
               submission to payment. {gapTxt}.
             </div>
+            {sell && venues?.best ? (
+              <div className="cap venue-hint">
+                Best venue for your miles: <b>{venues.best.platform}</b>
+                {venues.runnerUp ? ` over ${venues.runnerUp.platform}` : ""}. Details below.
+              </div>
+            ) : null}
             {sell ? (
               <a className="btn sm chan-cta" href={`${listHref}&type=auction`}>
                 Run the auction on InAuto
@@ -381,6 +393,18 @@ export function ValuationTool({
             ) : null}
           </div>
         </div>
+
+        {sell && venues ? (
+          <div className="venue-fit">
+            <h3 className="sec" style={{ fontSize: 18 }}>
+              Which auction house for your {form.year} {short}?
+            </h3>
+            <p className="sub" style={{ margin: "4px 0 10px" }}>
+              {G.name} results by venue, narrowed to cars near {fmtMiles(inputs.miles)} miles.
+            </p>
+            <VenueTable comparison={venues} short={short} compact />
+          </div>
+        ) : null}
 
         {sell ? (
           <div className="rec sell-pitch">

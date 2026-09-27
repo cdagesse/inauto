@@ -23,6 +23,26 @@ export function toDateOnly(v: unknown): string | null {
   return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
 }
 
+/**
+ * Sold date for a dealer listing when the source gives none: the day it was
+ * listed plus its days on market, never after `now`. Visor's sold feed omits
+ * sold_date but always carries listed_at and days_on_market.
+ */
+export function deriveSoldDate(
+  listedAt: unknown,
+  daysOnMarket: unknown,
+  now: Date = new Date(),
+): string | null {
+  const listed = toStr(listedAt);
+  if (!listed) return null;
+  const start = new Date(listed);
+  if (Number.isNaN(start.getTime())) return null;
+  const dom = Math.max(0, toInt(daysOnMarket) ?? 0);
+  const sold = new Date(start.getTime() + dom * 86_400_000);
+  const capped = sold.getTime() > now.getTime() ? now : sold;
+  return capped.toISOString().slice(0, 10);
+}
+
 export function toIso(v: unknown): string | null {
   const s = toStr(v);
   if (!s) return null;

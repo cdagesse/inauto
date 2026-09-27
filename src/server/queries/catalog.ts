@@ -48,6 +48,25 @@ export async function getCatalogModel(
   return row ?? null;
 }
 
+/** Published models per make, and how many already have a market report. */
+export async function countModelsByMake(): Promise<
+  { slug: string; name: string; models: number; ready: number }[]
+> {
+  const rows = await db
+    .select({
+      slug: makes.slug,
+      name: makes.name,
+      models: sql<number>`count(*)::int`,
+      ready: sql<number>`count(*) filter (where ${models.reportStatus} = 'ready')::int`,
+    })
+    .from(models)
+    .innerJoin(makes, eq(makes.id, models.makeId))
+    .where(eq(models.published, true))
+    .groupBy(makes.slug, makes.name)
+    .orderBy(asc(makes.name));
+  return rows.map((r) => ({ ...r, models: Number(r.models), ready: Number(r.ready) }));
+}
+
 const escapeLike = (s: string) => s.replace(/[%_\\]/g, (c) => `\\${c}`);
 
 /** Typeahead search over makes and models. Every whitespace-separated term must match. */

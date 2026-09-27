@@ -227,7 +227,7 @@ function router(routes: Record<string, unknown>, status = 200) {
 
 describe("visor normalization", () => {
   it("maps the real field names and drops rows without an id", () => {
-    const rows = visorPage1.data.map(normalizeVisorRow);
+    const rows = visorPage1.data.map((r) => normalizeVisorRow(r));
     expect(rows[3]).toBeNull();
     expect(rows[0]).toMatchObject({
       sourceListingId: "lst_01HZX",
@@ -591,5 +591,32 @@ describe("trim matching ignores spacing and symbols", () => {
     expect(re.test(normalizeTrim("GT3 RS Weissach"))).toBe(true);
     expect(re.test(normalizeTrim("GT3-RS"))).toBe(true);
     expect(re.test(normalizeTrim("GT3 Touring"))).toBe(false);
+  });
+});
+
+describe("deriveSoldDate", () => {
+  const now = new Date("2026-09-25T12:00:00Z");
+  it("adds days on market to the listed date", async () => {
+    const { deriveSoldDate } = await import("@/lib/sources/parse");
+    expect(deriveSoldDate("2026-05-29 04:09:58.580501", 23, now)).toBe("2026-06-21");
+  });
+  it("never lands after the fetch and treats bad days as zero", async () => {
+    const { deriveSoldDate } = await import("@/lib/sources/parse");
+    expect(deriveSoldDate("2026-09-20T00:00:00Z", 400, now)).toBe("2026-09-25");
+    expect(deriveSoldDate("2026-09-20T00:00:00Z", -19328, now)).toBe("2026-09-20");
+    expect(deriveSoldDate(null, 5, now)).toBeNull();
+  });
+  it("is used by the Visor normalizer when sold_date is missing", async () => {
+    const { normalizeVisorRow } = await import("@/lib/sources/visor");
+    const row = normalizeVisorRow(
+      { id: "x1", listed_at: "2026-08-14 07:15:33", days_on_market: 22 },
+      now,
+    );
+    expect(row?.soldDate).toBe("2026-09-05");
+    const explicit = normalizeVisorRow(
+      { id: "x2", listed_at: "2026-08-14 07:15:33", days_on_market: 22, sold_date: "2026-09-01" },
+      now,
+    );
+    expect(explicit?.soldDate).toBe("2026-09-01");
   });
 });

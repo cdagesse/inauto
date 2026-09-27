@@ -218,6 +218,8 @@ export async function getListingForViewer(id: string, viewerId: string | null) {
   return {
     ...l,
     vin,
+    /** Full VIN for server-side lookups only (history timeline); never render it. */
+    historyVin: l.vin,
     sellerName: row.sellerName,
     networkName: row.networkName,
     networkSlug: row.networkSlug,

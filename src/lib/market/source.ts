@@ -46,18 +46,24 @@ function summarize(s: MarketSnapshot): MarketModelSummary {
   return { make: s.make, model: s.model, totals: s.totals, headline: first?.median ?? 0 };
 }
 
-export const listMarketModels = cache(async (): Promise<MarketModelSummary[]> => {
-  const out = new Map<string, MarketModelSummary>();
+/** Every model snapshot with data (plus the fixture fallback), in catalog order. */
+export const listMarketSnapshots = cache(async (): Promise<MarketSnapshot[]> => {
+  const out = new Map<string, MarketSnapshot>();
   let keys: { makeSlug: string; modelSlug: string }[] = [];
   try {
     keys = await listModelsWithData();
   } catch (err) {
     console.warn("market index: database unavailable", (err as Error).message);
   }
-  for (const k of keys) {
-    const snap = await getMarketSnapshot(k.makeSlug, k.modelSlug);
-    if (snap) out.set(`${k.makeSlug}/${k.modelSlug}`, summarize(snap));
-  }
-  for (const [key, s] of Object.entries(FIXTURES)) if (!out.has(key)) out.set(key, summarize(s));
+  const snaps = await Promise.all(keys.map((k) => getMarketSnapshot(k.makeSlug, k.modelSlug)));
+  keys.forEach((k, i) => {
+    const snap = snaps[i];
+    if (snap) out.set(`${k.makeSlug}/${k.modelSlug}`, snap);
+  });
+  for (const [key, s] of Object.entries(FIXTURES)) if (!out.has(key)) out.set(key, s);
   return [...out.values()];
 });
+
+export const listMarketModels = cache(async (): Promise<MarketModelSummary[]> =>
+  (await listMarketSnapshots()).map(summarize),
+);
