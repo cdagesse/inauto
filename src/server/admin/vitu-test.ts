@@ -19,7 +19,10 @@ const schema = z.object({
     .string()
     .trim()
     .toUpperCase()
-    .regex(/^[A-HJ-NPR-Z0-9]{17}$/, "VIN must be 17 characters (no I, O or Q)"),
+    .regex(
+      /^[A-Z0-9 .-]{5,17}$/,
+      "Enter a 17-character VIN or a Vitu sandbox test string (5–17 characters)",
+    ),
   state: z
     .string()
     .trim()
