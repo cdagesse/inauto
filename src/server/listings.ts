@@ -5,8 +5,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/auth";
 import { db } from "@/db";
-import { listings, networkMembers } from "@/db/schema";
-import { createListingSchema } from "./listings-schema";
+import { bids, listings, networkMembers } from "@/db/schema";
+import { createListingSchema, updateListingSchema } from "./listings-schema";
 import { placeBid } from "./queries/listings";
 import { type ActionResult, fail, toError } from "./result";
 
@@ -74,6 +74,97 @@ export async function createListing(raw: unknown): Promise<ActionResult<{ id: st
     revalidatePath("/listings");
     revalidatePath("/");
     return { ok: true, data: { id: row.id } };
+  } catch (e) {
+    return toError(e);
+  }
+}
+
+/**
+ * Owner edits a listing. Allowed while draft, active or ended (not sold or
+ * withdrawn). Bids already placed keep an auction's reserve from rising.
+ */
+export async function updateListing(raw: unknown): Promise<ActionResult<{ id: string }>> {
+  try {
+    const user = await requireUser();
+    const parsed = updateListingSchema.safeParse(raw);
+    if (!parsed.success)
+      return fail(parsed.error.issues[0]?.message ?? "Check the listing details.");
+    const d = parsed.data;
+    const [cur] = await db
+      .select({
+        type: listings.type,
+        status: listings.status,
+        reservePrice: listings.reservePrice,
+        highBid: sql<
+          number | null
+        >`(select max(${bids.amount}) from ${bids} where ${bids.listingId} = ${listings.id})`,
+      })
+      .from(listings)
+      .where(and(eq(listings.id, d.id), eq(listings.sellerId, user.id)))
+      .limit(1);
+    if (!cur) return fail("Listing not found.");
+    if (cur.status === "sold" || cur.status === "withdrawn")
+      return fail("This listing is closed and can no longer be edited.");
+    if (cur.type !== "auction" && (d.askingPrice == null || d.askingPrice <= 0))
+      return fail("Enter an asking price.");
+    if (
+      cur.type === "auction" &&
+      cur.highBid != null &&
+      d.reservePrice != null &&
+      cur.reservePrice != null &&
+      d.reservePrice > cur.reservePrice
+    )
+      return fail("The reserve cannot be raised once bidding has started.");
+    const photos = d.photos.map(safeUrl).filter((p): p is string => !!p);
+    await db
+      .update(listings)
+      .set({
+        make: d.make,
+        model: d.model,
+        year: d.year,
+        trim: d.trim || null,
+        vin: d.vin || null,
+        miles: d.miles,
+        color: d.color || null,
+        colorClass: d.colorClass,
+        condition: d.condition,
+        history: d.history,
+        packages: d.packages,
+        title: d.title,
+        description: d.description || null,
+        photos,
+        location: d.location || null,
+        askingPrice: cur.type === "auction" ? null : (d.askingPrice ?? null),
+        reservePrice: cur.type === "auction" ? (d.reservePrice ?? null) : null,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(listings.id, d.id), eq(listings.sellerId, user.id)));
+    revalidatePath("/listings");
+    revalidatePath("/");
+    revalidatePath(`/listings/${d.id}`);
+    return { ok: true, data: { id: d.id } };
+  } catch (e) {
+    return toError(e);
+  }
+}
+
+/** Owner deletes a draft that was never published. Published listings are withdrawn instead. */
+export async function deleteDraftListing(fd: FormData): Promise<ActionResult> {
+  try {
+    const user = await requireUser();
+    const parsed = z.object({ id: z.string().uuid() }).safeParse({ id: fd.get("id") });
+    if (!parsed.success) return fail("Invalid request.");
+    await db
+      .delete(listings)
+      .where(
+        and(
+          eq(listings.id, parsed.data.id),
+          eq(listings.sellerId, user.id),
+          eq(listings.status, "draft"),
+        ),
+      );
+    revalidatePath("/garage");
+    return { ok: true };
   } catch (e) {
     return toError(e);
   }
