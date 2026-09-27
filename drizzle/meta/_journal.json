@@ -57,6 +57,13 @@
       "when": 1790548599580,
       "tag": "0007_early_silverclaw",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790550007534,
+      "tag": "0008_lethal_mister_sinister",
+      "breakpoints": true
     }
   ]
 }

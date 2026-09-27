@@ -33,7 +33,12 @@ export function OwnerBar({
   /** False for an admin viewing someone else's listing: only the admin section shows. */
   isOwner?: boolean;
   /** Present for admins: the remove action with a reason field. */
-  admin?: { remove: (fd: FormData) => void | Promise<void>; back: string };
+  admin?: {
+    remove: (fd: FormData) => void | Promise<void>;
+    back: string;
+    /** Home page feature toggle. */
+    feature?: { action: (fd: FormData) => void | Promise<void>; featured: boolean };
+  };
 }) {
   const live = status === "active";
   const editable = status !== "sold";
@@ -101,25 +106,43 @@ export function OwnerBar({
             </form>
           ) : null}
           {admin ? (
-            <form
-              action={admin.remove}
-              className="admin-remove"
-              onSubmit={(e) => {
-                if (
-                  !window.confirm(
-                    `Remove "${title}" for everyone? Bids are deleted; the seller keeps their account.`,
+            <>
+              {admin.feature ? (
+                <form action={admin.feature.action}>
+                  <input type="hidden" name="kind" value="listing" />
+
+                  <input type="hidden" name="refId" value={id} />
+
+                  <input type="hidden" name="back" value={`/listings/${id}`} />
+
+                  <button
+                    type="submit"
+                    className={`btn sm${admin.feature.featured ? "" : " primary"}`}
+                  >
+                    {admin.feature.featured ? "Remove from home page" : "Feature on home page"}
+                  </button>
+                </form>
+              ) : null}
+              <form
+                action={admin.remove}
+                className="admin-remove"
+                onSubmit={(e) => {
+                  if (
+                    !window.confirm(
+                      `Remove "${title}" for everyone? Bids are deleted; the seller keeps their account.`,
+                    )
                   )
-                )
-                  e.preventDefault();
-              }}
-            >
-              {hidden}
-              <input type="hidden" name="back" value={admin.back} />
-              <input name="reason" placeholder="Reason (audit log)" maxLength={500} />
-              <button type="submit" className="btn sm danger">
-                Remove listing
-              </button>
-            </form>
+                    e.preventDefault();
+                }}
+              >
+                {hidden}
+                <input type="hidden" name="back" value={admin.back} />
+                <input name="reason" placeholder="Reason (audit log)" maxLength={500} />
+                <button type="submit" className="btn sm danger">
+                  Remove listing
+                </button>
+              </form>
+            </>
           ) : null}
         </div>
       </div>
