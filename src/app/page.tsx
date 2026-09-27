@@ -1,14 +1,13 @@
 import Link from "next/link";
 import { ExternalCard } from "@/components/listings/external-card";
 import { ListingCard } from "@/components/listings/listing-card";
-import { usd } from "@/components/market/format";
-import { BrandLogo } from "@/components/site/brand-logo";
 import { SearchBox } from "@/components/site/search";
 import { FeaturedHero } from "@/components/home/featured-hero";
 import { RecentlyViewed } from "@/components/home/recent-views";
 import { autoFeatured, listFeatured } from "@/server/queries/featured";
 import { env } from "@/env/server";
-import { listMarketModels } from "@/lib/market/source";
+import { SegmentsTable } from "@/components/market/segments-table";
+import { getMarketTree } from "@/lib/market/tree-source";
 import { listExternalListings } from "@/server/queries/external";
 import { listActiveListings } from "@/server/queries/listings";
 
@@ -24,14 +23,14 @@ const OWN_LIMIT = 8;
 const EXTERNAL_LIMIT = 4;
 
 export default async function HomePage() {
-  const [models, own, external, picked] = await Promise.all([
-    listMarketModels(),
+  const [tree, own, external, picked] = await Promise.all([
+    getMarketTree().catch(() => null),
     listActiveListings(null, {}, OWN_LIMIT).catch(() => ({ rows: [], nextCursor: null })),
     listExternalListings({ limit: EXTERNAL_LIMIT }).catch(() => ({ rows: [], nextCursor: null })),
     listFeatured(env.externalPhotos).catch(() => []),
   ]);
   const heroCars = picked.length ? picked : await autoFeatured(5).catch(() => []);
-  const featured = models[0];
+  const segments = tree?.segments ?? [];
   const live = external.rows.filter((l) => l.status === "live");
   return (
     <>
@@ -139,30 +138,35 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {featured && (
-        <section style={{ paddingBlock: 24 }}>
-          <div className="eyebrow" style={{ marginBottom: 8 }}>
-            Featured market report
-          </div>
-          <Link href={`/${featured.make.slug}/${featured.model.slug}`} className="panel featured">
-            <div className="with-logo">
-              <BrandLogo make={featured.make.slug} px={56} />
-              <div>
-                <div className="eyebrow">{featured.make.name}</div>
-                <div className="name">{featured.model.name}</div>
-                <div className="note" style={{ margin: 0 }}>
-                  {featured.totals.dealerSales} dealer sales · {featured.totals.auctionSales}{" "}
-                  auction sales · {featured.totals.activeNow} for sale today
-                </div>
-              </div>
-            </div>
+      {segments.length ? (
+        <section className="shelf home-segments" aria-labelledby="seg-h">
+          <div
+            className="feed-head"
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "end",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
             <div>
-              <div className="lab">Latest generation median</div>
-              <div className="price">{usd(featured.headline)}</div>
+              <div className="eyebrow">Market reports</div>
+              <h2 id="seg-h" className="sec" style={{ marginTop: 4 }}>
+                Segments at a glance
+              </h2>
+              <p className="hint feed-hint">
+                Monthly dealer sales and a price index for each segment; the index sets every
+                generation&apos;s normal price at 100.
+              </p>
             </div>
-          </Link>
+            <Link href="/markets" className="btn">
+              All market reports
+            </Link>
+          </div>
+          <SegmentsTable segments={segments} />
         </section>
-      )}
+      ) : null}
 
       <section className="ctas">
         <Link href="/sell" className="btn primary">

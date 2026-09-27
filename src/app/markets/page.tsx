@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { longDate } from "@/components/market/format";
 import { NodeCard } from "@/components/market/market-nodes";
-import { Sparkline } from "@/components/market/sparkline";
+import { SegmentsTable } from "@/components/market/segments-table";
 import { SearchBox } from "@/components/site/search";
 import { getMarketTree } from "@/lib/market/tree-source";
 
@@ -57,60 +57,7 @@ export default async function MarketsPage() {
           generation&apos;s normal price at 100, so a rising line means cars are selling above their
           usual level.
         </p>
-        <div className="tw">
-          <table className="compare">
-            <thead>
-              <tr>
-                <th>Segment</th>
-                <th className="n">Median price</th>
-                <th className="n">90-day</th>
-                <th className="n">Dealer sales</th>
-                <th className="n">For sale</th>
-                <th>Sales per month</th>
-                <th>Price index</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tree.segments.map((s) => (
-                <tr key={s.key}>
-                  <td>
-                    <Link href={`/markets/${s.key}`} className="seg-link-name">
-                      {s.short}
-                    </Link>
-                    <div className="hint">
-                      {s.catalogMakes} makes · {s.stats?.models ?? 0} of {s.catalogModels} models
-                      reported
-                    </div>
-                  </td>
-                  <td className="n">
-                    {s.stats?.medianPrice != null
-                      ? "$" + Math.round(s.stats.medianPrice).toLocaleString("en-US")
-                      : "n/a"}
-                  </td>
-                  <td
-                    className={`n ${s.stats?.change90 == null ? "" : s.stats.change90 >= 0 ? "up" : "down"}`}
-                  >
-                    {s.stats?.change90 != null
-                      ? `${s.stats.change90 >= 0 ? "+" : ""}${(s.stats.change90 * 100).toFixed(1)}%`
-                      : "n/a"}
-                  </td>
-                  <td className="n">{(s.stats?.dealerSales ?? 0).toLocaleString("en-US")}</td>
-                  <td className="n">{(s.stats?.activeNow ?? 0).toLocaleString("en-US")}</td>
-                  <td className="spark-cell">
-                    {s.stats ? (
-                      <Sparkline trend={s.stats.trend} kind="volume" width={160} height={40} />
-                    ) : null}
-                  </td>
-                  <td className="spark-cell">
-                    {s.stats ? (
-                      <Sparkline trend={s.stats.trend} kind="index" width={160} height={40} />
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <SegmentsTable segments={tree.segments} />
       </section>
 
       <section>

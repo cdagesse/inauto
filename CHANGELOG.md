@@ -6,6 +6,8 @@ Features and fixes as they ship, newest first. One line per change, with the pul
 
 ### Features
 
+- Home page bottom shows "Segments at a glance" (median, 90-day move, sales, for sale, monthly volume, price index) instead of one featured report (#43)
+
 - Search suggestions in two sections, cars for sale first then market reports; Enter on a make opens its listings, "BMW M3" offers M3 listings and the M3 report (#41)
 - Home page "Recently viewed" row from the cars the visitor opened in this browser (#41)
 - Sticky site header on every page; Buy page filter row stays pinned under it (#40)

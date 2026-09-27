@@ -3303,3 +3303,7 @@ header.site-head {
 .recent-views {
   padding-top: 8px;
 }
+
+.home-segments {
+  padding-block: 8px 24px;
+}
