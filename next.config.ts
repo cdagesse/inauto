@@ -14,7 +14,8 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "font-src 'self'",
       "img-src 'self' data: blob: https:",
-      "connect-src 'self' https://vitals.vercel-insights.com https://*.clerk.accounts.dev https://*.clerk.com https://clerk-telemetry.com",
+      // Blob hosts: the browser uploads listing photos straight to Vercel Blob (client upload).
+      "connect-src 'self' https://vitals.vercel-insights.com https://*.clerk.accounts.dev https://*.clerk.com https://clerk-telemetry.com https://blob.vercel-storage.com https://*.blob.vercel-storage.com https://*.public.blob.vercel-storage.com",
       "frame-src https://challenges.cloudflare.com https://*.clerk.accounts.dev https://*.clerk.com",
       "worker-src 'self' blob:",
       "frame-ancestors 'none'",

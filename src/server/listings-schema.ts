@@ -58,6 +58,30 @@ export const createListingSchema = z.object({
 });
 export type CreateListingInput = z.infer<typeof createListingSchema>;
 
+/** Fields an owner may change after creation. Type, network and auction length are fixed. */
+export const updateListingSchema = createListingSchema
+  .pick({
+    make: true,
+    model: true,
+    year: true,
+    trim: true,
+    vin: true,
+    miles: true,
+    color: true,
+    colorClass: true,
+    condition: true,
+    history: true,
+    packages: true,
+    title: true,
+    description: true,
+    photos: true,
+    location: true,
+    askingPrice: true,
+    reservePrice: true,
+  })
+  .extend({ id: z.string().uuid() });
+export type UpdateListingInput = z.infer<typeof updateListingSchema>;
+
 export const listingFilterSchema = z.object({
   type: z.enum(["classified", "auction"]).optional(),
   make: z.string().trim().min(1).max(60).optional(),
