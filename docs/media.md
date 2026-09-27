@@ -10,7 +10,7 @@ Photos upload straight from the browser to the public-read Blob store `inauto-me
 
 ## Content Security Policy
 
-The browser talks to Vercel Blob directly, so `connect-src` in `next.config.ts` must allow `https://blob.vercel-storage.com` and `https://*.blob.vercel-storage.com` (plus the public store host). Without them the token broker succeeds (200 in the logs) but the upload itself is blocked by the browser and the listing saves with no photos.
+The browser talks to Vercel Blob directly, so `connect-src` in `next.config.ts` must allow `https://vercel.com/api/blob/` (the client library uploads through it), `https://blob.vercel-storage.com` and `https://*.blob.vercel-storage.com` (plus the public store host). Without them the token broker succeeds (200 in the logs) but the upload itself is blocked by the browser and the listing saves with no photos.
 
 ## Local development
 

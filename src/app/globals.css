@@ -2666,3 +2666,38 @@ table.compare td.down {
   color: var(--down);
   border-color: var(--down);
 }
+
+/* owner bar: fixed to the bottom of a listing page, owner only */
+.has-owner-bar {
+  padding-bottom: 84px;
+}
+.owner-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid var(--rule);
+  box-shadow: 0 -12px 32px color-mix(in srgb, var(--paper) 55%, transparent);
+}
+.owner-bar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-block: 10px;
+  flex-wrap: wrap;
+}
+.owner-bar-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.owner-bar-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}

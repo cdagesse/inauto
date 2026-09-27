@@ -237,6 +237,35 @@ async function setStatus(fd: FormData, status: "withdrawn" | "sold"): Promise<Ac
     return toError(e);
   }
 }
+/** Owner puts a withdrawn or ended listing back on the market. Auctions get a fresh 7-day clock. */
+export async function relistListing(fd: FormData): Promise<ActionResult> {
+  try {
+    const user = await requireUser();
+    const parsed = z.object({ id: z.string().uuid() }).safeParse({ id: fd.get("id") });
+    if (!parsed.success) return fail("Invalid request.");
+    await db
+      .update(listings)
+      .set({
+        status: "active",
+        closedAt: null,
+        auctionEndsAt: sql`case when ${listings.type} = 'auction' then now() + interval '7 days' else ${listings.auctionEndsAt} end`,
+      })
+      .where(
+        and(
+          eq(listings.id, parsed.data.id),
+          eq(listings.sellerId, user.id),
+          inArray(listings.status, ["withdrawn", "ended"]),
+        ),
+      );
+    revalidatePath("/listings");
+    revalidatePath("/");
+    revalidatePath(`/listings/${parsed.data.id}`);
+    return { ok: true };
+  } catch (e) {
+    return toError(e);
+  }
+}
+
 export async function withdrawListing(fd: FormData) {
   return setStatus(fd, "withdrawn");
 }

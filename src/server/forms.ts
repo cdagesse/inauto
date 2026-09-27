@@ -8,6 +8,7 @@ import {
   withdrawListing,
   deleteDraftListing,
   deleteListing,
+  relistListing,
 } from "./listings";
 import { revokeInvite } from "./networks";
 import type { ActionResult } from "./result";
@@ -39,6 +40,9 @@ export async function publishListingForm(fd: FormData) {
 }
 export async function deleteDraftListingForm(fd: FormData) {
   await run("/garage", deleteDraftListing(fd));
+}
+export async function relistListingForm(fd: FormData) {
+  await run(`/listings/${String(fd.get("id"))}`, relistListing(fd));
 }
 export async function deleteListingForm(fd: FormData) {
   await run("/garage", deleteListing(fd));
