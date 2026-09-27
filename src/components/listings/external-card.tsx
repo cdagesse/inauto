@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { mi, usd } from "@/components/account/money";
 import { BrandLogo } from "@/components/site/brand-logo";
+import { effectiveStatus, outcomeLabel, priceLabel } from "@/lib/sources/status";
 import type { ExternalCardData } from "@/server/queries/external";
 import { PlatformMark, SourceBadge } from "./source-badge";
 import { timeLeft } from "./listing-card";
 
 export function ExternalCard({ l, showPhotos }: { l: ExternalCardData; showPhotos: boolean }) {
   const photo = showPhotos ? l.photoUrls[0] : undefined;
-  const live = l.status === "live";
+  const status = effectiveStatus(l.status, l.endsAt);
+  const live = status === "live";
   const price = live ? l.currentBid : (l.finalPrice ?? l.currentBid);
   return (
     <Link
@@ -22,8 +24,12 @@ export function ExternalCard({ l, showPhotos }: { l: ExternalCardData; showPhoto
         {!photo ? <PlatformMark source={l.source} /> : null}
       </div>
       <div className="lab">
-        <SourceBadge source={l.source} sourceName={l.sourceName} status={l.status} />
-        {live && l.endsAt ? ` · ${timeLeft(l.endsAt)}` : ""}
+        <SourceBadge source={l.source} sourceName={l.sourceName} status={status} />
+        {live && l.endsAt ? (
+          <span suppressHydrationWarning> · {timeLeft(l.endsAt)}</span>
+        ) : status === "ended" ? (
+          <span> · {outcomeLabel(status)}</span>
+        ) : null}
       </div>
       <h3 className="display" style={{ fontSize: 18, margin: "2px 0 4px" }}>
         {l.title}
@@ -41,18 +47,12 @@ export function ExternalCard({ l, showPhotos }: { l: ExternalCardData; showPhoto
           <>
             {usd(price)}{" "}
             <span className="hint">
-              {live
-                ? "current bid"
-                : l.status === "sold"
-                  ? "sold"
-                  : l.status === "rnm"
-                    ? "high bid, no sale"
-                    : "final bid"}
-              {live && l.bidCount ? ` · ${l.bidCount} bids` : ""}
+              {priceLabel(status, true)}
+              {l.bidCount ? ` · ${l.bidCount} bids` : ""}
             </span>
           </>
         ) : (
-          <span className="hint">{live ? "No bids yet" : "No result"}</span>
+          <span className="hint">{priceLabel(status, false)}</span>
         )}
       </div>
     </Link>

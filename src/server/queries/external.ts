@@ -6,6 +6,20 @@ import { isPlatformKey, type PlatformKey } from "@/lib/sources/platforms";
 
 export const EXTERNAL_PAGE_SIZE = 24;
 
+/**
+ * The sync flags a row "live" until the platform reports a result, so between
+ * runs a live row can be past its end time. Treat those as settled everywhere
+ * a reader sees them, so a card never says "Live" over an ended auction.
+ */
+const liveNow = and(
+  eq(externalListings.status, "live"),
+  or(sql`${externalListings.endsAt} is null`, sql`${externalListings.endsAt} >= now()`),
+)!;
+const settled = or(
+  inArray(externalListings.status, ["sold", "rnm", "ended", "withdrawn"]),
+  sql`${externalListings.endsAt} < now()`,
+)!;
+
 export interface ExternalCardData {
   id: string;
   source: PlatformKey;
@@ -96,7 +110,7 @@ export async function listExternalListings(filter: ExternalFilter = {}) {
   let nextCursor: string | null = null;
 
   if (!cur || cur.phase === "live") {
-    const conds = [...base, eq(externalListings.status, "live")];
+    const conds = [...base, liveNow];
     if (cur)
       conds.push(
         or(
@@ -132,7 +146,7 @@ export async function listExternalListings(filter: ExternalFilter = {}) {
         ? encodeCursor("done", { endsAt: null, id: "00000000-0000-0000-0000-000000000000" })
         : null,
     };
-  const conds = [...base, inArray(externalListings.status, ["sold", "rnm", "ended", "withdrawn"])];
+  const conds = [...base, settled];
   if (cur?.phase === "done")
     conds.push(
       or(
@@ -245,7 +259,7 @@ export async function countLiveBySource(): Promise<Record<string, number>> {
   const rows = await db
     .select({ source: externalListings.source, n: sql<number>`count(*)::int` })
     .from(externalListings)
-    .where(eq(externalListings.status, "live"))
+    .where(liveNow)
     .groupBy(externalListings.source);
   const out: Record<string, number> = {};
   for (const r of rows) out[r.source] = Number(r.n);

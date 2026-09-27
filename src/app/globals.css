@@ -2189,3 +2189,28 @@ svg .lbl {
     height: 44px !important;
   }
 }
+
+/* infinite listing feeds */
+.feed-foot {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 16px 0 8px;
+}
+.feed-head {
+  padding-block: 4px 14px;
+}
+.inauto-card {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--rule-2));
+  background: color-mix(in srgb, var(--accent) 5%, var(--card));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.inauto-card:hover {
+  border-color: var(--accent);
+}
+.inauto-pill {
+  margin-right: 6px;
+  vertical-align: middle;
+}

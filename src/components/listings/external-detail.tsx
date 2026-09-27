@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { fmtDate, mi, usd } from "@/components/account/money";
 import { bidDelta, maskVin } from "@/lib/sources/live";
+import { effectiveStatus } from "@/lib/sources/status";
 import { PLATFORMS } from "@/lib/sources/platforms";
 import type { ValuationResult } from "@/lib/valuation/types";
 import type { ExternalDetail as ExternalDetailData } from "@/server/queries/external";
@@ -35,7 +36,8 @@ export function ExternalDetail({
 }) {
   const p = PLATFORMS[l.source] ?? PLATFORMS.other;
   const platformName = l.source === "other" ? l.sourceName : p.name;
-  const live = l.status === "live";
+  const status = effectiveStatus(l.status, l.endsAt);
+  const live = status === "live";
   const ended = !live;
   const headline = live ? l.currentBid : (l.finalPrice ?? l.currentBid);
   const outcome =
@@ -45,7 +47,7 @@ export function ExternalDetail({
         ? "Ended, reserve not met"
         : l.status === "withdrawn"
           ? "Withdrawn"
-          : l.status === "ended"
+          : status === "ended"
             ? "Ended, result pending"
             : null;
   const delta = read?.valuation ? bidDelta(headline, read.valuation.marketValue) : null;
@@ -69,7 +71,7 @@ export function ExternalDetail({
             {l.title}
           </h1>
           <p className="sub" style={{ marginTop: 8 }}>
-            <SourceBadge source={l.source} sourceName={l.sourceName} status={l.status} size="lg" />
+            <SourceBadge source={l.source} sourceName={l.sourceName} status={status} size="lg" />
             {carLine ? <> · {carLine}</> : null}
             {l.miles != null ? <> · {mi(l.miles)} miles</> : null}
             {l.location ? <> · {l.location}</> : null}

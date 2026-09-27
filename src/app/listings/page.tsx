@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { z } from "zod";
 import { auth } from "@/auth";
-import { ExternalCard } from "@/components/listings/external-card";
-import { ListingCard } from "@/components/listings/listing-card";
+import { ListingsFeed } from "@/components/listings/infinite-feed";
 import { env } from "@/env/server";
 import { PLATFORMS, PLATFORM_KEYS } from "@/lib/sources/platforms";
 import { listingFilterSchema } from "@/server/listings-schema";
@@ -158,82 +157,63 @@ export default async function ListingsPage({
         </div>
       </form>
 
-      {showOwn ? (
-        <section className="shelf" aria-labelledby="own-h">
-          {source === "all" ? (
-            <h2 id="own-h" className="sec">
-              On InAuto
-            </h2>
-          ) : null}
-          {own.rows.length === 0 ? (
-            <p className="note" style={{ padding: "24px 0" }}>
-              No active InAuto listings match. <Link href="/sell">Be the first to list.</Link>
-            </p>
-          ) : (
-            <div className="car-grid" style={{ marginTop: source === "all" ? 12 : 0 }}>
-              {own.rows.map((l) => (
-                <ListingCard key={l.id} l={l} />
-              ))}
-            </div>
-          )}
-          {own.nextCursor ? (
-            <div style={{ textAlign: "center", padding: 24 }}>
-              <Link href={qs({ cursor: own.nextCursor })} className="btn">
-                Load more InAuto listings
-              </Link>
-            </div>
-          ) : null}
-        </section>
-      ) : null}
-
-      {showExternal ? (
-        <section className="shelf" aria-labelledby="ext-h">
-          <div className="page-head" style={{ paddingBlock: "8px 12px" }}>
-            <div>
-              <h2 id="ext-h" className="sec">
-                {source === "all"
-                  ? liveTotal
-                    ? `Live on other platforms · ${liveTotal}`
-                    : "Recent auctions on other platforms"
-                  : `On ${PLATFORMS[source as (typeof PLATFORM_KEYS)[number]].name}`}
-              </h2>
-              <p className="sub" style={{ margin: "4px 0 0" }}>
-                Auctions running on Bring a Trailer, Cars &amp; Bids and others. We show the numbers
-                and our read on the price; bidding happens on the platform.
-              </p>
-            </div>
-          </div>
-          {external.rows.length === 0 ? (
-            <p className="note" style={{ padding: "24px 0" }}>
-              {liveTotal === 0
-                ? "No platform auctions synced yet."
-                : "No platform auctions match this filter."}
-            </p>
-          ) : (
-            <div className="car-grid">
-              {external.rows.map((l) => (
-                <ExternalCard key={l.id} l={l} showPhotos={env.externalPhotos} />
-              ))}
-            </div>
-          )}
-          {external.nextCursor ? (
-            <div style={{ textAlign: "center", padding: 24 }}>
-              <Link href={qs({ xcursor: external.nextCursor })} className="btn">
-                Load more from platforms
-              </Link>
-            </div>
-          ) : source === "all" && external.rows.length > 0 ? (
-            <div style={{ textAlign: "center", padding: 24 }}>
-              <Link
-                href={qs({ source: platformsWithLive[0] ?? "bat", cursor: undefined })}
-                className="btn"
-              >
-                See all platform auctions
-              </Link>
-            </div>
-          ) : null}
-        </section>
-      ) : null}
+      <section className="shelf" aria-labelledby="all-h">
+        <div className="feed-head">
+          <h2 id="all-h" className="sec">
+            {source === "inauto"
+              ? "On InAuto"
+              : source === "all"
+                ? "All cars"
+                : `On ${PLATFORMS[source as (typeof PLATFORM_KEYS)[number]].name}`}
+          </h2>
+          <p className="sub" style={{ margin: "4px 0 0" }}>
+            {showOwn && own.rows.length > 0 ? (
+              <>
+                <span className="pill accent inauto-pill">On InAuto</span> cars are listed by their
+                owners here and can be title-vetted and inspected before you commit.{" "}
+              </>
+            ) : showOwn ? (
+              <>
+                No InAuto listings match yet. <Link href="/sell">Be the first to list.</Link>{" "}
+              </>
+            ) : null}
+            {showExternal && liveTotal > 0
+              ? `${liveTotal} auctions are live on Bring a Trailer, Cars & Bids and others; we show the numbers and our read on the price, bidding happens on the platform.`
+              : null}
+          </p>
+        </div>
+        {own.rows.length === 0 && external.rows.length === 0 ? (
+          <p className="note" style={{ padding: "24px 0" }}>
+            {showExternal && liveTotal === 0 && !showOwn
+              ? "No platform auctions synced yet."
+              : "Nothing matches this filter yet."}
+          </p>
+        ) : (
+          <ListingsFeed
+            key={`${source}|${filter.type ?? ""}|${filter.make ?? ""}|${filter.cursor ?? ""}|${xcursor ?? ""}`}
+            own={own}
+            external={external}
+            ownFilter={showOwn ? { type: filter.type, make: filter.make } : null}
+            externalFilter={
+              showExternal
+                ? {
+                    source: source === "all" ? undefined : source,
+                    make: filter.make,
+                    limit: source === "all" ? 12 : 24,
+                  }
+                : null
+            }
+            showPhotos={env.externalPhotos}
+            fallbackHref={
+              own.nextCursor
+                ? qs({ cursor: own.nextCursor })
+                : external.nextCursor
+                  ? qs({ xcursor: external.nextCursor })
+                  : null
+            }
+          />
+        )}
+      </section>
     </div>
   );
 }
