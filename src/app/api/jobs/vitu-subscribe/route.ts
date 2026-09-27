@@ -17,8 +17,8 @@ export const dynamic = "force-dynamic";
  *   curl -X POST -H "Authorization: Bearer $CRON_SECRET" \
  *     "https://inauto-nu.vercel.app/api/jobs/vitu-subscribe?product=mvr"
  * GET shows the current subscription; DELETE removes it.
- * The product's notifications base must be configured (VITU_NOTIFY_MVR_BASE /
- * VITU_NOTIFY_NMVTIS_BASE) and VITU_WEBHOOK_KEY set: it becomes the HMAC key.
+ * Each Notifications product is served from its parent API's base, so only the
+ * product needs to be enabled. VITU_WEBHOOK_KEY becomes the HMAC key.
  */
 function authorized(req: Request): boolean {
   const secret = env.CRON_SECRET;
@@ -31,16 +31,11 @@ function authorized(req: Request): boolean {
 function config(req: Request) {
   const product = new URL(req.url).searchParams.get("product") ?? "mvr";
   const vitu = env.vitu;
-  const base =
-    product === "nmvtis"
-      ? env.vituNotifyNmvtisBase
-      : product === "mvr"
-        ? env.vituNotifyMvrBase
-        : null;
   if (!vitu) return { error: "Vitu credentials not configured", status: 503 } as const;
-  if (!base)
-    return { error: `notifications base for "${product}" not configured`, status: 503 } as const;
-  return { c: { ...vitu, base }, product } as const;
+  const apiBase =
+    product === "nmvtis" ? vitu.nmvtis?.apiBase : product === "mvr" ? vitu.mvr?.apiBase : null;
+  if (!apiBase) return { error: `product "${product}" is not enabled`, status: 503 } as const;
+  return { c: { ...vitu, apiBase }, product } as const;
 }
 
 async function handle(req: Request) {

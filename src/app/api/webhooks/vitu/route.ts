@@ -43,7 +43,9 @@ export async function POST(req: Request) {
   const [order] = await db
     .select({ id: serviceOrders.id })
     .from(serviceOrders)
-    .where(sql`${serviceOrders.details}->'mvr'->>'refNumber' = ${ref}`)
+    .where(
+      sql`(${serviceOrders.details}->'mvr'->>'refNumber' = ${ref} or ${serviceOrders.details}->'nmvtis'->>'refNumber' = ${ref})`,
+    )
     .limit(1);
   if (!order) return NextResponse.json({ ok: true, ignored: "unknown refNumber" });
   const summary = await runTitleVetting({ onlyOrderId: order.id, limit: 1 });

@@ -4,14 +4,22 @@ import { and, eq, sql } from "drizzle-orm";
 import { db as defaultDb, type Db } from "@/db";
 import { listings, serviceOrders, users } from "@/db/schema";
 import { env } from "@/env/server";
-import { fetchTitleReportRaw, parseTitleReport, VituError } from "@/lib/sources/vitu";
+import {
+  createNmvtisInquiry,
+  isNotReady,
+  loadNmvtisInquiry,
+  loadNmvtisRecord,
+  summarizeNmvtis,
+  type TitleSummary,
+  VituError,
+} from "@/lib/sources/vitu";
 import {
   createMvrInquiry,
   loadInquiryStatus,
   loadUnifiedRecord,
+  type MvrSummary,
   stateFromLocation,
   summarizeMvr,
-  type MvrSummary,
 } from "@/lib/sources/vitu-mvr";
 
 export interface TitleVettingSummary {
@@ -33,24 +41,33 @@ interface OrderRow {
   status: string;
 }
 
-type MvrState = {
+/** Stored in details.nmvtis / details.mvr once an inquiry has been created. */
+export interface InquiryRef {
   refNumber: string;
   inquiryId: number | null;
-  state: string;
+  state?: string;
   createdAt: string;
-  lastError?: string;
-};
+}
+
+/** Admin test orders (no listing) carry their inputs here: details.test. */
+export interface TestInputs {
+  state?: string | null;
+  sellerName?: string | null;
+  miles?: number | null;
+}
 
 const isVin = (v: string) => /^[A-HJ-NPR-Z0-9]{11,17}$/.test(v);
 
 /**
- * Fulfils title-vetting orders through Vitu, in two independent parts:
- *  - NMVTIS title report (brands, theft, liens) when VITU_TITLE_PATH is set;
- *  - MVR inquiry (live DMV record: registered owner, lienholder, registration)
- *    when VITU_MVR_ENABLED, created once and then read back on later runs
- *    (or when the Vitu notification webhook fires) until it is processed.
- * An order completes when every configured part has a result. A clean NMVTIS
- * (or, without NMVTIS, a verified MVR) marks the listing title-vetted.
+ * Fulfils title-vetting orders through Vitu. Two independent, asynchronous parts:
+ *  - NMVTIS vehicle history (brands, title history, junk/salvage/insurance) when
+ *    VITU_NMVTIS_ENABLED is not "false";
+ *  - MVR (live DMV record: registered owner, lienholder, registration) when
+ *    VITU_MVR_ENABLED is "true".
+ * Each inquiry is created once (stored in details.nmvtis / details.mvr) and read
+ * back on later runs, or when the Vitu notification webhook fires, until the
+ * provider has processed it. The order completes when every configured part has
+ * a result; the listing is marked title-vetted only when every part passes.
  */
 export async function runTitleVetting(
   opts: { db?: Db; limit?: number; log?: (m: string) => void; onlyOrderId?: string } = {},
@@ -60,11 +77,11 @@ export async function runTitleVetting(
   const limit = Math.max(1, Math.min(opts.limit ?? 10, 50));
   const out: TitleVettingSummary = { processed: [], skipped: null, errors: [] };
   const cfg = env.vitu;
-  const nmvtis = !!cfg?.titlePath;
-  const mvr = !!cfg?.mvr;
+  const nmvtis = cfg?.nmvtis ? { ...cfg, ...cfg.nmvtis } : null;
+  const mvr = cfg?.mvr ? { ...cfg, ...cfg.mvr } : null;
   if (!cfg || (!nmvtis && !mvr)) {
     out.skipped =
-      "Vitu not configured (set VITU_CLIENT_ID/SECRET plus VITU_TITLE_PATH and/or VITU_MVR_ENABLED)";
+      "Vitu not configured (set VITU_CLIENT_ID/SECRET; VITU_NMVTIS_ENABLED and/or VITU_MVR_ENABLED)";
     log(out.skipped);
     return out;
   }
@@ -105,107 +122,122 @@ export async function runTitleVetting(
     }
     const details: Record<string, unknown> = { ...(o.details ?? {}) };
     const result: Record<string, unknown> = { ...(o.result ?? {}) };
+    const test = (details.test as TestInputs | undefined) ?? null;
+    const state = test?.state?.toUpperCase() || stateFromLocation(o.location);
+    const sellerName = test?.sellerName || o.sellerLegalName || o.sellerName || null;
+    const miles = typeof test?.miles === "number" ? test.miles : o.miles;
     let touched = false;
+    let stop = false;
 
-    // Part 1: NMVTIS title report.
+    // Part 1: NMVTIS vehicle history.
     if (nmvtis && !result.summary) {
+      const ref = (details.nmvtis as InquiryRef | undefined) ?? null;
       try {
-        const raw = await fetchTitleReportRaw({ ...cfg, titlePath: cfg.titlePath! }, vin);
-        const summary = parseTitleReport(raw, vin);
-        details.report = raw;
-        result.summary = summary;
-        result.vetted = summary.verdict === "clean";
-        touched = true;
-        out.processed.push({ id: o.id, step: "nmvtis", verdict: summary.verdict });
+        if (!ref) {
+          const refNumber = randomUUID();
+          const created = await createNmvtisInquiry(nmvtis, { vin, refNumber });
+          details.nmvtis = {
+            refNumber,
+            inquiryId: created.inquiryId,
+            createdAt: new Date().toISOString(),
+          } satisfies InquiryRef;
+          details.nmvtisCreateResponse = created.raw;
+          touched = true;
+          out.processed.push({ id: o.id, step: "nmvtis-created" });
+        } else if (ref.inquiryId != null) {
+          const inquiry = await loadNmvtisInquiry(nmvtis, ref.inquiryId).catch((e) => {
+            if (isNotReady(e)) return null;
+            throw e;
+          });
+          const record = await loadNmvtisRecord(nmvtis, ref.inquiryId).catch((e) => {
+            if (isNotReady(e)) return null;
+            throw e;
+          });
+          const summary: TitleSummary = summarizeNmvtis(record, {
+            vin,
+            inquiryId: ref.inquiryId,
+            refNumber: ref.refNumber,
+            inquiry,
+            listingMiles: miles,
+          });
+          if (summary.processed) {
+            details.report = record;
+            if (inquiry) details.nmvtisInquiry = inquiry;
+            result.summary = summary;
+            touched = true;
+            out.processed.push({ id: o.id, step: "nmvtis", verdict: summary.verdict });
+          } else log(`${o.id} nmvtis still pending`);
+        }
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         out.errors.push(`${o.id} nmvtis: ${msg}`);
         log(`error ${o.id} nmvtis: ${msg}`);
-        if (e instanceof VituError && e.step === "token") break;
+        if (e instanceof VituError && e.step === "token") stop = true;
       }
     }
 
-    // Part 2: MVR inquiry, created once, then read back until processed.
-    if (mvr) {
-      const state = stateFromLocation(o.location);
-      const mvrState = (details.mvr as MvrState | undefined) ?? null;
-      if (!mvrState) {
-        if (!state) {
-          log(`skip mvr ${o.id}: no state in listing location`);
-        } else {
-          try {
+    // Part 2: MVR live state record.
+    if (mvr && !result.mvr && !stop) {
+      const ref = (details.mvr as InquiryRef | undefined) ?? null;
+      if (!ref && !state) log(`skip mvr ${o.id}: no state known for this vehicle`);
+      else {
+        try {
+          if (!ref) {
             const refNumber = randomUUID();
-            const created = await createMvrInquiry(
-              { ...cfg, ...cfg.mvr! },
-              { state, vin, refNumber },
-            );
+            const created = await createMvrInquiry(mvr, { state: state!, vin, refNumber });
             details.mvr = {
               refNumber,
               inquiryId: created.inquiryId,
-              state,
+              state: state!,
               createdAt: new Date().toISOString(),
-            } satisfies MvrState;
+            } satisfies InquiryRef;
             details.mvrCreateResponse = created.raw;
             touched = true;
             out.processed.push({ id: o.id, step: "mvr-created" });
-          } catch (e) {
-            const msg = e instanceof Error ? e.message : String(e);
-            out.errors.push(`${o.id} mvr create: ${msg}`);
-            log(`error ${o.id} mvr create: ${msg}`);
-            if (e instanceof VituError && e.step === "token") break;
-          }
-        }
-      } else if (!result.mvr && mvrState.inquiryId != null) {
-        try {
-          const mc = { ...cfg, ...cfg.mvr! };
-          const inquiry = await loadInquiryStatus(mc, mvrState.inquiryId);
-          // Before the state responds the record endpoint may 4xx; treat that as still pending.
-          const record = await loadUnifiedRecord(mc, mvrState.inquiryId).catch((e) => {
-            if (
-              e instanceof VituError &&
-              e.status >= 400 &&
-              e.status < 500 &&
-              e.status !== 401 &&
-              e.status !== 403
-            )
-              return null;
-            throw e;
-          });
-          const summary: MvrSummary = summarizeMvr(record, {
-            vin,
-            state: mvrState.state,
-            refNumber: mvrState.refNumber,
-            inquiryId: mvrState.inquiryId,
-            sellerName: o.sellerLegalName ?? o.sellerName,
-            listingMiles: o.miles,
-            inquiry,
-          });
-          if (summary.processed) {
-            details.mvrRecord = record;
-            if (inquiry) details.mvrInquiry = inquiry;
-            result.mvr = summary;
-            touched = true;
-            out.processed.push({ id: o.id, step: "mvr", verdict: summary.verdict });
-          } else {
-            log(`${o.id} mvr still pending`);
+          } else if (ref.inquiryId != null) {
+            const inquiry = await loadInquiryStatus(mvr, ref.inquiryId);
+            const record = await loadUnifiedRecord(mvr, ref.inquiryId).catch((e) => {
+              if (isNotReady(e)) return null;
+              throw e;
+            });
+            const summary: MvrSummary = summarizeMvr(record, {
+              vin,
+              state: ref.state ?? state ?? "",
+              refNumber: ref.refNumber,
+              inquiryId: ref.inquiryId,
+              sellerName,
+              listingMiles: miles,
+              inquiry,
+            });
+            if (summary.processed) {
+              details.mvrRecord = record;
+              if (inquiry) details.mvrInquiry = inquiry;
+              result.mvr = summary;
+              touched = true;
+              out.processed.push({ id: o.id, step: "mvr", verdict: summary.verdict });
+            } else log(`${o.id} mvr still pending`);
           }
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);
-          out.errors.push(`${o.id} mvr read: ${msg}`);
-          log(`error ${o.id} mvr read: ${msg}`);
+          out.errors.push(`${o.id} mvr: ${msg}`);
+          log(`error ${o.id} mvr: ${msg}`);
+          if (e instanceof VituError && e.step === "token") stop = true;
         }
       }
     }
 
     const nmvtisDone = !nmvtis || !!result.summary;
-    const mvrDone = !mvr || !!result.mvr || !stateFromLocation(o.location);
+    const mvrDone = !mvr || !!result.mvr || (!details.mvr && !state);
     const complete = nmvtisDone && mvrDone;
     if (touched || (complete && o.status !== "complete")) {
-      const s = result.summary as { verdict?: string; flags?: string[] } | undefined;
+      const s = result.summary as TitleSummary | undefined;
       const m = result.mvr as MvrSummary | undefined;
-      const vetted = nmvtis ? s?.verdict === "clean" : m?.verdict === "verified";
+      const passes = [s ? s.verdict === "clean" : null, m ? m.verdict === "verified" : null].filter(
+        (v): v is boolean => v !== null,
+      );
+      const vetted = passes.length > 0 && passes.every(Boolean);
       const notes = [
-        s ? `NMVTIS ${s.verdict}${s.flags?.length ? ` (${s.flags.join("; ")})` : ""}` : null,
+        s ? `NMVTIS ${s.verdict}${s.flags.length ? ` (${s.flags.join("; ")})` : ""}` : null,
         m ? `MVR ${m.verdict}${m.flags.length ? ` (${m.flags.join("; ")})` : ""}` : null,
       ].filter(Boolean);
       await db
@@ -222,6 +254,7 @@ export async function runTitleVetting(
       if (complete && o.listingId && vetted)
         await db.update(listings).set({ titleVetted: true }).where(eq(listings.id, o.listingId));
     }
+    if (stop) break;
   }
   return out;
 }

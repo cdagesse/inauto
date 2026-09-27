@@ -1,16 +1,19 @@
 /**
- * Vitu (developer.vitu.com) client for title checks.
+ * Vitu (developer.vitu.com) client: OAuth token plus the NMVTIS
+ * "Vehicle History Verification" inquiry API.
  *
  * Auth is OAuth 2.0 client credentials against Vitu's Keycloak realm
- * (form-encoded, scope `oneapi:access`), per Vitu's migration guide:
+ * (form-encoded, scope `oneapi:access`):
  *   sandbox: https://auth.test.vitu.com/realms/api/protocol/openid-connect/token
- *            API https://api-test.vitu.com
- *   stage:   https://auth.stage.vitu.com/…  API https://api-stage.vitu.com
- *   prod:    https://auth.secure.vitu.com/… API https://api.vitu.com
+ *   stage:   https://auth.stage.vitu.com/…
+ *   prod:    https://auth.secure.vitu.com/…
  *
- * The NMVTIS / theft-and-lien endpoint path and its response shape are set by
- * the API spec in Vitu's portal (login only). They live in VITU_TITLE_PATH
- * and parseTitleReport(); everything else here is spec-independent.
+ * NMVTIS (base https://api-test.vitu.com/one/nmvtis/api/v1) is asynchronous:
+ *   POST /inquiry { refNumber, vin, stockNumber? }  -> { inquiryId }
+ *   GET  /inquiry/id/{inquiryId}                    -> InquiryResponseDTO (processedDate, error)
+ *   GET  /inquiry/{inquiryId}/record                -> InquiryRecordDTO (titles, brands, dispositions)
+ *   GET  /inquiry/{inquiryId}/report                -> PDF
+ * Completion is announced through the matching Notifications product (same base).
  */
 import { z } from "zod";
 
@@ -18,13 +21,14 @@ export interface VituConfig {
   clientId: string;
   clientSecret: string;
   authUrl: string;
-  apiBase: string;
   scope: string;
-  /** Path of the title/NMVTIS report endpoint, e.g. "/nmvtis/v2/reports". "{vin}" is substituted when present. */
-  titlePath: string;
-  /** "GET" sends the VIN in the path/query; "POST" sends {"vin": …} as JSON. */
-  titleMethod: "GET" | "POST";
   fetchImpl?: typeof fetch;
+}
+
+export interface NmvtisConfig extends VituConfig {
+  /** e.g. https://api-test.vitu.com/one/nmvtis/api/v1 */
+  apiBase: string;
+  locationId?: string | null;
 }
 
 const tokenSchema = z.object({
@@ -70,188 +74,273 @@ export async function getVituToken(c: VituConfig, now = Date.now()): Promise<str
   return parsed.data.access_token;
 }
 
-/** Calls the title report endpoint for a VIN and returns the raw JSON body. */
-export async function fetchTitleReportRaw(c: VituConfig, vin: string): Promise<unknown> {
+/** Authenticated JSON call against a product base. Shared by the NMVTIS, MVR and Notifications clients. */
+export async function vituCall<T>(
+  c: VituConfig & { apiBase: string; locationId?: string | null },
+  method: "GET" | "POST" | "PUT" | "DELETE",
+  path: string,
+  body?: unknown,
+): Promise<T> {
   const token = await getVituToken(c);
   const f = c.fetchImpl ?? fetch;
-  const path = c.titlePath.includes("{vin}")
-    ? c.titlePath.replace("{vin}", encodeURIComponent(vin))
-    : c.titlePath;
-  const url = `${c.apiBase.replace(/\/$/, "")}${path}`;
-  const res =
-    c.titleMethod === "POST"
-      ? await f(url, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({ vin }),
-        })
-      : await f(
-          c.titlePath.includes("{vin}")
-            ? url
-            : `${url}${url.includes("?") ? "&" : "?"}vin=${encodeURIComponent(vin)}`,
-          {
-            method: "GET",
-            headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-          },
-        );
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+    Accept: "application/json",
+  };
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (c.locationId) headers["x-location-id"] = c.locationId;
+  const res = await f(`${c.apiBase.replace(/\/$/, "")}${path}`, {
+    method,
+    headers,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
   const text = await res.text();
-  if (!res.ok) throw new VituError("report", res.status, text.slice(0, 300));
+  if (!res.ok) throw new VituError("report", res.status, text.slice(0, 500));
+  if (!text.trim()) return {} as T;
   try {
-    return JSON.parse(text);
+    return JSON.parse(text) as T;
   } catch {
     throw new VituError("report", res.status, "response was not JSON");
   }
 }
 
-/** What we show buyers. Every field is best-effort; `flags` is the headline. */
+/** True for 4xx statuses that mean "not ready / not found yet" rather than auth or config errors. */
+export const isNotReady = (e: unknown) =>
+  e instanceof VituError &&
+  e.status >= 400 &&
+  e.status < 500 &&
+  e.status !== 401 &&
+  e.status !== 403 &&
+  e.status !== 429;
+
+// ---------------------------------------------------------------------------
+// NMVTIS inquiry API
+// ---------------------------------------------------------------------------
+
+export interface NmvtisInquiryStatus {
+  inquiryId?: number | null;
+  refNumber?: string | null;
+  vin?: string | null;
+  stockNumber?: string | null;
+  error?: string | null;
+  processedDate?: string | null;
+}
+
+/** InquiryRecordDTO. `titlingState` may be a jurisdiction code such as "C6", not only USPS codes. */
+export interface NmvtisTitle {
+  odometerReading?: string | null;
+  titleIssueDate?: string | null;
+  titlingState?: string | null;
+}
+export interface NmvtisRecord {
+  previousTitle?: NmvtisTitle[] | null;
+  title?: NmvtisTitle[] | null;
+  vehicle?: { vin?: string | null }[] | null;
+  vehicleBrands?:
+    | {
+        brand?: string | null;
+        brandDate?: string | null;
+        reportingEntityName?: string | null;
+        isBrand?: boolean | null;
+      }[]
+    | null;
+  vehicleDisposition?:
+    | {
+        dateObtained?: string | null;
+        entityName?: string | null;
+        entityAddress?: string | null;
+        entityPhone?: string | null;
+        entityEmail?: string | null;
+        reportingEntityType?: string | null;
+        vehicleDisposition?: string | null;
+      }[]
+    | null;
+}
+
+export async function createNmvtisInquiry(
+  c: NmvtisConfig,
+  req: { vin: string; refNumber: string; stockNumber?: string | null },
+): Promise<{ inquiryId: number | null; raw: unknown }> {
+  const body: Record<string, unknown> = { refNumber: req.refNumber, vin: req.vin.toUpperCase() };
+  if (req.stockNumber) body.stockNumber = req.stockNumber;
+  const raw = await vituCall<{ inquiryId?: number }>(c, "POST", "/inquiry", body);
+  return { inquiryId: typeof raw?.inquiryId === "number" ? raw.inquiryId : null, raw };
+}
+
+export function loadNmvtisInquiry(c: NmvtisConfig, inquiryId: number) {
+  return vituCall<NmvtisInquiryStatus>(c, "GET", `/inquiry/id/${inquiryId}`);
+}
+
+export function loadNmvtisInquiryByRef(c: NmvtisConfig, refNumber: string) {
+  return vituCall<NmvtisInquiryStatus>(
+    c,
+    "GET",
+    `/inquiry/refNumber/${encodeURIComponent(refNumber)}`,
+  );
+}
+
+export function loadNmvtisRecord(c: NmvtisConfig, inquiryId: number) {
+  return vituCall<NmvtisRecord>(c, "GET", `/inquiry/${inquiryId}/record`);
+}
+
+/** What we show buyers. `flags` is the headline. */
 export interface TitleSummary {
   vin: string;
   checkedAt: string;
+  inquiryId: number | null;
+  refNumber: string | null;
+  processed: boolean;
+  error: string | null;
+  vinOnRecord: string | null;
+  /** Brands as reported, e.g. "Salvage (2019-03-01, NY DMV)". */
   brands: string[];
-  theft: boolean | null;
-  liens: number | null;
-  lienHolders: string[];
-  titleRecords: number | null;
+  /** Junk / salvage / insurance dispositions, e.g. "Salvage — Progressive Insurance (2019-02-14)". */
+  dispositions: string[];
+  /** Newest first: current title(s) then previous titles. */
+  titleHistory: {
+    state: string | null;
+    issued: string | null;
+    odometer: number | null;
+    current: boolean;
+  }[];
+  titleRecords: number;
   lastTitleState: string | null;
   lastOdometer: number | null;
-  odometerIssue: boolean | null;
-  /** Human-readable red flags, empty when clean. */
+  odometerIssue: boolean;
   flags: string[];
-  /** "clean" | "issues" | "unknown" */
-  verdict: "clean" | "issues" | "unknown";
+  verdict: "clean" | "issues" | "pending" | "unknown";
 }
 
-const asArray = (v: unknown): unknown[] => (Array.isArray(v) ? v : v == null ? [] : [v]);
-const str = (v: unknown): string | null =>
-  typeof v === "string" && v.trim() ? v.trim() : typeof v === "number" ? String(v) : null;
-const num = (v: unknown): number | null => {
-  if (typeof v === "number" && Number.isFinite(v)) return v;
-  if (typeof v === "string" && /^\d[\d,]*$/.test(v.trim())) return Number(v.replace(/,/g, ""));
-  return null;
+/** Brands that are pure odometer disclosures rather than damage/condition brands. */
+const ODOMETER_OK = /^(actual milage|actual mileage|exempt from odometer disclosure)$/i;
+const ODOMETER_BAD = /odometer|not actual|exceeds mechanical/i;
+
+const odo = (v: string | null | undefined): number | null => {
+  if (v == null) return null;
+  const s = String(v).trim();
+  if (!/^\d[\d,]*$/.test(s)) return null;
+  return Number(s.replace(/,/g, ""));
 };
-const bool = (v: unknown): boolean | null =>
-  typeof v === "boolean"
-    ? v
-    : typeof v === "string"
-      ? /^(true|yes|y)$/i.test(v)
-        ? true
-        : /^(false|no|n)$/i.test(v)
-          ? false
-          : null
-      : null;
+const strv = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
 
-/** Depth-first search for the first key matching any of the names (case-insensitive). */
-function find(obj: unknown, names: string[], depth = 0): unknown {
-  if (depth > 6 || obj == null || typeof obj !== "object") return undefined;
-  const want = names.map((n) => n.toLowerCase());
-  if (Array.isArray(obj)) {
-    for (const item of obj) {
-      const r = find(item, names, depth + 1);
-      if (r !== undefined) return r;
-    }
-    return undefined;
-  }
-  for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
-    if (want.includes(k.toLowerCase())) return v;
-  }
-  for (const v of Object.values(obj as Record<string, unknown>)) {
-    const r = find(v, names, depth + 1);
-    if (r !== undefined) return r;
-  }
-  return undefined;
+export function recordHasContent(r: NmvtisRecord | null | undefined): boolean {
+  if (!r || typeof r !== "object") return false;
+  return !!(
+    r.title?.length ||
+    r.previousTitle?.length ||
+    r.vehicle?.some((v) => strv(v?.vin)) ||
+    r.vehicleBrands?.length ||
+    r.vehicleDisposition?.length
+  );
 }
 
-/**
- * Turns a raw NMVTIS-style report into our summary. Written against the
- * NMVTIS data model (brands, title records with state and odometer, theft
- * and lien indicators) with tolerant key matching, so it survives naming
- * differences; tighten it against Vitu's spec once we have it.
- */
-export function parseTitleReport(raw: unknown, vin: string, now = new Date()): TitleSummary {
-  const brandSrc = find(raw, [
-    "brands",
-    "brandHistory",
-    "brand_records",
-    "titleBrands",
-    "vehicleBrands",
-  ]);
-  const brands = asArray(brandSrc)
-    .map((b) =>
-      typeof b === "string"
-        ? b
-        : (str(find(b, ["brandName", "name", "brand", "description", "code"])) ?? null),
-    )
-    .filter((b): b is string => !!b);
+/** Summarises an NMVTIS InquiryRecordDTO (plus inquiry status when known) against the listing. */
+export function summarizeNmvtis(
+  record: NmvtisRecord | null | undefined,
+  ctx: {
+    vin: string;
+    inquiryId?: number | null;
+    refNumber?: string | null;
+    inquiry?: NmvtisInquiryStatus | null;
+    listingMiles?: number | null;
+    now?: Date;
+  },
+): TitleSummary {
+  const now = ctx.now ?? new Date();
+  const r: NmvtisRecord = record && typeof record === "object" ? record : {};
+  const error = strv(ctx.inquiry?.error);
+  const hasContent = recordHasContent(r);
+  const processed = hasContent || !!strv(ctx.inquiry?.processedDate) || !!error;
 
-  const theftRaw = find(raw, [
-    "theft",
-    "stolen",
-    "theftIndicator",
-    "reportedStolen",
-    "theftRecords",
-    "theft_records",
-  ]);
-  const theft = Array.isArray(theftRaw)
-    ? theftRaw.length > 0
-    : (bool(theftRaw) ??
-      (theftRaw && typeof theftRaw === "object"
-        ? bool(find(theftRaw, ["stolen", "indicator", "found", "hasRecords"]))
-        : null));
+  const vinOnRecord =
+    (r.vehicle ?? [])
+      .map((v) => strv(v?.vin))
+      .find(Boolean)
+      ?.toUpperCase() ?? null;
+  const toTitle = (t: NmvtisTitle, current: boolean) => ({
+    state: strv(t?.titlingState)?.toUpperCase() ?? null,
+    issued: strv(t?.titleIssueDate),
+    odometer: odo(t?.odometerReading),
+    current,
+  });
+  const byDateDesc = (a: { issued: string | null }, b: { issued: string | null }) =>
+    (Date.parse(b.issued ?? "") || 0) - (Date.parse(a.issued ?? "") || 0);
+  const titleHistory = [
+    ...(r.title ?? [])
+      .filter(Boolean)
+      .map((t) => toTitle(t, true))
+      .sort(byDateDesc),
+    ...(r.previousTitle ?? [])
+      .filter(Boolean)
+      .map((t) => toTitle(t, false))
+      .sort(byDateDesc),
+  ];
+  const brandRows = (r.vehicleBrands ?? []).filter(
+    (b) => b && (b.isBrand !== false || strv(b.brand)) && strv(b.brand),
+  );
+  const brands = brandRows.map((b) => {
+    const meta = [strv(b.brandDate), strv(b.reportingEntityName)].filter(Boolean).join(", ");
+    return `${b.brand!.trim()}${meta ? ` (${meta})` : ""}`;
+  });
+  const dispositions = (r.vehicleDisposition ?? [])
+    .filter((d) => d && (strv(d.vehicleDisposition) || strv(d.entityName)))
+    .map((d) => {
+      const what = strv(d.vehicleDisposition) ?? "Reported";
+      const who = [strv(d.entityName), strv(d.reportingEntityType)].filter(Boolean).join(", ");
+      const when = strv(d.dateObtained);
+      return `${what}${who ? ` — ${who}` : ""}${when ? ` (${when})` : ""}`;
+    });
 
-  const lienRaw = find(raw, ["liens", "lienRecords", "lien_records", "lienholders", "lienHolders"]);
-  const lienList = asArray(lienRaw);
-  const lienCount = Array.isArray(lienRaw)
-    ? lienList.length
-    : num(find(raw, ["lienCount", "activeLiens", "numberOfLiens"]));
-  const lienHolders = lienList
-    .map((l) =>
-      typeof l === "string"
-        ? l
-        : str(find(l, ["lienholderName", "lienHolderName", "name", "holder"])),
-    )
-    .filter((x): x is string => !!x);
-
-  const records = asArray(
-    find(raw, ["titleRecords", "title_records", "titles", "titleHistory", "history"]),
+  const latest = titleHistory[0] ?? null;
+  const lastOdometer =
+    titleHistory.map((t) => t.odometer).find((n): n is number => n != null) ?? null;
+  const odometerBrand = brandRows.some(
+    (b) => ODOMETER_BAD.test(b.brand!) && !ODOMETER_OK.test(b.brand!),
   );
-  const last = records[0] ?? null;
-  const lastTitleState = str(
-    find(last ?? raw, ["titleState", "state", "jurisdiction", "issuingState"]),
-  );
-  const odoRaw = find(last ?? raw, ["odometer", "odometerReading", "mileage", "odometer_reading"]);
-  const lastOdometer = num(
-    typeof odoRaw === "object" && odoRaw ? find(odoRaw, ["reading", "value", "miles"]) : odoRaw,
-  );
-  const odometerIssue = bool(
-    find(raw, ["odometerIssue", "odometerDiscrepancy", "odometerRollback", "odometer_problem"]),
-  );
+  // Readings should not decrease over time (history is newest-first, so each later entry should be <=).
+  const readings = [...titleHistory]
+    .filter((t) => t.odometer != null && t.issued)
+    .sort((a, b) => -byDateDesc(a, b));
+  let rollback = false;
+  for (let i = 1; i < readings.length; i++)
+    if (readings[i]!.odometer! + 100 < readings[i - 1]!.odometer!) rollback = true;
+  const listingBelowRecord =
+    lastOdometer != null &&
+    typeof ctx.listingMiles === "number" &&
+    ctx.listingMiles + 500 < lastOdometer;
+  const odometerIssue = odometerBrand || rollback || listingBelowRecord;
 
   const flags: string[] = [];
-  for (const b of brands) flags.push(`Title brand: ${b}`);
-  if (theft) flags.push("Reported stolen");
-  if (lienCount && lienCount > 0)
+  if (error) flags.push(`NMVTIS lookup error: ${error}`);
+  if (vinOnRecord && vinOnRecord !== ctx.vin.toUpperCase())
+    flags.push(`VIN on record (${vinOnRecord}) does not match the listing`);
+  for (const b of brandRows) {
+    if (ODOMETER_OK.test(b.brand!)) continue;
+    flags.push(`Title brand: ${b.brand!.trim()}${strv(b.brandDate) ? ` (${b.brandDate})` : ""}`);
+  }
+  for (const d of dispositions) flags.push(`Junk/salvage/insurance record: ${d}`);
+  if (rollback) flags.push("Odometer readings on title history decrease over time");
+  if (listingBelowRecord)
     flags.push(
-      `${lienCount} lien${lienCount === 1 ? "" : "s"} on record${lienHolders.length ? ` (${lienHolders.join(", ")})` : ""}`,
+      `Listing shows ${ctx.listingMiles!.toLocaleString("en-US")} miles but the last title reading was ${lastOdometer!.toLocaleString("en-US")}`,
     );
-  if (odometerIssue) flags.push("Odometer discrepancy");
 
-  const known = brands.length > 0 || theft != null || lienCount != null || records.length > 0;
   return {
-    vin,
+    vin: ctx.vin,
     checkedAt: now.toISOString(),
+    inquiryId: ctx.inquiryId ?? null,
+    refNumber: ctx.refNumber ?? null,
+    processed,
+    error,
+    vinOnRecord,
     brands,
-    theft: theft ?? null,
-    liens: lienCount ?? null,
-    lienHolders,
-    titleRecords: records.length || null,
-    lastTitleState,
+    dispositions,
+    titleHistory,
+    titleRecords: titleHistory.length,
+    lastTitleState: latest?.state ?? null,
     lastOdometer,
     odometerIssue,
     flags,
-    verdict: !known ? "unknown" : flags.length ? "issues" : "clean",
+    verdict: !processed ? "pending" : !hasContent ? "unknown" : flags.length ? "issues" : "clean",
   };
 }
