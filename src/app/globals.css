@@ -3448,3 +3448,25 @@ header.site-head {
     align-items: center;
   }
 }
+
+/* brand logos: white wordmark on dark, dark wordmark on light */
+.brand-img {
+  height: 44px;
+  width: auto;
+  display: inline-block;
+}
+.brand-sm .brand-img {
+  height: 32px;
+}
+.brand-img.light {
+  display: none;
+}
+:root[data-theme="light"] .brand-img.dark {
+  display: none;
+}
+:root[data-theme="light"] .brand-img.light {
+  display: inline-block;
+}
+.bar {
+  padding-block: 10px;
+}
