@@ -46,6 +46,14 @@ export interface OcdClientOptions {
   perPage?: number;
 }
 
+/** Thrown when Old Cars Data reports its quota is spent; jobs stop cleanly until the reset date. */
+export class OcdQuotaExhausted extends Error {
+  constructor(public readonly resetsOn: string) {
+    super(`Old Cars Data quota exhausted; resets ${resetsOn}`);
+    this.name = "OcdQuotaExhausted";
+  }
+}
+
 export class OcdApiError extends Error {
   constructor(
     public readonly endpoint: string,
@@ -388,6 +396,16 @@ export function createOcdClient(o: OcdClientOptions) {
       body: res.body,
     });
     if (!res.ok) throw new OcdApiError(path, res.status, errorDetail(res.body));
+    // OCD's own quota (1,000 calls per plan month, resetting on their cycle, not the
+    // calendar month) is the real limit: stop the run when it reports nothing left.
+    const remaining = Number(res.rateLimit?.["x-ratelimit-remaining"] ?? NaN);
+    if (Number.isFinite(remaining) && remaining <= 0) {
+      const reset = Number(res.rateLimit?.["x-ratelimit-reset"] ?? NaN);
+      const when = Number.isFinite(reset)
+        ? new Date(reset * 1000).toISOString().slice(0, 10)
+        : "the next cycle";
+      throw new OcdQuotaExhausted(when);
+    }
     return { res, rs };
   }
 
