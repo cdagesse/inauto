@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { VenueTable } from "./venue-table";
+import { compareVenues } from "@/lib/market/venues";
 import { useMemo, useState } from "react";
 import type { MarketSnapshot } from "@/lib/market/types";
 import { valuate } from "@/lib/valuation/engine";
@@ -202,6 +204,19 @@ export function MarketSummary({
           </div>
         </section>
       )}
+
+      <section>
+        <h2 className="sec">Where a car like this sells best</h2>
+        <p className="sub">
+          {g.name} auction results by venue, narrowed to cars near {mi(milesUsed)} miles. Useful
+          whether you are weighing this car against an auction or thinking of selling your own.
+        </p>
+        <VenueTable
+          comparison={compareVenues(snapshot, { generation: sel, miles: milesUsed })}
+          short={snapshot.model.shortName}
+          compact
+        />
+      </section>
 
       <section>
         <h2 className="sec">Price vs. mileage, {g.name}</h2>

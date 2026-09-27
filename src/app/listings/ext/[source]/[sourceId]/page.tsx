@@ -3,12 +3,15 @@ import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { ExternalDetail, type InAutoRead } from "@/components/listings/external-detail";
 import { MarketBlock } from "@/components/listings/market-block";
+import { VinTimeline } from "@/components/listings/vin-timeline";
 import { packagesFromText } from "@/components/market/market-summary-lib";
 import { env } from "@/env/server";
 import { getMarketSnapshot } from "@/lib/market/source";
 import { isPlatformKey } from "@/lib/sources/platforms";
 import { valuate } from "@/lib/valuation/engine";
 import { getExternalListing } from "@/server/queries/external";
+import { getVinTimeline } from "@/server/queries/vin";
+import { maskVin } from "@/lib/sources/live";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +46,10 @@ export default async function ExternalListingPage({ params }: { params: Params }
   const l = await load(params);
   if (!l) notFound();
   const session = await auth();
+  const history = await getVinTimeline(l.vin, {
+    kind: "external",
+    id: `${l.source}:${l.sourceId}`,
+  });
 
   let read: InAutoRead | null = null;
   if (l.market) {
@@ -73,19 +80,22 @@ export default async function ExternalListingPage({ params }: { params: Params }
   const price = live ? l.currentBid : (l.finalPrice ?? l.currentBid);
   const priceLabel = l.status === "sold" ? "Sold for" : "Current bid";
   const market = (
-    <MarketBlock
-      market={l.market}
-      make={l.make}
-      model={l.model}
-      car={{
-        year: l.year,
-        miles: l.miles,
-        price: price ?? null,
-        packages: packagesFromText(`${l.title} ${l.trim ?? ""}`),
-        title: l.title,
-      }}
-      priceLabel={priceLabel}
-    />
+    <>
+      <MarketBlock
+        market={l.market}
+        make={l.make}
+        model={l.model}
+        car={{
+          year: l.year,
+          miles: l.miles,
+          price: price ?? null,
+          packages: packagesFromText(`${l.title} ${l.trim ?? ""}`),
+          title: l.title,
+        }}
+        priceLabel={priceLabel}
+      />
+      <VinTimeline events={history} vinShown={maskVin(l.vin)} />
+    </>
   );
 
   return (

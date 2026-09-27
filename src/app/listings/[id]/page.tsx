@@ -10,11 +10,13 @@ import { Countdown } from "@/components/listings/countdown";
 import { MarketBlock } from "@/components/listings/market-block";
 import { PhotoGallery } from "@/components/listings/photo-gallery";
 import { ServiceOrderForm } from "@/components/listings/service-order-form";
+import { VinTimeline } from "@/components/listings/vin-timeline";
 import { verdictClass, verdictLabel } from "@/components/listings/verdict";
 import type { PriceGuidance } from "@/lib/valuation/types";
 import { markListingSoldForm, publishListingForm, withdrawListingForm } from "@/server/forms";
 import { minimumIncrement } from "@/server/listings-schema";
 import { getListingForViewer } from "@/server/queries/listings";
+import { getVinTimeline } from "@/server/queries/vin";
 
 export async function generateMetadata({
   params,
@@ -44,6 +46,7 @@ export default async function ListingPage({
   const viewerId = session?.user?.id ?? null;
   const l = await getListingForViewer(id, viewerId);
   if (!l) notFound();
+  const history = await getVinTimeline(l.historyVin, { kind: "inauto", id: l.id });
   const closed = l.status === "sold" || l.status === "ended" || l.status === "withdrawn";
   const ended = l.ended || closed;
   const winningMine = l.status === "sold" && l.bids[0]?.mine === true;
@@ -236,6 +239,7 @@ export default async function ListingPage({
             }}
             priceLabel={marketLabel}
           />
+          <VinTimeline events={history} vinShown={l.vin} />
         </div>
 
         <aside className="side">
