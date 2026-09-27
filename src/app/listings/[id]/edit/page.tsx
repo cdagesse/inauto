@@ -71,6 +71,7 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
           askingPrice: l.askingPrice,
           reservePrice: l.reservePrice,
           hasBids: l.bids.length > 0,
+          sellerDetails: l.sellerDetails ?? null,
         }}
       />
     </div>

@@ -27,6 +27,7 @@ export interface EditableListing {
   askingPrice: number | null;
   reservePrice: number | null;
   hasBids: boolean;
+  sellerDetails: { legalName?: string; address?: string; phone?: string } | null;
 }
 
 export function EditListingForm({ listing }: { listing: EditableListing }) {
@@ -58,6 +59,11 @@ export function EditListingForm({ listing }: { listing: EditableListing }) {
           : "",
   });
   const [photos, setPhotos] = useState<string[]>(listing.photos);
+  const [seller, setSeller] = useState({
+    legalName: listing.sellerDetails?.legalName ?? "",
+    address: listing.sellerDetails?.address ?? "",
+    phone: listing.sellerDetails?.phone ?? "",
+  });
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((s) => ({ ...s, [k]: v }));
   const seg = <K extends "colorClass" | "condition" | "history">(
     k: K,
@@ -97,6 +103,11 @@ export function EditListingForm({ listing }: { listing: EditableListing }) {
         location: f.location.trim() || null,
         askingPrice: listing.type === "auction" ? null : price,
         reservePrice: listing.type === "auction" ? price : null,
+        sellerDetails: {
+          legalName: seller.legalName.trim() || undefined,
+          address: seller.address.trim() || undefined,
+          phone: seller.phone.trim() || undefined,
+        },
       });
       if (!r.ok) return setError(r.error);
       router.push(`/listings/${listing.id}`);
@@ -274,6 +285,43 @@ export function EditListingForm({ listing }: { listing: EditableListing }) {
         />{" "}
         Weissach package
       </label>
+      <div className="panel">
+        <div className="lab">Bill of sale details</div>
+        <p className="hint" style={{ margin: "4px 0 10px" }}>
+          Shown only on the bill of sale a buyer generates when they send a purchase request. Leave
+          blank to fill in by hand.
+        </p>
+        <div className="grid-3">
+          <div className="fld">
+            <label htmlFor="e-sname">Legal name</label>
+            <input
+              id="e-sname"
+              value={seller.legalName}
+              onChange={(e) => setSeller({ ...seller, legalName: e.target.value })}
+              maxLength={120}
+            />
+          </div>
+          <div className="fld">
+            <label htmlFor="e-saddr">Address</label>
+            <input
+              id="e-saddr"
+              value={seller.address}
+              onChange={(e) => setSeller({ ...seller, address: e.target.value })}
+              maxLength={300}
+            />
+          </div>
+          <div className="fld">
+            <label htmlFor="e-sphone">Phone</label>
+            <input
+              id="e-sphone"
+              type="tel"
+              value={seller.phone}
+              onChange={(e) => setSeller({ ...seller, phone: e.target.value })}
+              maxLength={40}
+            />
+          </div>
+        </div>
+      </div>
       {error ? <p className="err">{error}</p> : null}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <button type="submit" className="btn primary" disabled={pending}>
