@@ -62,6 +62,10 @@ export const listingFilterSchema = z.object({
   type: z.enum(["classified", "auction"]).optional(),
   make: z.string().trim().min(1).max(60).optional(),
   cursor: z.string().max(120).optional(),
+  /** live (default): cars for sale now. past: sold, ended or withdrawn listings. */
+  when: z.enum(["live", "past"]).optional(),
+  /** Past listings only: sold, or unsold (ended without a sale, withdrawn). */
+  result: z.enum(["sold", "unsold"]).optional(),
 });
 export type ListingFilter = z.infer<typeof listingFilterSchema>;
 

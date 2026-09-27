@@ -92,6 +92,10 @@ export interface ExternalFilter {
   cursor?: string;
   /** Live only (default) or include recently settled results. */
   includeSettled?: boolean;
+  /** Skip the live phase entirely: past results only. */
+  settledOnly?: boolean;
+  /** With settled rows: only those that sold, or only those that did not. */
+  result?: "sold" | "unsold";
   limit?: number;
 }
 
@@ -109,7 +113,7 @@ export async function listExternalListings(filter: ExternalFilter = {}) {
   const out: ExternalCardData[] = [];
   let nextCursor: string | null = null;
 
-  if (!cur || cur.phase === "live") {
+  if (!filter.settledOnly && (!cur || cur.phase === "live")) {
     const conds = [...base, liveNow];
     if (cur)
       conds.push(
@@ -147,6 +151,9 @@ export async function listExternalListings(filter: ExternalFilter = {}) {
         : null,
     };
   const conds = [...base, settled];
+  if (filter.result === "sold") conds.push(eq(externalListings.status, "sold"));
+  else if (filter.result === "unsold")
+    conds.push(inArray(externalListings.status, ["rnm", "withdrawn"]));
   if (cur?.phase === "done")
     conds.push(
       or(

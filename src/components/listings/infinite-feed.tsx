@@ -28,8 +28,19 @@ export function ListingsFeed({
 }: {
   own: Page<ListingFeedRow>;
   external: Page<ExternalCardData>;
-  ownFilter: { type?: "classified" | "auction"; make?: string } | null;
-  externalFilter: { source?: ExternalCardData["source"]; make?: string; limit?: number } | null;
+  ownFilter: {
+    type?: "classified" | "auction";
+    make?: string;
+    when?: "live" | "past";
+    result?: "sold" | "unsold";
+  } | null;
+  externalFilter: {
+    source?: ExternalCardData["source"];
+    make?: string;
+    limit?: number;
+    when?: "live" | "past";
+    result?: "sold" | "unsold";
+  } | null;
   showPhotos: boolean;
   fallbackHref: string | null;
 }) {

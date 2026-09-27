@@ -30,6 +30,8 @@ const externalSchema = z.object({
   make: z.string().trim().min(1).max(60).optional(),
   cursor: z.string().max(160).optional(),
   limit: z.number().int().min(1).max(48).optional(),
+  when: z.enum(["live", "past"]).optional(),
+  result: z.enum(["sold", "unsold"]).optional(),
 });
 
 /** Public, read-only. Next page of platform auctions (live first, then settled). */
@@ -39,7 +41,13 @@ export async function loadMoreExternal(
   try {
     const parsed = externalSchema.safeParse(raw);
     if (!parsed.success) return fail("Invalid filter.");
-    const page = await listExternalListings({ ...parsed.data, includeSettled: true });
+    const { when, result, ...rest } = parsed.data;
+    const page = await listExternalListings({
+      ...rest,
+      includeSettled: when === "past",
+      settledOnly: when === "past",
+      result: when === "past" ? result : undefined,
+    });
     return { ok: true, data: page };
   } catch (e) {
     return toError(e);
