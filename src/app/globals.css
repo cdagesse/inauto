@@ -3335,3 +3335,25 @@ header.site-head {
 .featured-body .pill.accent {
   margin-bottom: 4px;
 }
+/* hero card: readable labels over any photo */
+.featured-body {
+  background: linear-gradient(
+    to top,
+    rgb(0 0 0 / 0.9),
+    rgb(0 0 0 / 0.62) 55%,
+    rgb(0 0 0 / 0.15) 85%,
+    transparent
+  );
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.6);
+}
+.featured-body .pill.accent {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  text-shadow: none;
+  font-weight: 700;
+}
+.featured-badge {
+  color: #fff;
+  opacity: 0.92;
+}
