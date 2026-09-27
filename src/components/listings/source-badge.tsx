@@ -19,9 +19,11 @@ export function SourceBadge({
       ? "Live on"
       : status === "sold"
         ? "Sold on"
-        : status === "withdrawn"
-          ? "Withdrawn from"
-          : "Ended on";
+        : status === "rnm"
+          ? "Not sold on"
+          : status === "withdrawn"
+            ? "Withdrawn from"
+            : "Ended on";
   return (
     <span
       className={`source-badge ${size} ${status === "live" ? "is-live" : ""}`}

@@ -25,13 +25,18 @@ export function timeLeft(endsAt: Date | null) {
   const d = Math.floor(ms / 86_400_000);
   const h = Math.floor((ms % 86_400_000) / 3_600_000);
   const m = Math.floor((ms % 3_600_000) / 60_000);
-  return d > 0 ? `${d}d ${h}h left` : h > 0 ? `${h}h ${m}m left` : `${m}m left`;
+  if (d > 0) return `${d}d ${h}h left`;
+  if (h > 0) return `${h}h ${m}m left`;
+  return m > 0 ? `${m}m left` : "Ending now";
 }
 
-export function ListingCard({ l }: { l: ListingCardData }) {
+export function ListingCard({ l, highlight = false }: { l: ListingCardData; highlight?: boolean }) {
   const photo = l.photos[0];
   return (
-    <Link href={`/listings/${l.id}`} className="panel car-card link-card listing-card">
+    <Link
+      href={`/listings/${l.id}`}
+      className={`panel car-card link-card listing-card${highlight ? " inauto-card" : ""}`}
+    >
       <div
         className="photo"
         style={photo ? { backgroundImage: `url("${photo}")` } : undefined}
@@ -40,6 +45,7 @@ export function ListingCard({ l }: { l: ListingCardData }) {
         {!photo ? <span className="lab">No photo</span> : null}
       </div>
       <div className="lab">
+        {highlight ? <span className="pill accent inauto-pill">On InAuto</span> : null}
         {l.type === "auction" ? "Auction" : l.type === "private" ? "Private network" : "Classified"}
         {l.type === "auction" && l.auctionEndsAt ? ` · ${timeLeft(l.auctionEndsAt)}` : ""}
         {l.titleVetted ? (
