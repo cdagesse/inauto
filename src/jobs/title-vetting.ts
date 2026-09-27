@@ -174,6 +174,7 @@ export async function runTitleVetting(
           const record = inquiryId
             ? await loadNmvtisRecord(nmvtis, inquiryId).catch(soft("load record"))
             : null;
+          if (record) details.report = record; // keep the raw shape even if summarising throws
           const summary: TitleSummary = summarizeNmvtis(record, {
             vin,
             inquiryId,
@@ -224,24 +225,27 @@ export async function runTitleVetting(
             out.processed.push({ id: o.id, step: "mvr-created" });
           } else {
             const notes: string[] = [];
+            const soft = (label: string) => (e: unknown) => {
+              if (isNotReady(e)) {
+                notes.push(`${label}: ${errText(e)}`);
+                return null;
+              }
+              throw e;
+            };
             let inquiry = realId(ref.inquiryId)
-              ? await loadInquiryStatus(mvr, ref.inquiryId!)
+              ? await loadInquiryStatus(mvr, ref.inquiryId!).catch(soft("load by id"))
               : null;
-            if (!inquiry) inquiry = await loadInquiryByRef(mvr, ref.refNumber);
+            if (!inquiry)
+              inquiry = await loadInquiryByRef(mvr, ref.refNumber).catch(soft("load by refNumber"));
             const inquiryId = realId(inquiry?.inquiryId) ?? realId(ref.inquiryId);
             if (inquiryId && inquiryId !== ref.inquiryId) {
               details.mvr = { ...ref, inquiryId } satisfies InquiryRef;
               touched = true;
             }
             const record = inquiryId
-              ? await loadUnifiedRecord(mvr, inquiryId).catch((e) => {
-                  if (isNotReady(e)) {
-                    notes.push(`load record: ${errText(e)}`);
-                    return null;
-                  }
-                  throw e;
-                })
+              ? await loadUnifiedRecord(mvr, inquiryId).catch(soft("load record"))
               : null;
+            if (record) details.mvrRecord = record;
             if (!inquiryId)
               notes.push(
                 "no inquiry id yet (create answered 0 and refNumber lookup found nothing)",

@@ -126,35 +126,41 @@ export interface NmvtisInquiryStatus {
   processedDate?: string | null;
 }
 
-/** InquiryRecordDTO. `titlingState` may be a jurisdiction code such as "C6", not only USPS codes. */
+/** A field the spec types as an array but the API may return as a single object. */
+type Many<T> = T[] | T | null | undefined;
+export const many = <T>(v: Many<T>): T[] =>
+  Array.isArray(v) ? v.filter((x) => x != null) : v == null ? [] : [v];
+
+/**
+ * InquiryRecordDTO. `titlingState` may be a jurisdiction code such as "C6", not only
+ * USPS codes. The sandbox returns some list fields as bare objects; use `many()`.
+ */
 export interface NmvtisTitle {
   odometerReading?: string | null;
   titleIssueDate?: string | null;
   titlingState?: string | null;
 }
+export interface NmvtisBrand {
+  brand?: string | null;
+  brandDate?: string | null;
+  reportingEntityName?: string | null;
+  isBrand?: boolean | null;
+}
+export interface NmvtisDisposition {
+  dateObtained?: string | null;
+  entityName?: string | null;
+  entityAddress?: string | null;
+  entityPhone?: string | null;
+  entityEmail?: string | null;
+  reportingEntityType?: string | null;
+  vehicleDisposition?: string | null;
+}
 export interface NmvtisRecord {
-  previousTitle?: NmvtisTitle[] | null;
-  title?: NmvtisTitle[] | null;
-  vehicle?: { vin?: string | null }[] | null;
-  vehicleBrands?:
-    | {
-        brand?: string | null;
-        brandDate?: string | null;
-        reportingEntityName?: string | null;
-        isBrand?: boolean | null;
-      }[]
-    | null;
-  vehicleDisposition?:
-    | {
-        dateObtained?: string | null;
-        entityName?: string | null;
-        entityAddress?: string | null;
-        entityPhone?: string | null;
-        entityEmail?: string | null;
-        reportingEntityType?: string | null;
-        vehicleDisposition?: string | null;
-      }[]
-    | null;
+  previousTitle?: Many<NmvtisTitle>;
+  title?: Many<NmvtisTitle>;
+  vehicle?: Many<{ vin?: string | null }>;
+  vehicleBrands?: Many<NmvtisBrand>;
+  vehicleDisposition?: Many<NmvtisDisposition>;
 }
 
 export async function createNmvtisInquiry(
@@ -226,11 +232,11 @@ const strv = (v: unknown): string | null => (typeof v === "string" && v.trim() ?
 export function recordHasContent(r: NmvtisRecord | null | undefined): boolean {
   if (!r || typeof r !== "object") return false;
   return !!(
-    r.title?.length ||
-    r.previousTitle?.length ||
-    r.vehicle?.some((v) => strv(v?.vin)) ||
-    r.vehicleBrands?.length ||
-    r.vehicleDisposition?.length
+    many(r.title).length ||
+    many(r.previousTitle).length ||
+    many(r.vehicle).some((v) => strv(v?.vin)) ||
+    many(r.vehicleBrands).length ||
+    many(r.vehicleDisposition).length
   );
 }
 
@@ -253,7 +259,7 @@ export function summarizeNmvtis(
   const processed = hasContent || !!strv(ctx.inquiry?.processedDate) || !!error;
 
   const vinOnRecord =
-    (r.vehicle ?? [])
+    many(r.vehicle)
       .map((v) => strv(v?.vin))
       .find(Boolean)
       ?.toUpperCase() ?? null;
@@ -266,24 +272,20 @@ export function summarizeNmvtis(
   const byDateDesc = (a: { issued: string | null }, b: { issued: string | null }) =>
     (Date.parse(b.issued ?? "") || 0) - (Date.parse(a.issued ?? "") || 0);
   const titleHistory = [
-    ...(r.title ?? [])
-      .filter(Boolean)
+    ...many(r.title)
       .map((t) => toTitle(t, true))
       .sort(byDateDesc),
-    ...(r.previousTitle ?? [])
-      .filter(Boolean)
+    ...many(r.previousTitle)
       .map((t) => toTitle(t, false))
       .sort(byDateDesc),
   ];
-  const brandRows = (r.vehicleBrands ?? []).filter(
-    (b) => b && (b.isBrand !== false || strv(b.brand)) && strv(b.brand),
-  );
+  const brandRows = many(r.vehicleBrands).filter((b) => strv(b.brand));
   const brands = brandRows.map((b) => {
     const meta = [strv(b.brandDate), strv(b.reportingEntityName)].filter(Boolean).join(", ");
     return `${b.brand!.trim()}${meta ? ` (${meta})` : ""}`;
   });
-  const dispositions = (r.vehicleDisposition ?? [])
-    .filter((d) => d && (strv(d.vehicleDisposition) || strv(d.entityName)))
+  const dispositions = many(r.vehicleDisposition)
+    .filter((d) => strv(d.vehicleDisposition) || strv(d.entityName))
     .map((d) => {
       const what = strv(d.vehicleDisposition) ?? "Reported";
       const who = [strv(d.entityName), strv(d.reportingEntityType)].filter(Boolean).join(", ");

@@ -68,38 +68,26 @@ export async function loadUnifiedRecord(c: MvrConfig, inquiryId: number): Promis
   return vituCall<MvrRecord>(c, "GET", c.unifiedPath.replace("{id}", String(inquiryId)));
 }
 
-/** LoadInquiryById when its path is configured; null (never throws) otherwise or on failure. */
+/** LoadInquiryById. Throws VituError; the caller decides whether that is fatal. */
 export async function loadInquiryStatus(
   c: MvrConfig,
   inquiryId: number,
 ): Promise<MvrInquiryStatus | null> {
   if (!c.inquiryPath) return null;
-  try {
-    return await vituCall<MvrInquiryStatus>(
-      c,
-      "GET",
-      c.inquiryPath.replace("{id}", String(inquiryId)),
-    );
-  } catch {
-    return null;
-  }
+  return vituCall<MvrInquiryStatus>(c, "GET", c.inquiryPath.replace("{id}", String(inquiryId)));
 }
 
-/** LoadInquiryByRefNumber when its path is configured; null (never throws) otherwise or on failure. */
+/** LoadInquiryByRefNumber. Throws VituError; the caller decides whether that is fatal. */
 export async function loadInquiryByRef(
   c: MvrConfig,
   refNumber: string,
 ): Promise<MvrInquiryStatus | null> {
   if (!c.loadByRefPath) return null;
-  try {
-    return await vituCall<MvrInquiryStatus>(
-      c,
-      "GET",
-      c.loadByRefPath.replace("{ref}", encodeURIComponent(refNumber)),
-    );
-  } catch {
-    return null;
-  }
+  return vituCall<MvrInquiryStatus>(
+    c,
+    "GET",
+    c.loadByRefPath.replace("{ref}", encodeURIComponent(refNumber)),
+  );
 }
 
 /* ---------- pure helpers ---------- */
