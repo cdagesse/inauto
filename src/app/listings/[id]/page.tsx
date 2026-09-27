@@ -1,6 +1,8 @@
 import { BrandLogo } from "@/components/site/brand-logo";
 import { StickyHead } from "@/components/listings/sticky-head";
 import { RecordView } from "@/components/home/recent-views";
+import { after } from "next/server";
+import { recordCarView } from "@/server/views";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -62,6 +64,7 @@ export default async function ListingPage({
   const viewerId = session?.user?.id ?? null;
   const l = await getListingForViewer(id, viewerId);
   if (!l) notFound();
+  after(() => recordCarView("listing", l.id));
   const featured = session?.user?.role === "admin" ? await isFeatured("listing", l.id) : false;
   const [history, titleCheck] = await Promise.all([
     getVinTimeline(l.historyVin, { kind: "inauto", id: l.id }),

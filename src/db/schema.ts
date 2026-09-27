@@ -310,6 +310,18 @@ export const featuredCars = pgTable(
   (t) => [uniqueIndex("featured_car_ref_idx").on(t.kind, t.refId)],
 );
 
+/** Page views per car per day, for "trending" on the home page. kind: "listing" | "external". */
+export const carViews = pgTable(
+  "car_view",
+  {
+    kind: text("kind").notNull(),
+    refId: text("ref_id").notNull(),
+    day: date("day").notNull(),
+    views: integer("views").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.kind, t.refId, t.day] })],
+);
+
 export const marketSnapshots = pgTable("market_snapshot", {
   modelId: text("model_id")
     .primaryKey()

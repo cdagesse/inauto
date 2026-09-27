@@ -7,6 +7,7 @@ Features and fixes as they ship, newest first. One line per change, with the pul
 ### Features
 
 - Home page bottom shows "Segments at a glance" (median, 90-day move, sales, for sale, monthly volume, price index) instead of one featured report (#43)
+- Home hero: larger photo with the controls under it, auto-cycles every 5 s, and mixes in the week's most-viewed cars ("Trending") after the admin picks; new per-day view counter (#42)
 
 - Search suggestions in two sections, cars for sale first then market reports; Enter on a make opens its listings, "BMW M3" offers M3 listings and the M3 report (#41)
 - Home page "Recently viewed" row from the cars the visitor opened in this browser (#41)

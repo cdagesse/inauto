@@ -4,7 +4,8 @@ import { ListingCard } from "@/components/listings/listing-card";
 import { SearchBox } from "@/components/site/search";
 import { FeaturedHero } from "@/components/home/featured-hero";
 import { RecentlyViewed } from "@/components/home/recent-views";
-import { autoFeatured, listFeatured } from "@/server/queries/featured";
+import { autoFeatured, listFeatured, resolveCars } from "@/server/queries/featured";
+import { topViewed } from "@/server/views";
 import { env } from "@/env/server";
 import { SegmentsTable } from "@/components/market/segments-table";
 import { getMarketTree } from "@/lib/market/tree-source";
@@ -29,7 +30,22 @@ export default async function HomePage() {
     listExternalListings({ limit: EXTERNAL_LIMIT }).catch(() => ({ rows: [], nextCursor: null })),
     listFeatured(env.externalPhotos).catch(() => []),
   ]);
-  const heroCars = picked.length ? picked : await autoFeatured(5).catch(() => []);
+  // Hero rotation: admin picks first, then the most-viewed cars of the week, then newest with photos.
+  const trendingIds = await topViewed(7, 8).catch(() => []);
+  const trending = (await resolveCars(trendingIds, env.externalPhotos, false).catch(() => [])).map(
+    (c) => ({ ...c, views: trendingIds.find((t) => `${t.kind}:${t.refId}` === c.key)?.views }),
+  );
+  const seen = new Set(picked.map((c) => c.key));
+  const heroCars = [
+    ...picked,
+    ...trending.filter((c) => c.photo && !seen.has(c.key) && seen.add(c.key)),
+  ].slice(0, 8);
+  if (heroCars.length < 3)
+    for (const c of await autoFeatured(5).catch(() => []))
+      if (!seen.has(c.key) && heroCars.length < 5) {
+        seen.add(c.key);
+        heroCars.push(c);
+      }
   const segments = tree?.segments ?? [];
   const live = external.rows.filter((l) => l.status === "live");
   return (
