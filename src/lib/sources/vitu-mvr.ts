@@ -13,8 +13,10 @@ export interface MvrConfig extends Omit<VituConfig, "titlePath" | "titleMethod">
   apiBase: string;
   /** POST: create an inquiry (spec: /inquiry). */
   createPath: string;
-  /** GET: unified record by inquiry id; "{id}" is substituted (LoadUnifiedInquiryRecord). */
-  unifiedPath: string | null;
+  /** GET: unified record by inquiry id; "{id}" is substituted (LoadUnifiedInquiryRecord, /inquiry/{id}/vitu-record). */
+  unifiedPath: string;
+  /** GET: inquiry status by id; "{id}" is substituted (LoadInquiryById). Optional. */
+  inquiryPath?: string | null;
   /** GET: inquiry by reference number; "{ref}" is substituted (LoadInquiryByRefNumber). */
   loadByRefPath?: string | null;
   /** Optional x-location-id header value (integer). */
@@ -90,9 +92,21 @@ export async function createMvrInquiry(
   return { inquiryId: pickNumber(raw, ["inquiryId", "id"]), raw };
 }
 
-export async function loadUnifiedRecord(c: MvrConfig, inquiryId: number): Promise<unknown> {
-  if (!c.unifiedPath) throw new VituError("report", 0, "VITU_MVR_UNIFIED_PATH not set");
-  return call<unknown>(c, "GET", c.unifiedPath.replace("{id}", String(inquiryId)));
+export async function loadUnifiedRecord(c: MvrConfig, inquiryId: number): Promise<MvrRecord> {
+  return call<MvrRecord>(c, "GET", c.unifiedPath.replace("{id}", String(inquiryId)));
+}
+
+/** LoadInquiryById when its path is configured; null (never throws) otherwise or on failure. */
+export async function loadInquiryStatus(
+  c: MvrConfig,
+  inquiryId: number,
+): Promise<MvrInquiryStatus | null> {
+  if (!c.inquiryPath) return null;
+  try {
+    return await call<MvrInquiryStatus>(c, "GET", c.inquiryPath.replace("{id}", String(inquiryId)));
+  } catch {
+    return null;
+  }
 }
 
 export async function loadInquiryByRef(c: MvrConfig, refNumber: string): Promise<unknown> {
@@ -143,17 +157,12 @@ function pickNumber(obj: unknown, names: string[]): number | null {
 const str = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
 
 /** Full name from a party section: "name" or first/middle/last, or a business name. */
-export function partyName(section: unknown): string | null {
-  if (!section || typeof section !== "object") return typeof section === "string" ? section : null;
-  const direct = str(
-    find(section, ["fullName", "name", "businessName", "companyName", "ownerName"]),
-  );
+/** Display name for an MVRBaseOwnerDTO / MVRBaseLessorDTO: name, else business, else first middle last suffix. */
+export function partyName(section: MvrParty | null | undefined): string | null {
+  if (!section || typeof section !== "object") return null;
+  const direct = str(section.name) ?? str(section.businessName);
   if (direct) return direct;
-  const parts = [
-    find(section, ["firstName"]),
-    find(section, ["middleName"]),
-    find(section, ["lastName"]),
-  ]
+  const parts = [section.firstName, section.middleName, section.lastName, section.suffix]
     .map(str)
     .filter(Boolean);
   return parts.length ? parts.join(" ") : null;
@@ -286,6 +295,76 @@ export function compareNames(
   return "mismatch";
 }
 
+/** MVRBaseRecordDTO, as returned by GET /inquiry/{inquiryId}/vitu-record. */
+export interface MvrParty {
+  ownerType?: string | null;
+  name?: string | null;
+  firstName?: string | null;
+  middleName?: string | null;
+  lastName?: string | null;
+  suffix?: string | null;
+  businessName?: string | null;
+}
+export interface MvrRecord {
+  vehicle?: {
+    vin?: string | null;
+    year?: number | null;
+    make?: string | null;
+    model?: string | null;
+    odometerReading?: number | null;
+    odometerReadingDate?: string | null;
+    odometerValidity?: string | null;
+    isVehicleStop?: boolean | null;
+    purchaseDate?: string | null;
+    sellingPrice?: number | null;
+  } | null;
+  title?: {
+    titleNumber?: string | null;
+    titleType?: string | null;
+    titlingState?: string | null;
+    titleIssueDate?: string | null;
+    plateNumber?: string | null;
+    plateExpirationDate?: string | null;
+    registrationNumber?: string | null;
+  } | null;
+  owners?: MvrParty[] | null;
+  lienholders?:
+    | {
+        lienholderId?: string | null;
+        name?: string | null;
+        lienDate?: string | null;
+        electronicLien?: boolean | null;
+      }[]
+    | null;
+  lessor?:
+    | (MvrParty & {
+        leaseStartDate?: string | null;
+        leaseEndDate?: string | null;
+        electronicLease?: boolean | null;
+      })
+    | null;
+  registration?: {
+    expirationDate?: string | null;
+    plateNumber?: string | null;
+    plateExpirationDate?: string | null;
+    plateType?: string | null;
+    address?: {
+      street?: string | null;
+      city?: string | null;
+      state?: string | null;
+      zipCode?: string | null;
+    } | null;
+  } | null;
+}
+
+/** InquiryDTO status fields, as returned by LoadInquiryById / LoadInquiryByRefNumber. */
+export interface MvrInquiryStatus {
+  inquiryId?: number | null;
+  processedDate?: string | null;
+  charged?: boolean | null;
+  error?: string | null;
+}
+
 export interface MvrSummary {
   vin: string;
   state: string;
@@ -295,92 +374,130 @@ export interface MvrSummary {
   error: string | null;
   vinOnRecord: string | null;
   vinMatches: boolean | null;
+  vehicle: string | null;
   owner: string | null;
   coOwner: string | null;
+  ownerType: string | null;
   ownerMatch: "match" | "partial" | "mismatch" | "unknown";
   lienholder: string | null;
+  lienDate: string | null;
   lessor: string | null;
   registrationState: string | null;
   registrationExpires: string | null;
   registrationExpired: boolean | null;
+  plateNumber: string | null;
   titleState: string | null;
   titleNumber: string | null;
+  titleType: string | null;
+  titleIssued: string | null;
+  odometer: number | null;
+  odometerDate: string | null;
+  vehicleStop: boolean;
   flags: string[];
   verdict: "verified" | "issues" | "pending" | "unknown";
 }
 
+const isPast = (d: string | null, now: Date) =>
+  d && !Number.isNaN(Date.parse(d)) ? Date.parse(d) < now.getTime() : null;
+
+/** True once the state has returned anything substantive for the inquiry. */
+export function recordHasContent(r: MvrRecord | null | undefined): boolean {
+  if (!r || typeof r !== "object") return false;
+  return !!(
+    str(r.vehicle?.vin) ||
+    (r.owners && r.owners.length) ||
+    str(r.title?.titleNumber) ||
+    str(r.registration?.expirationDate) ||
+    str(r.registration?.plateNumber)
+  );
+}
+
 /**
- * Summarises a unified MVR record (MVRBaseRecordDTO-style: vehicle, title,
- * owner, coOwner, lienholder, lessor, registration sections, all optional)
- * against what the seller told us. Tolerant key matching until the spec's
- * exact field names are wired in.
+ * Summarises the unified MVR record (MVRBaseRecordDTO) plus, when available,
+ * the inquiry status (processedDate / error) against what the seller told us.
  */
 export function summarizeMvr(
-  record: unknown,
+  record: MvrRecord | null | undefined,
   ctx: {
     vin: string;
     state: string;
     refNumber: string;
     inquiryId: number | null;
     sellerName: string | null;
+    listingMiles?: number | null;
+    inquiry?: MvrInquiryStatus | null;
     now?: Date;
   },
 ): MvrSummary {
   const now = ctx.now ?? new Date();
-  const inquiry = find(record, ["inquiry"]) ?? record;
-  const processedDate = str(find(inquiry, ["processedDate", "processed_date", "completedDate"]));
-  const error = str(find(inquiry, ["error", "errorMessage"]));
-  const vehicle = find(record, ["vehicle"]);
-  const title = find(record, ["title"]);
-  const owner = find(record, ["owner", "registeredOwner", "primaryOwner"]);
-  const coOwner = find(record, ["coOwner", "co_owner", "secondaryOwner"]);
-  const lien = find(record, ["lienholder", "lienHolder", "lienholders", "lien"]);
-  const lessor = find(record, ["lessor"]);
-  const registration = find(record, ["registration"]);
+  const r: MvrRecord = record && typeof record === "object" ? record : {};
+  const error = str(ctx.inquiry?.error);
+  const processedDate = str(ctx.inquiry?.processedDate);
+  const hasContent = recordHasContent(r);
+  const processed = hasContent || !!processedDate || !!error;
 
-  const vinOnRecord = str(find(vehicle ?? record, ["vin"]));
-  const ownerName = partyName(owner);
-  const coOwnerName = partyName(coOwner);
-  const lienName = Array.isArray(lien) ? partyName(lien[0]) : partyName(lien);
-  const lessorName = partyName(lessor);
-  const regState = str(find(registration ?? {}, ["state", "jurisdiction", "registrationState"]));
-  const regExp = str(
-    find(registration ?? {}, [
-      "expirationDate",
-      "expiresOn",
-      "expiration",
-      "expires",
-      "expirationDt",
-    ]),
-  );
-  const regExpired =
-    regExp && !Number.isNaN(Date.parse(regExp)) ? Date.parse(regExp) < now.getTime() : null;
-  const titleState = str(find(title ?? {}, ["state", "titleState", "jurisdiction"]));
-  const titleNumber = str(find(title ?? {}, ["titleNumber", "number", "titleNo"]));
+  const vehicle = r.vehicle ?? null;
+  const title = r.title ?? null;
+  const owners = (r.owners ?? []).filter((o) => o && typeof o === "object");
+  const lienholders = (r.lienholders ?? []).filter((l) => l && typeof l === "object");
+  const registration = r.registration ?? null;
 
-  const ownerMatch = compareNames(ownerName, ctx.sellerName);
-  const coOwnerMatch = compareNames(coOwnerName, ctx.sellerName);
-  const effectiveOwner =
-    ownerMatch === "match" || coOwnerMatch === "match"
-      ? "match"
-      : ownerMatch === "partial" || coOwnerMatch === "partial"
-        ? "partial"
-        : ownerMatch;
-  const vinMatches = vinOnRecord ? vinOnRecord.toUpperCase() === ctx.vin.toUpperCase() : null;
+  const vinOnRecord = str(vehicle?.vin)?.toUpperCase() ?? null;
+  const vinMatches = vinOnRecord ? vinOnRecord === ctx.vin.toUpperCase() : null;
+  const vehicleDesc =
+    [vehicle?.year, str(vehicle?.make), str(vehicle?.model)].filter(Boolean).join(" ") || null;
+  const ownerNames = owners.map(partyName).filter((n): n is string => !!n);
+  const ownerName = ownerNames[0] ?? null;
+  const coOwner = ownerNames.slice(1).join(", ") || null;
+  const lienNames = lienholders.map((l) => str(l.name)).filter((n): n is string => !!n);
+  const lienName = lienNames.join(", ") || null;
+  const lienDate = str(lienholders[0]?.lienDate);
+  const lessorName = partyName(r.lessor);
+  const regState = str(registration?.address?.state)?.toUpperCase() ?? null;
+  const regExp =
+    str(registration?.expirationDate) ??
+    str(registration?.plateExpirationDate) ??
+    str(title?.plateExpirationDate);
+  const regExpired = isPast(regExp, now);
+  const titleState = str(title?.titlingState)?.toUpperCase() ?? null;
+  const odometer = typeof vehicle?.odometerReading === "number" ? vehicle.odometerReading : null;
+  const vehicleStop = vehicle?.isVehicleStop === true;
 
-  const processed = !!processedDate || !!ownerName || !!vinOnRecord;
+  let ownerMatch: MvrSummary["ownerMatch"] = "unknown";
+  for (const n of ownerNames) {
+    const m = compareNames(n, ctx.sellerName);
+    if (m === "match") {
+      ownerMatch = "match";
+      break;
+    }
+    if (m === "partial" || (m === "mismatch" && ownerMatch === "unknown")) ownerMatch = m;
+  }
+
   const flags: string[] = [];
   if (error) flags.push(`State lookup error: ${error}`);
   if (vinMatches === false) flags.push(`VIN on record (${vinOnRecord}) does not match the listing`);
-  if (effectiveOwner === "mismatch")
-    flags.push(`Registered owner (${ownerName}) does not match the seller`);
-  if (effectiveOwner === "partial")
-    flags.push(`Registered owner (${ownerName}) only partly matches the seller`);
-  if (lienName) flags.push(`Lienholder on record: ${lienName}`);
+  if (ownerMatch === "mismatch")
+    flags.push(`Registered owner (${ownerNames.join(", ")}) does not match the seller`);
+  if (ownerMatch === "partial")
+    flags.push(`Registered owner (${ownerNames.join(", ")}) only partly matches the seller`);
+  if (lienName)
+    flags.push(`Lienholder on record: ${lienName}${lienDate ? ` (since ${lienDate})` : ""}`);
   if (lessorName) flags.push(`Leased vehicle; lessor on record: ${lessorName}`);
-  if (regState && regState.toUpperCase() !== ctx.state.toUpperCase())
-    flags.push(`Registered in ${regState}, listing says ${ctx.state}`);
+  if (vehicleStop) flags.push("State has a stop on this vehicle");
+  if (regState && regState !== ctx.state.toUpperCase())
+    flags.push(`Registered in ${regState}, listing says ${ctx.state.toUpperCase()}`);
+  else if (!regState && titleState && titleState !== ctx.state.toUpperCase())
+    flags.push(`Titled in ${titleState}, listing says ${ctx.state.toUpperCase()}`);
   if (regExpired) flags.push(`Registration expired ${regExp}`);
+  if (odometer != null && typeof ctx.listingMiles === "number" && ctx.listingMiles + 500 < odometer)
+    flags.push(
+      `Listing shows ${ctx.listingMiles.toLocaleString()} miles but the state's last odometer reading was ${odometer.toLocaleString()}${vehicle?.odometerReadingDate ? ` on ${vehicle.odometerReadingDate}` : ""}`,
+    );
+  if (
+    str(vehicle?.odometerValidity) &&
+    !/^(actual|ok|valid|true)$/i.test(vehicle!.odometerValidity!)
+  )
+    flags.push(`Odometer status on record: ${vehicle!.odometerValidity}`);
 
   return {
     vin: ctx.vin,
@@ -391,20 +508,29 @@ export function summarizeMvr(
     error,
     vinOnRecord,
     vinMatches,
+    vehicle: vehicleDesc,
     owner: ownerName,
-    coOwner: coOwnerName,
-    ownerMatch: effectiveOwner,
+    coOwner,
+    ownerType: str(owners[0]?.ownerType),
+    ownerMatch,
     lienholder: lienName,
+    lienDate,
     lessor: lessorName,
     registrationState: regState,
     registrationExpires: regExp,
     registrationExpired: regExpired,
+    plateNumber: str(registration?.plateNumber) ?? str(title?.plateNumber),
     titleState,
-    titleNumber,
+    titleNumber: str(title?.titleNumber),
+    titleType: str(title?.titleType),
+    titleIssued: str(title?.titleIssueDate),
+    odometer,
+    odometerDate: str(vehicle?.odometerReadingDate),
+    vehicleStop,
     flags,
     verdict: !processed
       ? "pending"
-      : error && !ownerName
+      : !hasContent
         ? "unknown"
         : flags.length
           ? "issues"

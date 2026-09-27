@@ -69,6 +69,20 @@ inquiryType: "VIN" }`, plus any per-state extras from `VITU_MVR_STATE_EXTRAS`. T
 | VIN                        | `vehicle.vin`                                                                           | differs from the listing VIN                                                 |
 | Inquiry error              | `error` on the inquiry                                                                  | state returned an error                                                      |
 
+### Notifications
+
+Each Vitu API has a matching Notifications product with the same three calls: `PUT /subscription?callbackUrl=`,
+`GET /subscription`, `DELETE /subscription`, and `PUT /security/callback` to register an HMAC key. Vitu then signs
+every callback with base64 HMAC-SHA256 of the body in the `X-HMAC` header. Register ours once per product with the
+cron secret:
+
+```
+curl -X POST -H "Authorization: Bearer $CRON_SECRET" \
+  "https://inauto-nu.vercel.app/api/jobs/vitu-subscribe?product=mvr"
+```
+
+(`GET` shows the current subscription, `DELETE` removes it; `product=nmvtis` targets the NMVTIS product.)
+
 The webhook only uses the `refNumber` to find the order and then reads the record back from
 Vitu itself, so a forged callback cannot inject data. The record and inquiry responses are
 stored in `details` for audit; the buyer-facing card shows only the summary.

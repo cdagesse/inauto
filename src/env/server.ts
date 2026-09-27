@@ -52,14 +52,19 @@ const schema = z.object({
     .url()
     .default("https://api-test.vitu.com/lookup-national-vr-public-api/v1"),
   VITU_MVR_CREATE_PATH: z.string().default("/inquiry"),
-  /** LoadUnifiedInquiryRecord path with "{id}"; from the spec. Unset = inquiries are created but not read back. */
-  VITU_MVR_UNIFIED_PATH: optionalString,
+  /** LoadUnifiedInquiryRecord path with "{id}" (spec: /inquiry/{inquiryId}/vitu-record). */
+  VITU_MVR_UNIFIED_PATH: z.string().default("/inquiry/{id}/vitu-record"),
+  /** LoadInquiryById path with "{id}", for processedDate/error. Optional; the record's content is the fallback signal. */
+  VITU_MVR_INQUIRY_PATH: optionalString,
   VITU_MVR_LOAD_BY_REF_PATH: optionalString,
   VITU_MVR_LOCATION_ID: optionalString,
   /** JSON: per-state extra InquiryDTO fields, e.g. {"TX":{"dealerNumber":150786,"sellerUserName":"x"}} */
   VITU_MVR_STATE_EXTRAS: optionalString,
-  /** Shared secret Vitu's notification subscription must send as ?key= (or X-Webhook-Key). */
+  /** Shared secret for Vitu callbacks: the HMAC key registered via SetCallbackSecurity (32–64 chars) and the ?key= fallback. */
   VITU_WEBHOOK_KEY: optionalString,
+  /** Notifications product bases (one per Vitu API). NMVTIS from its spec; MVR's is not published yet. */
+  VITU_NOTIFY_NMVTIS_BASE: z.string().url().default("https://api-test.vitu.com/one/nmvtis/api/v1"),
+  VITU_NOTIFY_MVR_BASE: optionalString,
   /** "true" shows third-party listing photos. Off until platform terms are cleared. */
   EXTERNAL_PHOTOS: optionalString,
 });
@@ -107,7 +112,8 @@ export const env = {
               ? {
                   apiBase: parsed.data.VITU_MVR_API_BASE,
                   createPath: parsed.data.VITU_MVR_CREATE_PATH,
-                  unifiedPath: parsed.data.VITU_MVR_UNIFIED_PATH ?? null,
+                  unifiedPath: parsed.data.VITU_MVR_UNIFIED_PATH,
+                  inquiryPath: parsed.data.VITU_MVR_INQUIRY_PATH ?? null,
                   loadByRefPath: parsed.data.VITU_MVR_LOAD_BY_REF_PATH ?? null,
                   locationId: parsed.data.VITU_MVR_LOCATION_ID ?? null,
                   stateExtras: parseJsonObject(parsed.data.VITU_MVR_STATE_EXTRAS),
@@ -116,4 +122,6 @@ export const env = {
         }
       : null,
   vituWebhookKey: parsed.data.VITU_WEBHOOK_KEY ?? null,
+  vituNotifyNmvtisBase: parsed.data.VITU_NOTIFY_NMVTIS_BASE,
+  vituNotifyMvrBase: parsed.data.VITU_NOTIFY_MVR_BASE ?? null,
 };
