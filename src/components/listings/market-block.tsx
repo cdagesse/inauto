@@ -21,6 +21,26 @@ export interface MarketRef {
  * 2) catalogued model without a report → request it (idempotent) and show the pending panel
  * 3) unmatched → try a free-text catalog match, else a short "no data" line
  */
+/** Resolves the market reference, snapshot and generation a listing page can show. */
+export async function resolveMarket(
+  market: MarketRef | null,
+  make: string | null,
+  model: string | null,
+  car: SummaryCar,
+) {
+  let ref: MarketRef | null = market;
+  if (!ref) {
+    const m = await matchCatalog(make, model, car.title);
+    if (m) ref = { ...m, generationCode: null };
+  }
+  if (!ref) return null;
+  const snapshot = await getMarketSnapshot(ref.makeSlug, ref.modelSlug);
+  const generation = snapshot
+    ? generationFor(snapshot.years, ref.generationCode, car.year, snapshot.order[0])
+    : null;
+  return { ref, snapshot, generation, reportHref: `/${ref.makeSlug}/${ref.modelSlug}` };
+}
+
 export async function MarketBlock({
   market,
   make,

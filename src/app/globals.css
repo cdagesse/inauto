@@ -2632,6 +2632,19 @@ table.compare td.down {
   }
 }
 
+/* listing page: market sliver in the sidebar, full block expands below */
+.market-sliver .sliver-kv dd.up {
+  color: var(--up);
+}
+.market-sliver .sliver-kv dd.down {
+  color: var(--down);
+}
+.expanded-region {
+  padding-top: 8px;
+}
+.expanded-region[hidden] {
+  display: none;
+}
 .clerk-sync {
   display: inline-flex;
   align-items: center;

@@ -7,7 +7,9 @@ import { signInHref } from "@/components/account/require-signin";
 import { fmtDate, mi, usd } from "@/components/account/money";
 import { BidForm } from "@/components/listings/bid-form";
 import { Countdown } from "@/components/listings/countdown";
+import { ExpandedRegion } from "@/components/listings/expandable";
 import { MarketBlock } from "@/components/listings/market-block";
+import { MarketSliver } from "@/components/listings/market-sliver";
 import { PhotoGallery } from "@/components/listings/photo-gallery";
 import { ServiceOrderForm } from "@/components/listings/service-order-form";
 import { VinTimeline } from "@/components/listings/vin-timeline";
@@ -226,7 +228,12 @@ export default async function ListingPage({
               </div>
             </>
           ) : null}
-          <MarketBlock
+          <VinTimeline events={history} vinShown={l.vin} />
+        </div>
+
+        <aside className="side">
+          <MarketSliver
+            id={`market-${l.id}`}
             market={l.market}
             make={l.make}
             model={l.model}
@@ -239,10 +246,6 @@ export default async function ListingPage({
             }}
             priceLabel={marketLabel}
           />
-          <VinTimeline events={history} vinShown={l.vin} />
-        </div>
-
-        <aside className="side">
           {l.isOwner ? (
             <div className="panel">
               <div className="lab">Your listing</div>
@@ -343,6 +346,21 @@ export default async function ListingPage({
           ) : null}
         </aside>
       </div>
+      <ExpandedRegion id={`market-${l.id}`}>
+        <MarketBlock
+          market={l.market}
+          make={l.make}
+          model={l.model}
+          car={{
+            year: l.year,
+            miles: l.miles,
+            price: marketPrice ?? null,
+            packages: l.packages,
+            title: l.title,
+          }}
+          priceLabel={marketLabel}
+        />
+      </ExpandedRegion>
     </article>
   );
 }

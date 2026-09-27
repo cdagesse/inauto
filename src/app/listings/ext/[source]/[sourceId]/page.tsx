@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { ExternalDetail, type InAutoRead } from "@/components/listings/external-detail";
+import { ExpandedRegion } from "@/components/listings/expandable";
 import { MarketBlock } from "@/components/listings/market-block";
 import { VinTimeline } from "@/components/listings/vin-timeline";
 import { packagesFromText } from "@/components/market/market-summary-lib";
@@ -79,21 +80,24 @@ export default async function ExternalListingPage({ params }: { params: Params }
   const live = l.status === "live";
   const price = live ? l.currentBid : (l.finalPrice ?? l.currentBid);
   const priceLabel = l.status === "sold" ? "Sold for" : "Current bid";
+  const expandId = `market-${l.source}-${l.sourceId}`;
   const market = (
     <>
-      <MarketBlock
-        market={l.market}
-        make={l.make}
-        model={l.model}
-        car={{
-          year: l.year,
-          miles: l.miles,
-          price: price ?? null,
-          packages: packagesFromText(`${l.title} ${l.trim ?? ""}`),
-          title: l.title,
-        }}
-        priceLabel={priceLabel}
-      />
+      <ExpandedRegion id={expandId}>
+        <MarketBlock
+          market={l.market}
+          make={l.make}
+          model={l.model}
+          car={{
+            year: l.year,
+            miles: l.miles,
+            price: price ?? null,
+            packages: packagesFromText(`${l.title} ${l.trim ?? ""}`),
+            title: l.title,
+          }}
+          priceLabel={priceLabel}
+        />
+      </ExpandedRegion>
       <VinTimeline events={history} vinShown={maskVin(l.vin)} />
     </>
   );
@@ -105,6 +109,7 @@ export default async function ExternalListingPage({ params }: { params: Params }
       showPhotos={env.externalPhotos}
       signedIn={!!session?.user}
       market={market}
+      expandId={expandId}
     />
   );
 }
