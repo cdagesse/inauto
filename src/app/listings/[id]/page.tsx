@@ -16,7 +16,14 @@ import { VinTimeline } from "@/components/listings/vin-timeline";
 import { verdictClass, verdictLabel } from "@/components/listings/verdict";
 import type { PriceGuidance } from "@/lib/valuation/types";
 import { adminDeleteListingForm } from "@/server/admin/actions";
-import { markListingSoldForm, publishListingForm, withdrawListingForm } from "@/server/forms";
+import {
+  deleteListingForm,
+  markListingSoldForm,
+  publishListingForm,
+  relistListingForm,
+  withdrawListingForm,
+} from "@/server/forms";
+import { OwnerBar } from "@/components/listings/owner-bar";
 import { minimumIncrement } from "@/server/listings-schema";
 import { getListingForViewer } from "@/server/queries/listings";
 import { getVinTimeline } from "@/server/queries/vin";
@@ -81,7 +88,8 @@ export default async function ListingPage({
   const marketLabel =
     l.status === "sold" ? "Sold for" : l.type === "auction" ? "Current bid" : "Asking price";
   return (
-    <article>
+    <article className={l.isOwner ? "has-owner-bar" : undefined}>
+      {error ? <p className="err">{error}</p> : null}
       <div className="page-head">
         <div>
           <div className="eyebrow">
@@ -247,43 +255,6 @@ export default async function ListingPage({
             }}
             priceLabel={marketLabel}
           />
-          {l.isOwner ? (
-            <div className="panel">
-              <div className="lab">Your listing</div>
-              {error ? <p className="err">{error}</p> : null}
-              <div className="card-actions" style={{ marginTop: 8 }}>
-                {l.status !== "sold" && l.status !== "withdrawn" ? (
-                  <Link href={`/listings/${l.id}/edit`} className="btn sm">
-                    Edit listing
-                  </Link>
-                ) : null}
-                {l.status === "draft" ? (
-                  <form action={publishListingForm}>
-                    <input type="hidden" name="id" value={l.id} />
-                    <button type="submit" className="btn primary sm">
-                      Publish
-                    </button>
-                  </form>
-                ) : null}
-                {l.status === "active" || l.status === "ended" ? (
-                  <>
-                    <form action={markListingSoldForm}>
-                      <input type="hidden" name="id" value={l.id} />
-                      <button type="submit" className="btn sm">
-                        Mark sold
-                      </button>
-                    </form>
-                    <form action={withdrawListingForm}>
-                      <input type="hidden" name="id" value={l.id} />
-                      <button type="submit" className="btn sm danger">
-                        Withdraw
-                      </button>
-                    </form>
-                  </>
-                ) : null}
-              </div>
-            </div>
-          ) : null}
 
           {session?.user?.role === "admin" ? (
             <div className="panel">
@@ -364,6 +335,22 @@ export default async function ListingPage({
           ) : null}
         </aside>
       </div>
+      {l.isOwner ? (
+        <OwnerBar
+          id={l.id}
+          title={l.title}
+          status={l.status}
+          type={l.type}
+          hasBids={l.bids.length > 0}
+          actions={{
+            publish: publishListingForm,
+            markSold: markListingSoldForm,
+            withdraw: withdrawListingForm,
+            relist: relistListingForm,
+            remove: deleteListingForm,
+          }}
+        />
+      ) : null}
       <ExpandedRegion id={`market-${l.id}`}>
         <MarketBlock
           market={l.market}
