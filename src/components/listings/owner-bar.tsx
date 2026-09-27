@@ -15,6 +15,8 @@ export function OwnerBar({
   type,
   hasBids,
   actions,
+  isOwner = true,
+  admin,
 }: {
   id: string;
   title: string;
@@ -28,27 +30,31 @@ export function OwnerBar({
     relist: (fd: FormData) => void | Promise<void>;
     remove: (fd: FormData) => void | Promise<void>;
   };
+  /** False for an admin viewing someone else's listing: only the admin section shows. */
+  isOwner?: boolean;
+  /** Present for admins: the remove action with a reason field. */
+  admin?: { remove: (fd: FormData) => void | Promise<void>; back: string };
 }) {
   const live = status === "active";
   const editable = status !== "sold";
   const hidden = <input type="hidden" name="id" value={id} />;
   return (
-    <div className="owner-bar" role="region" aria-label="Your listing">
+    <div className="owner-bar" role="region" aria-label={isOwner ? "Your listing" : "Admin"}>
       <div className="wrap owner-bar-inner">
         <div className="owner-bar-state">
-          <span className="lab">Your listing</span>
+          <span className="lab">{isOwner ? "Your listing" : "Admin"}</span>
           <span className={`pill ${live ? "up" : status === "sold" ? "accent" : ""}`}>
             {status}
           </span>
           {type === "auction" && hasBids ? <span className="hint">has bids</span> : null}
         </div>
         <div className="owner-bar-actions">
-          {editable ? (
+          {isOwner && editable ? (
             <Link href={`/listings/${id}/edit`} className="btn sm">
               Edit
             </Link>
           ) : null}
-          {status === "draft" ? (
+          {isOwner && status === "draft" ? (
             <form action={actions.publish}>
               {hidden}
               <button type="submit" className="btn sm primary">
@@ -56,7 +62,7 @@ export function OwnerBar({
               </button>
             </form>
           ) : null}
-          {status === "withdrawn" || status === "ended" ? (
+          {isOwner && (status === "withdrawn" || status === "ended") ? (
             <form action={actions.relist}>
               {hidden}
               <button type="submit" className="btn sm primary">
@@ -64,7 +70,7 @@ export function OwnerBar({
               </button>
             </form>
           ) : null}
-          {status === "active" || status === "ended" ? (
+          {isOwner && (status === "active" || status === "ended") ? (
             <>
               <form action={actions.markSold}>
                 {hidden}
@@ -80,7 +86,7 @@ export function OwnerBar({
               </form>
             </>
           ) : null}
-          {!hasBids ? (
+          {isOwner && !hasBids ? (
             <form
               action={actions.remove}
               onSubmit={(e) => {
@@ -91,6 +97,27 @@ export function OwnerBar({
               {hidden}
               <button type="submit" className="btn sm danger">
                 Delete
+              </button>
+            </form>
+          ) : null}
+          {admin ? (
+            <form
+              action={admin.remove}
+              className="admin-remove"
+              onSubmit={(e) => {
+                if (
+                  !window.confirm(
+                    `Remove "${title}" for everyone? Bids are deleted; the seller keeps their account.`,
+                  )
+                )
+                  e.preventDefault();
+              }}
+            >
+              {hidden}
+              <input type="hidden" name="back" value={admin.back} />
+              <input name="reason" placeholder="Reason (audit log)" maxLength={500} />
+              <button type="submit" className="btn sm danger">
+                Remove listing
               </button>
             </form>
           ) : null}
