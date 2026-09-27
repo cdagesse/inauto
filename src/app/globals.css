@@ -3361,3 +3361,90 @@ header.site-head {
   color: #fff;
   opacity: 0.92;
 }
+
+/* ---------- mobile pass ---------- */
+@media (max-width: 900px) {
+  /* the wider desktop hero rule was appended after the earlier phone rule; restate it */
+  .home-hero.with-featured {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .home-hero.with-featured h1 {
+    font-size: clamp(30px, 9vw, 44px);
+  }
+}
+@media (max-width: 640px) {
+  /* source dropdown must not run past the right edge */
+  .src-list {
+    left: auto;
+    right: 0;
+    min-width: 200px;
+    max-width: calc(100vw - 32px);
+  }
+}
+@media (max-width: 640px) {
+  /* car pages: stack the compact header; the thumbnail only exists once stuck */
+  .page-head.compact {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px;
+    align-items: start;
+    padding-block: 10px 8px;
+  }
+  .page-head.compact .price-block {
+    text-align: left;
+  }
+  .sticky-head .sticky-thumb {
+    display: none;
+  }
+  .sticky-head.stuck {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 10px;
+    padding-block: 6px;
+  }
+  .sticky-head.stuck .sticky-thumb {
+    display: block;
+    flex-basis: 48px;
+    max-width: 48px;
+    height: 36px;
+  }
+  .sticky-head.stuck .head-main {
+    min-width: 0;
+  }
+  .sticky-head.stuck .head-title {
+    font-size: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sticky-head.stuck .head-price {
+    font-size: 16px;
+    white-space: nowrap;
+  }
+  .sticky-head.stuck .price-block {
+    text-align: right;
+    flex: 0 0 auto;
+  }
+  /* source dropdown opens in place instead of floating off-screen */
+  .src-list {
+    position: static;
+    left: auto;
+    right: auto;
+    max-width: none;
+    margin-top: 6px;
+    box-shadow: none;
+  }
+  .src-menu {
+    flex-basis: 100%;
+  }
+}
+@media (max-width: 640px) {
+  /* Buy page header stays a row: title left, Sell button right */
+  .page-head.compact.buy-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
