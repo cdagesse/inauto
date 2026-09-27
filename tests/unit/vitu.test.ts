@@ -3,6 +3,7 @@ import {
   createNmvtisInquiry,
   getVituToken,
   loadNmvtisRecord,
+  many,
   summarizeNmvtis,
   VituError,
 } from "@/lib/sources/vitu";
@@ -83,6 +84,21 @@ describe("summarizeNmvtis (InquiryRecordDTO)", () => {
       "Listing shows 20,000 miles but the last title reading was 50,000",
     ]);
   });
+  it("accepts list fields returned as single objects (as the sandbox does)", () => {
+    const s = summarizeNmvtis(
+      {
+        vehicle: { vin: "WP0AA2996XS620000" },
+        title: { titlingState: "NY", titleIssueDate: "2024-02-01", odometerReading: "61000" },
+        vehicleBrands: { brand: "Rebuilt", isBrand: true },
+        vehicleDisposition: null,
+      },
+      ctx,
+    );
+    expect(s.processed).toBe(true);
+    expect(s.lastTitleState).toBe("NY");
+    expect(s.brands).toEqual(["Rebuilt"]);
+    expect(s.verdict).toBe("issues");
+  });
   it("is pending with no record, unknown when processed with an error and nothing else", () => {
     expect(summarizeNmvtis(null, ctx).verdict).toBe("pending");
     expect(summarizeNmvtis({}, ctx).processed).toBe(false);
@@ -128,7 +144,7 @@ describe("NMVTIS inquiry calls", () => {
     expect(JSON.parse(calls[0]!.body!)).toEqual({ refNumber: "ref-1", vin: "WP0AA2996XS620000" });
     const rec = await loadNmvtisRecord(c, 99);
     expect(calls[1]).toMatchObject({ url: `${base.apiBase}/inquiry/99/record`, method: "GET" });
-    expect(rec.title?.[0]?.titlingState).toBe("NY");
+    expect(many(rec.title)[0]?.titlingState).toBe("NY");
   });
 });
 
