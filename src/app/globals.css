@@ -2701,3 +2701,83 @@ table.compare td.down {
   flex-wrap: wrap;
   align-items: center;
 }
+
+/* listing description assistant */
+.assistant-cta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.assistant {
+  margin-top: 10px;
+  display: grid;
+  gap: 10px;
+}
+.assistant-log {
+  display: grid;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.bubble {
+  max-width: 85%;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+.bubble.assistant {
+  background: color-mix(in srgb, var(--ink) 6%, var(--card));
+  justify-self: start;
+  border-bottom-left-radius: 4px;
+}
+.bubble.user {
+  background: color-mix(in srgb, var(--accent) 16%, var(--card));
+  justify-self: end;
+  border-bottom-right-radius: 4px;
+}
+.assistant-questions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.assistant-questions .pill {
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: var(--body);
+  font-size: 12.5px;
+}
+.assistant-draft {
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--rule));
+  border-radius: 10px;
+  padding: 12px;
+  background: color-mix(in srgb, var(--accent) 5%, var(--card));
+}
+.assistant-draft p {
+  margin: 6px 0 10px;
+  white-space: pre-wrap;
+  font-size: 14px;
+}
+.assistant-input {
+  display: flex;
+  gap: 8px;
+}
+.assistant-input input {
+  flex: 1;
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+}
+.thumbs li.dragging {
+  opacity: 0.5;
+}
+.thumbs li[draggable="true"] {
+  cursor: grab;
+}

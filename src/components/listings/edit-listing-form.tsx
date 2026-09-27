@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { updateListing } from "@/server/listings";
+import { DescriptionAssistant } from "./description-assistant";
 import { PhotoUpload } from "./photo-upload";
 
 export interface EditableListing {
@@ -29,7 +30,13 @@ export interface EditableListing {
   hasBids: boolean;
 }
 
-export function EditListingForm({ listing }: { listing: EditableListing }) {
+export function EditListingForm({
+  listing,
+  assistantEnabled = false,
+}: {
+  listing: EditableListing;
+  assistantEnabled?: boolean;
+}) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -138,6 +145,21 @@ export function EditListingForm({ listing }: { listing: EditableListing }) {
           value={f.description}
           onChange={(e) => set("description", e.target.value)}
         />
+        {assistantEnabled ? (
+          <DescriptionAssistant
+            car={{
+              year: Number(f.year) || null,
+              make: f.make,
+              model: f.model,
+              trim: f.trim || null,
+              miles: Number(f.miles) || null,
+              color: f.color || null,
+              vin: f.vin || null,
+            }}
+            current={f.description}
+            onAccept={(text) => set("description", text)}
+          />
+        ) : null}
       </div>
       <div className="grid-3">
         <div className="fld">
