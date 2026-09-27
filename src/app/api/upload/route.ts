@@ -8,6 +8,15 @@ export const runtime = "nodejs";
 
 const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/heic"];
 const MAX_BYTES = 12 * 1024 * 1024;
+/** Purchase evidence: title photos plus a short proof-of-ownership video. */
+const ALLOWED_PURCHASE = [
+  ...ALLOWED,
+  "application/pdf",
+  "video/mp4",
+  "video/quicktime",
+  "video/webm",
+];
+const MAX_PURCHASE_BYTES = 200 * 1024 * 1024;
 const UPLOADS_PER_HOUR = 40;
 
 /**
@@ -34,12 +43,14 @@ export async function POST(req: Request) {
         }
         const rl = rateLimit(`upload:${user.id}`, UPLOADS_PER_HOUR, 60 * 60 * 1000);
         if (!rl.ok) throw new Error("Too many uploads. Try again in a few minutes.");
-        const prefix = `listings/${user.clerkId}/`;
-        if (!pathname.startsWith(prefix) || pathname.includes(".."))
+        const listingPrefix = `listings/${user.clerkId}/`;
+        const purchasePrefix = `purchases/${user.clerkId}/`;
+        const forPurchase = pathname.startsWith(purchasePrefix);
+        if ((!pathname.startsWith(listingPrefix) && !forPurchase) || pathname.includes(".."))
           throw new Error("Invalid upload path.");
         return {
-          allowedContentTypes: ALLOWED,
-          maximumSizeInBytes: MAX_BYTES,
+          allowedContentTypes: forPurchase ? ALLOWED_PURCHASE : ALLOWED,
+          maximumSizeInBytes: forPurchase ? MAX_PURCHASE_BYTES : MAX_BYTES,
           addRandomSuffix: true,
           tokenPayload: JSON.stringify({ userId: user.id }),
         };

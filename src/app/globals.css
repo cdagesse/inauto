@@ -2781,3 +2781,98 @@ table.compare td.down {
 .thumbs li[draggable="true"] {
   cursor: grab;
 }
+/* purchase flow */
+.purchase {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.purchase-main {
+  display: grid;
+  gap: 14px;
+}
+.purchase-cart {
+  position: sticky;
+  top: 16px;
+}
+.cart-car {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 8px 0 12px;
+}
+.cart-car img {
+  width: 84px;
+  height: 63px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+.cart-lines {
+  display: block;
+}
+.cart-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--rule-2);
+}
+.cart-line.total {
+  border-top: 2px solid var(--ink);
+  font-weight: 700;
+}
+.cart-line dd {
+  margin: 0;
+}
+.addons {
+  display: grid;
+  gap: 10px;
+}
+.check.addon {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: start;
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+}
+.check.addon .hint {
+  display: block;
+}
+.addon-price {
+  white-space: nowrap;
+  color: var(--ink-2);
+}
+.steps-list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+  display: grid;
+  gap: 6px;
+}
+.doc-preview {
+  display: grid;
+  gap: 6px;
+}
+.doc-preview img,
+.doc-preview video {
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: 6px;
+  background: var(--paper);
+}
+.inquiry.unread {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--rule-2));
+}
+@media (max-width: 900px) {
+  .purchase {
+    grid-template-columns: 1fr;
+  }
+  .purchase-cart {
+    position: static;
+  }
+}

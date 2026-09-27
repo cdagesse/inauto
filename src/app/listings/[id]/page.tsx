@@ -10,6 +10,7 @@ import { Countdown } from "@/components/listings/countdown";
 import { ExpandedRegion } from "@/components/listings/expandable";
 import { MarketBlock } from "@/components/listings/market-block";
 import { MarketSliver } from "@/components/listings/market-sliver";
+import { PurchaseCta } from "@/components/listings/purchase-cta";
 import { PhotoGallery } from "@/components/listings/photo-gallery";
 import { ServiceOrderForm } from "@/components/listings/service-order-form";
 import { VinTimeline } from "@/components/listings/vin-timeline";
@@ -255,6 +256,15 @@ export default async function ListingPage({
             }}
             priceLabel={marketLabel}
           />
+          {!l.isOwner ? (
+            <PurchaseCta
+              id={l.id}
+              type={l.type}
+              status={l.status}
+              signedIn={!!session?.user}
+              askingPrice={l.askingPrice}
+            />
+          ) : null}
 
           {session?.user?.role === "admin" ? (
             <div className="panel">

@@ -136,6 +136,7 @@ export async function updateListing(raw: unknown): Promise<ActionResult<{ id: st
         location: d.location || null,
         askingPrice: cur.type === "auction" ? null : (d.askingPrice ?? null),
         reservePrice: cur.type === "auction" ? (d.reservePrice ?? null) : null,
+        sellerDetails: d.sellerDetails ?? null,
         updatedAt: new Date(),
       })
       .where(and(eq(listings.id, d.id), eq(listings.sellerId, user.id)));
