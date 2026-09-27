@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { fmtDate, mi, usd } from "@/components/account/money";
+import { fmtDate, isUsd, mi, money, usd } from "@/components/account/money";
+import { countryName, flag, normalizeCountry } from "@/lib/geo";
 import { bidDelta, maskVin } from "@/lib/sources/live";
 import { effectiveStatus } from "@/lib/sources/status";
 import { PLATFORMS } from "@/lib/sources/platforms";
@@ -46,7 +47,7 @@ export function ExternalDetail({
   const headline = live ? l.currentBid : (l.finalPrice ?? l.currentBid);
   const outcome =
     l.status === "sold"
-      ? `Sold for ${usd(l.finalPrice ?? l.currentBid)}`
+      ? `Sold for ${money(l.finalPrice ?? l.currentBid, l.currency)}`
       : l.status === "rnm"
         ? "Ended, reserve not met"
         : l.status === "withdrawn"
@@ -54,7 +55,11 @@ export function ExternalDetail({
           : status === "ended"
             ? "Ended, result pending"
             : null;
-  const delta = read?.valuation ? bidDelta(headline, read.valuation.marketValue) : null;
+  const foreign = !isUsd(l.currency);
+  const country = normalizeCountry(l.country);
+  // Our market value is in US dollars; a bid in another currency is not compared to it.
+  const delta = read?.valuation && !foreign ? bidDelta(headline, read.valuation.marketValue) : null;
+  const extras = listingExtras(l.raw);
   const goHref = `/go/${l.id}`;
   const vinQuery = l.vin ? `?vin=${encodeURIComponent(l.vin)}` : "";
   const photos = showPhotos ? l.photoUrls : [];
@@ -62,29 +67,38 @@ export function ExternalDetail({
 
   return (
     <article className="external-page">
-      <div className="page-head">
-        <div>
+      <div className="page-head compact">
+        <div className="head-main">
           <div className="eyebrow">
             <Link href="/listings">Listings</Link> /{" "}
             <Link href={`/listings?source=${l.source}`}>{platformName}</Link>
           </div>
-          <h1
-            className="display"
-            style={{ fontSize: "clamp(28px,5vw,44px)", margin: "6px 0 0", lineHeight: 1 }}
-          >
-            {l.title}
-          </h1>
-          <p className="sub" style={{ marginTop: 8 }}>
+          <h1 className="display head-title">{l.title}</h1>
+          <p className="sub head-sub">
             <SourceBadge source={l.source} sourceName={l.sourceName} status={status} size="lg" />
             {carLine ? <> · {carLine}</> : null}
             {l.miles != null ? <> · {mi(l.miles)} miles</> : null}
             {l.location ? <> · {l.location}</> : null}
+            {country && country !== "US" ? (
+              <>
+                {" "}
+                · {flag(country)} {countryName(country)}
+              </>
+            ) : null}
           </p>
         </div>
         <div className="price-block">
-          <div className="lab">{live ? "Current bid" : "Final bid"}</div>
-          <div className="display num" style={{ fontSize: 36 }}>
-            {headline ? usd(headline) : "No bids"}
+          <div className="lab">
+            {live ? "Current bid" : "Final bid"}
+            {foreign ? ` · in ${l.currency}` : ""}
+          </div>
+          <div className="display num head-price">
+            {headline ? money(headline, l.currency) : "No bids"}
+            {foreign && headline ? (
+              <span className="cur-tag" title="Not US dollars">
+                {l.currency}
+              </span>
+            ) : null}
           </div>
           {outcome ? (
             <div className={`pill ${l.status === "sold" ? "up" : ""}`}>{outcome}</div>
@@ -149,11 +163,38 @@ export function ExternalDetail({
                   mono
                   note={l.vin ? "Full VIN is on the platform listing" : undefined}
                 />
+                {country ? (
+                  <Row k="Country" v={`${flag(country)} ${countryName(country)}`} />
+                ) : null}
+                {foreign ? (
+                  <Row
+                    k="Currency"
+                    v={`${l.currency} — prices on this listing are not US dollars`}
+                  />
+                ) : null}
+                {extras.spec.map((e) => (
+                  <Row key={e.k} k={e.k} v={e.v} />
+                ))}
                 <Row k="Listing started" v={l.startedAt ? fmtDate(l.startedAt) : "Unknown"} mono />
                 <Row k="Last checked" v={l.fetchedAt.toLocaleString("en-US")} mono />
               </tbody>
             </table>
           </div>
+          {extras.sections.length ? (
+            <>
+              <h2 className="sec" style={{ marginTop: 20 }}>
+                From the listing
+              </h2>
+              {extras.sections.map((s) => (
+                <div key={s.k} className="listing-extra">
+                  <div className="lab">{s.k}</div>
+                  <p className="desc" style={{ marginTop: 4 }}>
+                    {s.v}
+                  </p>
+                </div>
+              ))}
+            </>
+          ) : null}
           <p className="note external-notice">
             Listing details are provided by the platform; InAuto is not the seller. Bid and buy on
             the platform.
@@ -288,4 +329,40 @@ function Row({ k, v, mono, note }: { k: string; v: string; mono?: boolean; note?
       </td>
     </tr>
   );
+}
+
+/** Extra fields Old Cars Data passes through from the platform listing. */
+export function listingExtras(raw: Record<string, unknown> | null | undefined): {
+  spec: { k: string; v: string }[];
+  sections: { k: string; v: string }[];
+} {
+  const str = (k: string) => {
+    const v = raw?.[k];
+    if (typeof v === "string" && v.trim()) return v.trim();
+    if (Array.isArray(v)) return v.map(String).filter(Boolean).join(", ") || null;
+    return null;
+  };
+  const rows = (pairs: readonly (readonly [string, string])[]) =>
+    pairs
+      .map(([k, key]) => ({ k, v: str(key) }))
+      .filter((e): e is { k: string; v: string } => !!e.v);
+  return {
+    spec: rows([
+      ["Engine", "engine"],
+      ["Transmission", "transmission"],
+      ["Drivetrain", "drivetrain"],
+      ["Body style", "body_style"],
+      ["Exterior", "exterior_color"],
+      ["Interior", "interior_color"],
+      ["Title status", "title_status"],
+      ["Seller", "seller_type"],
+    ]),
+    sections: rows([
+      ["Listing details", "listing_details"],
+      ["Known flaws", "known_flaws"],
+      ["Modifications", "modifications"],
+      ["Recent service history", "recent_service_history"],
+      ["Ownership history", "ownership_history"],
+    ]),
+  };
 }

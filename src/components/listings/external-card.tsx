@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { mi, usd } from "@/components/account/money";
+import { isUsd, mi, money } from "@/components/account/money";
 import { BrandLogo } from "@/components/site/brand-logo";
+import { placeLine } from "@/lib/geo";
 import { effectiveStatus, outcomeLabel, priceLabel } from "@/lib/sources/status";
 import type { ExternalCardData } from "@/server/queries/external";
 import { PlatformMark, SourceBadge } from "./source-badge";
@@ -11,6 +12,7 @@ export function ExternalCard({ l, showPhotos }: { l: ExternalCardData; showPhoto
   const status = effectiveStatus(l.status, l.endsAt);
   const live = status === "live";
   const price = live ? l.currentBid : (l.finalPrice ?? l.currentBid);
+  const foreign = !isUsd(l.currency);
   return (
     <Link
       href={`/listings/ext/${l.source}/${encodeURIComponent(l.sourceId)}`}
@@ -39,13 +41,18 @@ export function ExternalCard({ l, showPhotos }: { l: ExternalCardData; showPhoto
         <span>
           {[l.year, l.make, l.model].filter(Boolean).join(" ")}
           {l.miles != null ? ` · ${mi(l.miles)} mi` : ""}
-          {l.location ? ` · ${l.location}` : ""}
+          {placeLine(l.location, l.country) ? ` · ${placeLine(l.location, l.country)}` : ""}
         </span>
       </div>
       <div className="num price">
         {price ? (
           <>
-            {usd(price)}{" "}
+            {money(price, l.currency)}{" "}
+            {foreign ? (
+              <span className="cur-tag" title={`Price in ${l.currency}, not US dollars`}>
+                {l.currency}
+              </span>
+            ) : null}{" "}
             <span className="hint">
               {priceLabel(status, true)}
               {l.bidCount ? ` · ${l.bidCount} bids` : ""}

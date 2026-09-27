@@ -95,8 +95,8 @@ export default async function ListingPage({
   return (
     <article className={l.isOwner || session?.user?.role === "admin" ? "has-owner-bar" : undefined}>
       {error ? <p className="err">{error}</p> : null}
-      <div className="page-head">
-        <div>
+      <div className="page-head compact">
+        <div className="head-main">
           <div className="eyebrow">
             <Link href="/listings">Listings</Link> /{" "}
             {l.type === "private" ? (
@@ -112,16 +112,11 @@ export default async function ListingPage({
               </span>
             ) : null}
           </div>
-          <div className="with-logo" style={{ marginTop: 6 }}>
-            <BrandLogo make={l.make} px={44} />
-            <h1
-              className="display"
-              style={{ fontSize: "clamp(28px,5vw,44px)", margin: 0, lineHeight: 1 }}
-            >
-              {l.title}
-            </h1>
+          <div className="with-logo" style={{ marginTop: 4 }}>
+            <BrandLogo make={l.make} px={36} />
+            <h1 className="display head-title">{l.title}</h1>
           </div>
-          <p className="sub" style={{ marginTop: 8 }}>
+          <p className="sub head-sub">
             {l.year} {l.make} {l.model}
             {l.trim ? ` ${l.trim}` : ""} · {mi(l.miles)} miles{l.location ? ` · ${l.location}` : ""}{" "}
             · listed by {l.sellerName ?? "owner"}
@@ -131,9 +126,7 @@ export default async function ListingPage({
           {l.type === "auction" ? (
             <>
               <div className="lab">{ended ? "Final bid" : "Current bid"}</div>
-              <div className="display num" style={{ fontSize: 36 }}>
-                {l.highBid ? usd(l.highBid) : "No bids"}
-              </div>
+              <div className="display num head-price">{l.highBid ? usd(l.highBid) : "No bids"}</div>
               {outcome ? (
                 <div
                   className={`pill ${l.status === "sold" ? "up" : ""}`}
@@ -165,9 +158,7 @@ export default async function ListingPage({
           ) : (
             <>
               <div className="lab">Asking</div>
-              <div className="display num" style={{ fontSize: 36 }}>
-                {usd(l.askingPrice)}
-              </div>
+              <div className="display num head-price">{usd(l.askingPrice)}</div>
               {guidance ? (
                 <div className="hint">
                   Market value {usd(guidance.marketValue)} ·{" "}

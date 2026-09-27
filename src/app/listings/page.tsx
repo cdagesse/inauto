@@ -93,22 +93,16 @@ export default async function ListingsPage({
 
   return (
     <div>
-      <div className="page-head">
-        <div>
+      <div className="page-head compact buy-head">
+        <div className="head-main">
           <div className="eyebrow">Buy</div>
-          <h1 className="display" style={{ fontSize: 40, margin: "6px 0 0" }}>
-            Cars for sale
-          </h1>
-          <p className="sub">
-            Listed by owners, priced against real market data, alongside live auctions on the major
-            platforms. Every car can be title-vetted and inspected before you commit.
-          </p>
+          <h1 className="display head-title">Cars for sale</h1>
         </div>
         <Link href="/sell" className="btn primary">
           Sell yours
         </Link>
       </div>
-      <form className="filters" method="get" action="/listings">
+      <div className="filters">
         <div className="seg" role="group" aria-label="Live or past">
           <Link
             href={qs({ when: undefined, result: undefined, cursor: undefined, xcursor: undefined })}
@@ -173,47 +167,48 @@ export default async function ListingsPage({
             Auctions
           </Link>
         </div>
-        <div className="seg" role="group" aria-label="Source">
-          <Link
-            href={qs({ source: undefined, cursor: undefined, xcursor: undefined })}
-            className="seg-link"
-            aria-pressed={source === "all"}
-          >
-            All sources
-          </Link>
-          <Link
-            href={qs({ source: "inauto", cursor: undefined, xcursor: undefined })}
-            className="seg-link"
-            aria-pressed={source === "inauto"}
-          >
-            InAuto
-          </Link>
-          {platformsWithLive.map((k) => (
+        <details className="src-menu">
+          <summary className="seg-link" aria-label="Choose a source">
+            {source === "all"
+              ? "All sources"
+              : source === "inauto"
+                ? "InAuto"
+                : PLATFORMS[source as (typeof PLATFORM_KEYS)[number]].name}
+            <span className="caret" aria-hidden="true">
+              ▾
+            </span>
+          </summary>
+          <div className="src-list" role="group" aria-label="Source">
             <Link
-              key={k}
-              href={qs({ source: k, cursor: undefined, xcursor: undefined })}
-              className="seg-link"
-              aria-pressed={source === k}
+              href={qs({ source: undefined, cursor: undefined, xcursor: undefined })}
+              aria-pressed={source === "all"}
             >
-              {PLATFORMS[k].name} <span className="count">{liveCounts[k]}</span>
+              All sources
             </Link>
-          ))}
-          {!platformsWithLive.includes(source as (typeof PLATFORM_KEYS)[number]) &&
-          source !== "all" &&
-          source !== "inauto" ? (
             <Link
-              href={qs({ source, cursor: undefined, xcursor: undefined })}
-              className="seg-link"
-              aria-pressed
+              href={qs({ source: "inauto", cursor: undefined, xcursor: undefined })}
+              aria-pressed={source === "inauto"}
             >
-              {PLATFORMS[source as (typeof PLATFORM_KEYS)[number]].name}
+              InAuto
             </Link>
-          ) : null}
-        </div>
-        {filter.type ? <input type="hidden" name="type" value={filter.type} /> : null}
-        {source !== "all" ? <input type="hidden" name="source" value={source} /> : null}
-        {past ? <input type="hidden" name="when" value="past" /> : null}
-        {result ? <input type="hidden" name="result" value={result} /> : null}
+            {platformsWithLive.map((k) => (
+              <Link
+                key={k}
+                href={qs({ source: k, cursor: undefined, xcursor: undefined })}
+                aria-pressed={source === k}
+              >
+                {PLATFORMS[k].name} <span className="count">{liveCounts[k]}</span>
+              </Link>
+            ))}
+            {!platformsWithLive.includes(source as (typeof PLATFORM_KEYS)[number]) &&
+            source !== "all" &&
+            source !== "inauto" ? (
+              <Link href={qs({ source, cursor: undefined, xcursor: undefined })} aria-pressed>
+                {PLATFORMS[source as (typeof PLATFORM_KEYS)[number]].name}
+              </Link>
+            ) : null}
+          </div>
+        </details>
         <FilterDrawer
           makes={makes}
           current={carFilter}
@@ -224,7 +219,7 @@ export default async function ListingsPage({
             source: source === "all" ? undefined : source,
           }}
         />
-      </form>
+      </div>
       {chips.length ? (
         <div className="active-chips" style={{ paddingBottom: 14 }}>
           <span className="lab">Filters</span>
@@ -273,28 +268,24 @@ export default async function ListingsPage({
               ? ` · ${source === "inauto" ? "InAuto" : PLATFORMS[source as (typeof PLATFORM_KEYS)[number]].name}`
               : ""}
           </h2>
-          <p className="sub" style={{ margin: "4px 0 0" }}>
-            {past ? (
-              result === "sold" ? (
-                "Cars that found a buyer, newest first, with the price they went for."
-              ) : result === "unsold" ? (
-                "Auctions that ended without a sale (reserve not met or withdrawn), newest first, with the high bid."
-              ) : (
-                "Every finished auction and sale, newest first. Filter to what sold or what did not."
-              )
-            ) : showOwn && own.rows.length > 0 ? (
+          <p className="hint feed-hint">
+            {past
+              ? result === "sold"
+                ? "Sold, newest first, with the price paid."
+                : result === "unsold"
+                  ? "Ended without a sale, newest first, with the high bid."
+                  : "Finished auctions and sales, newest first."
+              : liveTotal > 0
+                ? `${liveTotal} live on the platforms · bidding happens there`
+                : showOwn && own.rows.length === 0
+                  ? "No InAuto listings match yet."
+                  : null}
+            {!past && showOwn && own.rows.length === 0 ? (
               <>
-                <span className="pill accent inauto-pill">On InAuto</span> cars are listed by their
-                owners here and can be title-vetted and inspected before you commit.{" "}
-              </>
-            ) : showOwn ? (
-              <>
-                No InAuto listings match yet. <Link href="/sell">Be the first to list.</Link>{" "}
+                {" "}
+                <Link href="/sell">Be the first to list.</Link>
               </>
             ) : null}
-            {!past && showExternal && liveTotal > 0
-              ? `${liveTotal} auctions are live on Bring a Trailer, Cars & Bids and others; we show the numbers and our read on the price, bidding happens on the platform.`
-              : null}
           </p>
         </div>
         {!past && showExternal && external.rows.length === 0 ? (

@@ -73,7 +73,8 @@ function rows(body: unknown): unknown[] {
 function meta(body: unknown) {
   const m = pick(body, "meta");
   return {
-    hasMore: pick(m, "has_more") === true,
+    // Cursor responses carry has_more; page responses (/auctions/live) carry total_pages only.
+    hasMore: pick(m, "has_more") == null ? null : pick(m, "has_more") === true,
     nextCursor: toStr(pick(m, "next_cursor")),
     totalPages: toInt(pick(m, "total_pages")),
   };
@@ -246,6 +247,10 @@ export interface NormalizedLiveRow {
   miles: number | null;
   color: string | null;
   location: string | null;
+  /** ISO 4217, upper case; USD when the source omits it. */
+  currency: string;
+  /** ISO 3166-1 alpha-2 when published. */
+  country: string | null;
   description: string | null;
   photoUrls: string[];
   currentBid: number | null;
@@ -326,6 +331,8 @@ export function normalizeLiveRow(r: unknown, now = new Date()): NormalizedLiveRo
     miles: toMiles(r),
     color: toStr(pick(r, "exterior_color")) ?? toStr(pick(r, "standard_exterior_color")),
     location: locationOf(r),
+    currency: (toStr(pick(r, "currency")) ?? "USD").toUpperCase().slice(0, 3),
+    country: toStr(pick(r, "country_code"))?.toUpperCase().slice(0, 2) ?? null,
     description: toStr(pick(r, "description")),
     photoUrls: toPhotoUrls(pick(r, "featured_image_url")),
     currentBid: toInt(pick(r, "price")),
@@ -452,7 +459,7 @@ export function createOcdClient(o: OcdClientOptions) {
       }
       const m = meta(result.res.body);
       if (sorted && since && oldest != null && oldest < new Date(since).getTime()) break;
-      if (!m.hasMore || !m.nextCursor) break;
+      if (m.hasMore !== true || !m.nextCursor) break;
       cursor = m.nextCursor;
     }
   }

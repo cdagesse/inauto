@@ -2960,3 +2960,106 @@ table.compare td.down {
   margin-top: 8px;
   font-size: 13px;
 }
+
+/* compact page headers */
+.page-head.compact {
+  padding-block: 14px 10px;
+  align-items: center;
+}
+.page-head.compact .head-main {
+  min-width: 0;
+}
+.head-title {
+  font-size: clamp(22px, 3.2vw, 32px);
+  margin: 2px 0 0;
+  line-height: 1.05;
+}
+.buy-head .head-title {
+  font-size: clamp(24px, 3.4vw, 34px);
+}
+.head-sub {
+  margin: 4px 0 0;
+}
+.head-price {
+  font-size: 28px;
+  line-height: 1.1;
+}
+.page-head.compact .price-block .hint {
+  margin-top: 2px;
+}
+.cur-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid color-mix(in srgb, var(--down) 55%, var(--rule));
+  color: var(--down);
+  vertical-align: middle;
+  margin-left: 4px;
+}
+.filters {
+  padding-bottom: 12px;
+}
+.src-menu {
+  position: relative;
+}
+.src-menu > summary {
+  list-style: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.src-menu > summary::-webkit-details-marker {
+  display: none;
+}
+.src-menu[open] > summary {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+.src-list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 230px;
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.25);
+}
+.src-list a {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 13.5px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.src-list a:hover {
+  background: color-mix(in srgb, var(--ink) 6%, var(--card));
+}
+.src-list a[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--paper);
+}
+.src-list a[aria-pressed="true"] .count {
+  color: var(--paper);
+}
+.feed-head {
+  padding-block: 2px 10px;
+}
+.feed-hint {
+  margin: 2px 0 0;
+}
+.listing-extra {
+  margin-top: 12px;
+}

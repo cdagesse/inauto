@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { BrandLogo } from "@/components/site/brand-logo";
 import type { SellMake, SellModel } from "@/server/queries/sell-catalog";
 import { getSellModels } from "@/server/sell-catalog";
-import { sellHref, trimsFor, yearsFor } from "@/lib/sell/picker-lib";
+import { groupModels, sellHref, trimsFor, variantFor, yearsForGroup } from "@/lib/sell/picker-lib";
 
 export function SellPicker({ makes }: { makes: SellMake[] }) {
   const router = useRouter();
@@ -21,9 +21,12 @@ export function SellPicker({ makes }: { makes: SellMake[] }) {
   const [pending, start] = useTransition();
 
   const make = makes.find((m) => m.slug === makeSlug) ?? null;
-  const model = models.find((m) => m.slug === modelSlug) ?? null;
-  const years = useMemo(() => yearsFor(model), [model]);
+  // One entry per base model; the generation-specific catalog row is chosen from the year.
+  const groups = useMemo(() => groupModels(models), [models]);
+  const group = groups.find((g) => g.slug === modelSlug) ?? null;
+  const years = useMemo(() => yearsForGroup(group), [group]);
   const yearNum = year ? Number(year) : null;
+  const model = useMemo(() => variantFor(group, yearNum), [group, yearNum]);
   const trims = useMemo(() => trimsFor(model, yearNum), [model, yearNum]);
   const hasGens = (model?.generations.length ?? 0) > 0;
   // A single matching generation is selected automatically; a stale choice is dropped.
@@ -114,7 +117,7 @@ export function SellPicker({ makes }: { makes: SellMake[] }) {
           <div className="lab">Your car</div>
           <b className="display" style={{ fontSize: 18 }}>
             {make ? make.name : "Pick a make to start"}
-            {model ? ` ${model.name}` : ""}
+            {group ? ` ${group.name}` : ""}
             {yearNum ? ` · ${yearNum}` : ""}
           </b>
         </div>
@@ -140,13 +143,15 @@ export function SellPicker({ makes }: { makes: SellMake[] }) {
             disabled={!makeSlug || loading}
           >
             <option value="">{loading ? "Loading models…" : "Choose a model"}</option>
-            {models.map((m) => (
-              <option key={m.slug} value={m.slug}>
-                {m.name}
-                {m.ready ? "" : " (report on request)"}
+            {groups.map((g) => (
+              <option key={g.slug} value={g.slug}>
+                {g.name}
               </option>
             ))}
           </select>
+          {group && !group.ready ? (
+            <span className="hint">Market report is built on request for this model.</span>
+          ) : null}
         </div>
         <div className="fld">
           <label htmlFor="p-year">Model year</label>
