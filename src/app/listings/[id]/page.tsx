@@ -93,7 +93,7 @@ export default async function ListingPage({
   const marketLabel =
     l.status === "sold" ? "Sold for" : l.type === "auction" ? "Current bid" : "Asking price";
   return (
-    <article className={l.isOwner ? "has-owner-bar" : undefined}>
+    <article className={l.isOwner || session?.user?.role === "admin" ? "has-owner-bar" : undefined}>
       {error ? <p className="err">{error}</p> : null}
       <div className="page-head">
         <div>
@@ -270,23 +270,6 @@ export default async function ListingPage({
             />
           ) : null}
 
-          {session?.user?.role === "admin" ? (
-            <div className="panel">
-              <div className="lab">Admin</div>
-              <form action={adminDeleteListingForm} className="stack" style={{ marginTop: 8 }}>
-                <input type="hidden" name="id" value={l.id} />
-                <input type="hidden" name="back" value="/listings" />
-                <input name="reason" placeholder="Reason (kept in the audit log)" maxLength={500} />
-                <button type="submit" className="btn sm danger">
-                  Remove this listing
-                </button>
-              </form>
-              <p className="hint" style={{ marginTop: 6 }}>
-                Deletes the listing and its bids. The seller keeps their account.
-              </p>
-            </div>
-          ) : null}
-
           {l.type === "auction" && l.status === "active" && !ended && !l.isOwner ? (
             session?.user ? (
               <BidForm listingId={l.id} minimum={minBid} />
@@ -356,13 +339,19 @@ export default async function ListingPage({
           ) : null}
         </aside>
       </div>
-      {l.isOwner ? (
+      {l.isOwner || session?.user?.role === "admin" ? (
         <OwnerBar
           id={l.id}
           title={l.title}
           status={l.status}
           type={l.type}
           hasBids={l.bids.length > 0}
+          isOwner={l.isOwner}
+          admin={
+            session?.user?.role === "admin"
+              ? { remove: adminDeleteListingForm, back: "/listings" }
+              : undefined
+          }
           actions={{
             publish: publishListingForm,
             markSold: markListingSoldForm,
