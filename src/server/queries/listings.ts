@@ -247,10 +247,14 @@ export async function getListingForViewer(id: string, viewerId: string | null) {
 }
 
 export async function listMyListings(userId: string) {
-  return db
-    .select()
+  const rows = await db
+    .select({
+      listing: listings,
+      bidCount: sql<number>`(select count(*) from ${bids} where ${bids.listingId} = ${listings.id})::int`,
+    })
     .from(listings)
     .where(eq(listings.sellerId, userId))
     .orderBy(desc(listings.createdAt))
     .limit(100);
+  return rows.map((r) => ({ ...r.listing, hasBids: Number(r.bidCount) > 0 }));
 }

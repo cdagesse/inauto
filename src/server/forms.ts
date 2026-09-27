@@ -2,7 +2,13 @@
 
 import { redirect } from "next/navigation";
 import { addGarageCar, deleteGarageCar, moveGarageCar } from "./garage";
-import { markListingSold, publishListing, withdrawListing, deleteDraftListing } from "./listings";
+import {
+  markListingSold,
+  publishListing,
+  withdrawListing,
+  deleteDraftListing,
+  deleteListing,
+} from "./listings";
 import { revokeInvite } from "./networks";
 import type { ActionResult } from "./result";
 
@@ -33,6 +39,9 @@ export async function publishListingForm(fd: FormData) {
 }
 export async function deleteDraftListingForm(fd: FormData) {
   await run("/garage", deleteDraftListing(fd));
+}
+export async function deleteListingForm(fd: FormData) {
+  await run("/garage", deleteListing(fd));
 }
 export async function withdrawListingForm(fd: FormData) {
   await run(`/listings/${String(fd.get("id"))}`, withdrawListing(fd));
