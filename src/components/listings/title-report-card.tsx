@@ -115,7 +115,9 @@ export function TitleReportCard({
             ? "No issues found"
             : summary.verdict === "issues"
               ? "Issues found"
-              : "Inconclusive"}
+              : summary.verdict === "pending"
+                ? "Waiting for NMVTIS"
+                : "Inconclusive"}
         </span>
         <span className="hint">checked {when}</span>
       </div>
@@ -130,18 +132,12 @@ export function TitleReportCard({
         <dt>VIN</dt>
         <dd className="mono">{summary.vin}</dd>
         <dt>Title brands</dt>
-        <dd>{summary.brands.length ? summary.brands.join(", ") : "None reported"}</dd>
-        <dt>Theft</dt>
-        <dd>
-          {summary.theft == null ? "Not reported" : summary.theft ? "Reported stolen" : "None"}
-        </dd>
-        <dt>Liens</dt>
-        <dd>
-          {summary.liens == null ? "Not reported" : summary.liens === 0 ? "None" : summary.liens}
-        </dd>
+        <dd>{summary.brands.length ? summary.brands.join("; ") : "None reported"}</dd>
+        <dt>Junk / salvage / insurance</dt>
+        <dd>{summary.dispositions.length ? summary.dispositions.join("; ") : "None reported"}</dd>
         {summary.lastTitleState ? (
           <>
-            <dt>Last title</dt>
+            <dt>Current title</dt>
             <dd>
               {summary.lastTitleState}
               {summary.lastOdometer != null
@@ -150,10 +146,21 @@ export function TitleReportCard({
             </dd>
           </>
         ) : null}
-        {summary.titleRecords ? (
+        {summary.titleHistory.length ? (
           <>
-            <dt>Title records</dt>
-            <dd>{summary.titleRecords}</dd>
+            <dt>Title history</dt>
+            <dd>
+              <ul className="title-history">
+                {summary.titleHistory.map((t, i) => (
+                  <li key={i}>
+                    {t.state ?? "Unknown state"}
+                    {t.issued ? ` · issued ${t.issued}` : ""}
+                    {t.odometer != null ? ` · ${t.odometer.toLocaleString("en-US")} mi` : ""}
+                    {t.current ? " · current" : ""}
+                  </li>
+                ))}
+              </ul>
+            </dd>
           </>
         ) : null}
       </dl>

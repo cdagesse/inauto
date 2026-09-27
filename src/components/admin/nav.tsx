@@ -6,6 +6,7 @@ const ITEMS = [
   ["/admin/models", "Models"],
   ["/admin/review", "Outlier review"],
   ["/admin/vetting", "Vetting"],
+  ["/admin/vitu", "Vitu test"],
   ["/admin/audit", "Audit log"],
 ] as const;
 

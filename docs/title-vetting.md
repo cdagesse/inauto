@@ -1,38 +1,37 @@
 # Title vetting through Vitu
 
-Title-vetting orders (`service_order.kind = title_vetting`) are fulfilled automatically by
-`src/jobs/title-vetting.ts`, run by the `/api/jobs/title-vetting` cron every 10 minutes.
+Buyers can order a title check on a listing (service order kind `title_vetting`). The
+`title-vetting` cron (every 10 minutes) fulfils it through two Vitu products, each an
+asynchronous inquiry that is created once, stored on the order, and read back on later runs
+or when Vitu's notification webhook fires:
 
-## Auth
+- **NMVTIS vehicle history** (`VITU_NMVTIS_ENABLED`, on by default once credentials exist):
+  `POST {VITU_NMVTIS_API_BASE}/inquiry` with `{ refNumber (our UUID), vin }` → `{ inquiryId }`,
+  stored in `details.nmvtis`. Later, `GET /inquiry/id/{inquiryId}` gives `processedDate` / `error`
+  and `GET /inquiry/{inquiryId}/record` gives `InquiryRecordDTO`, summarised into `result.summary`:
 
-OAuth 2.0 client credentials against Vitu's Keycloak realm, form-encoded, `scope=oneapi:access`
-(per Vitu's migration guide). Tokens are cached in memory until a minute before expiry.
+  | Check                      | Source                                                                           | Flag when                                                    |
+  | -------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+  | Brands                     | `vehicleBrands[]` (`BrandEnum`: Salvage, Rebuilt, Flood, Junk, odometer brands…) | any brand except the "Actual Mileage" / "Exempt" disclosures |
+  | Junk / salvage / insurance | `vehicleDisposition[]`                                                           | any record (with reporting entity and date)                  |
+  | Title history              | `title[]` + `previousTitle[]` (state, issue date, odometer), newest first        | odometer readings decrease over time                         |
+  | Odometer vs listing        | latest title `odometerReading` vs listing miles                                  | listing shows 500+ fewer miles                               |
+  | VIN                        | `vehicle[].vin`                                                                  | differs from the listing VIN                                 |
 
-| Environment | Token URL                                                               | API base                     |
-| ----------- | ----------------------------------------------------------------------- | ---------------------------- |
-| Sandbox     | `https://auth.test.vitu.com/realms/api/protocol/openid-connect/token`   | `https://api-test.vitu.com`  |
-| Stage       | `https://auth.stage.vitu.com/realms/api/protocol/openid-connect/token`  | `https://api-stage.vitu.com` |
-| Production  | `https://auth.secure.vitu.com/realms/api/protocol/openid-connect/token` | `https://api.vitu.com`       |
+  NMVTIS has no theft or lien data; liens come from the MVR record below. A PDF of the report is
+  available from `GET /inquiry/{inquiryId}/report` (not surfaced yet).
 
-Sandbox credentials for personal accounts expire after 30 days; regenerate them in Key Management.
+- **MVR registration record** (`VITU_MVR_ENABLED=true`), described below.
 
-## Configuration
+The order completes when every enabled part has a result. The listing is marked title-vetted only
+when every part passes (NMVTIS `clean`, MVR `verified`).
 
-`VITU_CLIENT_ID`, `VITU_CLIENT_SECRET`, and `VITU_TITLE_PATH` (the NMVTIS / theft-and-lien report
-endpoint from the API spec in the developer portal; `{vin}` is substituted, else the VIN is sent as
-`{"vin": …}` for POST or `?vin=` for GET). Until `VITU_TITLE_PATH` is set the job idles and admins
-keep completing orders by hand. Override `VITU_AUTH_URL`, `VITU_API_BASE`, `VITU_SCOPE`,
-`VITU_TITLE_METHOD` for stage/production.
+## Admin VIN tester
 
-## What is stored
-
-- `service_order.details.report`: the raw response.
-- `service_order.result.summary`: our `TitleSummary` (brands, theft, liens, last title state and
-  odometer, flags, verdict), built by `parseTitleReport()` with tolerant key matching. Tighten the
-  mapping once the spec's field names are known.
-- A clean verdict marks the listing `title_vetted`; issues leave it unvetted and show the flags.
-
-The buyer who ordered the check and the listing owner see the result on the listing page.
+`/admin/vitu` lets an admin enter a VIN, state, optional seller name and listing miles. It creates
+a title-vetting order with no listing (`details.test`), runs the job for it immediately, and shows
+the same card buyers see plus the raw Vitu responses. Use **Refresh** to poll; the notification
+webhook also completes it. Every run creates real, billable inquiries.
 
 ## Registration record (MVR) verification
 
@@ -71,7 +70,7 @@ inquiryType: "VIN" }`, plus any per-state extras from `VITU_MVR_STATE_EXTRAS`. T
 
 ### Notifications
 
-Each Vitu API has a matching Notifications product with the same three calls: `PUT /subscription?callbackUrl=`,
+Each Vitu API has a matching Notifications product, served from the same base URL, with the same calls: `PUT /subscription?callbackUrl=`,
 `GET /subscription`, `DELETE /subscription`, and `PUT /security/callback` to register an HMAC key. Vitu then signs
 every callback with base64 HMAC-SHA256 of the body in the `X-HMAC` header. Register ours once per product with the
 cron secret:

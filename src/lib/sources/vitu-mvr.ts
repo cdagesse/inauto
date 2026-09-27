@@ -6,9 +6,9 @@
  * LoadUnifiedInquiryRecord. Concrete paths and field names come from the
  * spec (portal login) and are configured, not hard-coded.
  */
-import { getVituToken, type VituConfig, VituError } from "./vitu";
+import { type VituConfig, VituError, vituCall } from "./vitu";
 
-export interface MvrConfig extends Omit<VituConfig, "titlePath" | "titleMethod"> {
+export interface MvrConfig extends VituConfig {
   /** Base of the MVR API, e.g. https://api-test.vitu.com/lookup-national-vr-public-api/v1 */
   apiBase: string;
   /** POST: create an inquiry (spec: /inquiry). */
@@ -29,34 +29,6 @@ export interface MvrInquiryRequest {
   state: string; // two-letter MvrStateEnum, the StateInquiryDTO discriminator
   vin: string;
   refNumber: string; // our UUID (InquiryDTO.refNumber)
-}
-
-async function call<T>(
-  c: MvrConfig,
-  method: "GET" | "POST",
-  path: string,
-  body?: unknown,
-): Promise<T> {
-  const token = await getVituToken({ ...c, titlePath: "", titleMethod: "POST" });
-  const f = c.fetchImpl ?? fetch;
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${token}`,
-    Accept: "application/json",
-  };
-  if (body !== undefined) headers["Content-Type"] = "application/json";
-  if (c.locationId) headers["x-location-id"] = c.locationId;
-  const res = await f(`${c.apiBase.replace(/\/$/, "")}${path}`, {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  const text = await res.text();
-  if (!res.ok) throw new VituError("report", res.status, text.slice(0, 300));
-  try {
-    return JSON.parse(text) as T;
-  } catch {
-    throw new VituError("report", res.status, "response was not JSON");
-  }
 }
 
 /** InquiryDTO body for a VIN lookup, plus any state-specific extras. Pure, for tests. */
@@ -83,7 +55,7 @@ export async function createMvrInquiry(
   c: MvrConfig,
   req: MvrInquiryRequest,
 ): Promise<{ inquiryId: number | null; raw: unknown }> {
-  const raw = await call<unknown>(
+  const raw = await vituCall<unknown>(
     c,
     "POST",
     c.createPath,
@@ -93,7 +65,7 @@ export async function createMvrInquiry(
 }
 
 export async function loadUnifiedRecord(c: MvrConfig, inquiryId: number): Promise<MvrRecord> {
-  return call<MvrRecord>(c, "GET", c.unifiedPath.replace("{id}", String(inquiryId)));
+  return vituCall<MvrRecord>(c, "GET", c.unifiedPath.replace("{id}", String(inquiryId)));
 }
 
 /** LoadInquiryById when its path is configured; null (never throws) otherwise or on failure. */
@@ -103,7 +75,11 @@ export async function loadInquiryStatus(
 ): Promise<MvrInquiryStatus | null> {
   if (!c.inquiryPath) return null;
   try {
-    return await call<MvrInquiryStatus>(c, "GET", c.inquiryPath.replace("{id}", String(inquiryId)));
+    return await vituCall<MvrInquiryStatus>(
+      c,
+      "GET",
+      c.inquiryPath.replace("{id}", String(inquiryId)),
+    );
   } catch {
     return null;
   }
@@ -111,7 +87,11 @@ export async function loadInquiryStatus(
 
 export async function loadInquiryByRef(c: MvrConfig, refNumber: string): Promise<unknown> {
   if (!c.loadByRefPath) throw new VituError("report", 0, "VITU_MVR_LOAD_BY_REF_PATH not set");
-  return call<unknown>(c, "GET", c.loadByRefPath.replace("{ref}", encodeURIComponent(refNumber)));
+  return vituCall<unknown>(
+    c,
+    "GET",
+    c.loadByRefPath.replace("{ref}", encodeURIComponent(refNumber)),
+  );
 }
 
 /* ---------- pure helpers ---------- */

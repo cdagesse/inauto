@@ -37,9 +37,8 @@ describe("subscription calls", () => {
     clientId: "id",
     clientSecret: "secret",
     authUrl: "https://auth.test.vitu.com/realms/api/protocol/openid-connect/token",
-    apiBase: "https://api-test.vitu.com",
     scope: "oneapi:access",
-    base: "https://api-test.vitu.com/one/nmvtis/api/v1",
+    apiBase: "https://api-test.vitu.com/one/nmvtis/api/v1",
     fetchImpl,
   };
   it("subscribes with callbackUrl as a query parameter and sets HMAC security", async () => {
