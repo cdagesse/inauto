@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, gt, inArray, lt, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, ilike, inArray, lt, lte, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { externalListings, generations, makes, models } from "@/db/schema";
 import { isPlatformKey, type PlatformKey } from "@/lib/sources/platforms";
@@ -104,6 +104,14 @@ function encodeCursor(
 export interface ExternalFilter {
   source?: PlatformKey;
   make?: string;
+  model?: string;
+  trim?: string;
+  yearMin?: number;
+  yearMax?: number;
+  priceMin?: number;
+  priceMax?: number;
+  milesMin?: number;
+  milesMax?: number;
   cursor?: string;
   /** Live only (default) or include recently settled results. */
   includeSettled?: boolean;
@@ -124,6 +132,30 @@ export async function listExternalListings(filter: ExternalFilter = {}) {
   const base = [] as ReturnType<typeof eq>[];
   if (filter.source) base.push(eq(externalListings.source, filter.source));
   if (filter.make) base.push(sql`lower(${externalListings.make}) = ${filter.make.toLowerCase()}`);
+  const like = (s: string) => `%${s.replace(/[%_\\]/g, (c) => `\\${c}`)}%`;
+  if (filter.model)
+    base.push(
+      or(
+        ilike(externalListings.model, like(filter.model)),
+        ilike(externalListings.title, like(filter.model)),
+      )!,
+    );
+  if (filter.trim)
+    base.push(
+      or(
+        ilike(externalListings.trim, like(filter.trim)),
+        ilike(externalListings.title, like(filter.trim)),
+      )!,
+    );
+  if (filter.yearMin != null) base.push(gte(externalListings.year, filter.yearMin));
+  if (filter.yearMax != null) base.push(lte(externalListings.year, filter.yearMax));
+  if (filter.milesMin != null) base.push(gte(externalListings.miles, filter.milesMin));
+  if (filter.milesMax != null) base.push(lte(externalListings.miles, filter.milesMax));
+  const priceExpr = sql<
+    number | null
+  >`coalesce(${externalListings.finalPrice}, ${externalListings.currentBid})`;
+  if (filter.priceMin != null) base.push(sql`${priceExpr} >= ${filter.priceMin}`);
+  if (filter.priceMax != null) base.push(sql`${priceExpr} <= ${filter.priceMax}`);
 
   const out: ExternalCardData[] = [];
   let nextCursor: string | null = null;

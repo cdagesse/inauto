@@ -58,9 +58,21 @@ export const createListingSchema = z.object({
 });
 export type CreateListingInput = z.infer<typeof createListingSchema>;
 
+const money = z.coerce.number().int().min(0).max(100_000_000).optional();
+const year = z.coerce.number().int().min(1900).max(2100).optional();
+const miles = z.coerce.number().int().min(0).max(2_000_000).optional();
+
 export const listingFilterSchema = z.object({
   type: z.enum(["classified", "auction"]).optional(),
   make: z.string().trim().min(1).max(60).optional(),
+  model: z.string().trim().min(1).max(80).optional(),
+  trim: z.string().trim().min(1).max(80).optional(),
+  yearMin: year,
+  yearMax: year,
+  priceMin: money,
+  priceMax: money,
+  milesMin: miles,
+  milesMax: miles,
   cursor: z.string().max(120).optional(),
   /** live (default): cars for sale now. past: sold, ended or withdrawn listings. */
   when: z.enum(["live", "past"]).optional(),
