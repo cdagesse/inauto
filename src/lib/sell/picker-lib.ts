@@ -68,3 +68,57 @@ export function generationFor(
   if (year) for (const code of order) if ((years[code] ?? []).includes(year)) return code;
   return order[0]!;
 }
+
+/** A base model with the catalog rows that belong to it (e.g. M3 → M3, M3 (E30), M3 (E46)). */
+export interface PickerGroup {
+  /** Display name without a trailing generation tag. */
+  name: string;
+  /** Slug of the base row when one exists, else the first variant's slug. */
+  slug: string;
+  ready: boolean;
+  variants: PickerModel[];
+}
+
+/** "M3 (E30)" → "M3"; "911 / 996" stays as is. Only a trailing parenthetical is removed. */
+export function baseModelName(name: string): string {
+  return name.replace(/\s*\([^()]*\)\s*$/, "").trim() || name;
+}
+
+/** Groups catalog models by base name so the picker offers "M3" once, not every generation. */
+export function groupModels(models: PickerModel[]): PickerGroup[] {
+  const map = new Map<string, PickerGroup>();
+  for (const m of models) {
+    const name = baseModelName(m.name);
+    const key = name.toLowerCase();
+    const g = map.get(key) ?? { name, slug: m.slug, ready: false, variants: [] };
+    g.variants.push(m);
+    if (m.name === name) g.slug = m.slug; // the plain row is the base
+    g.ready = g.ready || m.ready;
+    map.set(key, g);
+  }
+  return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }));
+}
+
+/** Model years across every variant of a group, newest first. */
+export function yearsForGroup(g: PickerGroup | null): number[] {
+  if (!g) return [];
+  const set = new Set<number>();
+  for (const v of g.variants) for (const y of yearsFor(v)) set.add(y);
+  return [...set].sort((a, b) => b - a);
+}
+
+/**
+ * The catalog row to use for a chosen year: a generation-specific variant whose years cover
+ * it wins over the plain base row (its range is the whole model run), else the base, else
+ * the first variant.
+ */
+export function variantFor(g: PickerGroup | null, year: number | null): PickerModel | null {
+  if (!g) return null;
+  const base = g.variants.find((v) => v.name === g.name) ?? null;
+  if (year) {
+    const specific = g.variants.filter((v) => v !== base && yearsFor(v).includes(year));
+    if (specific.length) return specific[0]!;
+    if (base && yearsFor(base).includes(year)) return base;
+  }
+  return base ?? g.variants[0] ?? null;
+}

@@ -31,6 +31,8 @@ export interface ExternalCardData {
   model: string | null;
   miles: number | null;
   location: string | null;
+  currency: string;
+  country: string | null;
   photoUrls: string[];
   currentBid: number | null;
   bidCount: number | null;
@@ -50,6 +52,8 @@ const cardColumns = {
   model: externalListings.model,
   miles: externalListings.miles,
   location: externalListings.location,
+  currency: externalListings.currency,
+  country: externalListings.country,
   photoUrls: externalListings.photoUrls,
   currentBid: externalListings.currentBid,
   bidCount: externalListings.bidCount,
@@ -219,6 +223,8 @@ export interface ExternalDetail extends ExternalCardData {
   reserveMet: boolean | null;
   startedAt: Date | null;
   fetchedAt: Date;
+  /** The source row as fetched; extra listing details (engine, flaws, history) live here. */
+  raw: Record<string, unknown> | null;
   market: {
     makeSlug: string;
     modelSlug: string;
@@ -244,6 +250,7 @@ export async function getExternalListing(
       reserveMet: externalListings.reserveMet,
       startedAt: externalListings.startedAt,
       fetchedAt: externalListings.fetchedAt,
+      rawJson: externalListings.rawJson,
       makeSlug: makes.slug,
       modelSlug: models.slug,
       modelName: models.name,
@@ -269,6 +276,10 @@ export async function getExternalListing(
     reserveMet: rest.reserveMet,
     startedAt: rest.startedAt,
     fetchedAt: rest.fetchedAt,
+    raw:
+      rest.rawJson && typeof rest.rawJson === "object" && !Array.isArray(rest.rawJson)
+        ? (rest.rawJson as Record<string, unknown>)
+        : null,
     market:
       makeSlug && modelSlug && modelName && reportStatus
         ? {

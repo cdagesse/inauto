@@ -598,6 +598,10 @@ export const externalListings = pgTable(
     miles: integer("miles"),
     color: text("color"),
     location: text("location"),
+    /** ISO 4217 code of currentBid/finalPrice, e.g. USD, GBP, EUR. */
+    currency: text("currency").notNull().default("USD"),
+    /** ISO 3166-1 alpha-2 of the car's location when the source publishes it. */
+    country: text("country"),
     description: text("description"),
     photoUrls: jsonb("photo_urls")
       .$type<string[]>()
