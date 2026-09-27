@@ -56,57 +56,103 @@ describe("names", () => {
   });
 });
 
-describe("summarizeMvr", () => {
+describe("summarizeMvr (MVRBaseRecordDTO)", () => {
   const ctx = {
     vin: "WP0AA2996XS620000",
     state: "NY",
     refNumber: "r",
     inquiryId: 42,
     sellerName: "James Bowen",
+    listingMiles: 41_000,
     now: new Date("2026-09-27T00:00:00Z"),
   };
   it("verifies a matching owner with no lien and current in-state registration", () => {
     const s = summarizeMvr(
       {
-        inquiry: { processedDate: "2026-09-27T01:00:00Z", error: null },
-        vehicle: { vin: "WP0AA2996XS620000", year: 1999 },
-        owner: { firstName: "James", lastName: "Bowen" },
-        registration: { state: "NY", expirationDate: "2027-03-01" },
-        title: { titleState: "NY", titleNumber: "NY123" },
+        vehicle: {
+          vin: "WP0AA2996XS620000",
+          year: 1999,
+          make: "PORSCHE",
+          model: "911",
+          odometerReading: 40_512,
+          odometerReadingDate: "2025-11-02",
+          odometerValidity: "Actual",
+        },
+        title: {
+          titleNumber: "NY123",
+          titleType: "Original",
+          titlingState: "NY",
+          titleIssueDate: "2019-05-01",
+          plateNumber: "ABC1234",
+        },
+        owners: [
+          { ownerType: "Individual", firstName: "James", middleName: "R", lastName: "Bowen" },
+        ],
+        lienholders: [],
+        registration: {
+          expirationDate: "2027-03-01",
+          plateNumber: "ABC1234",
+          address: { city: "Hauppauge", state: "NY" },
+        },
       },
-      ctx,
+      { ...ctx, inquiry: { processedDate: "2026-09-27T01:00:00Z", charged: true, error: null } },
     );
     expect(s.verdict).toBe("verified");
-    expect(s.owner).toBe("James Bowen");
+    expect(s.owner).toBe("James R Bowen");
     expect(s.ownerMatch).toBe("match");
+    expect(s.vehicle).toBe("1999 PORSCHE 911");
     expect(s.lienholder).toBeNull();
+    expect(s.registrationState).toBe("NY");
+    expect(s.titleState).toBe("NY");
+    expect(s.odometer).toBe(40_512);
     expect(s.flags).toEqual([]);
   });
-  it("flags a lien, an owner mismatch, an out-of-state registration and an expired plate", () => {
+  it("flags a lien, owner mismatch, out-of-state plate, expiry, vehicle stop and odometer rollback", () => {
     const s = summarizeMvr(
       {
-        processedDate: "2026-09-27T01:00:00Z",
-        vehicle: { vin: "WP0AA2996XS620000" },
-        owner: { name: "Pat Smith" },
-        lienholder: { name: "First Bank" },
-        registration: { state: "NJ", expirationDate: "2025-01-01" },
+        vehicle: { vin: "WP0AA2996XS620000", odometerReading: 68_000, isVehicleStop: true },
+        owners: [{ name: "Pat Smith" }, { businessName: "Smith Holdings LLC" }],
+        lienholders: [{ name: "First Bank", lienDate: "2024-06-01", electronicLien: true }],
+        registration: { plateExpirationDate: "2025-01-01", address: { state: "NJ" } },
       },
       ctx,
     );
     expect(s.verdict).toBe("issues");
+    expect(s.coOwner).toBe("Smith Holdings LLC");
     expect(s.flags).toEqual([
-      "Registered owner (Pat Smith) does not match the seller",
-      "Lienholder on record: First Bank",
+      "Registered owner (Pat Smith, Smith Holdings LLC) does not match the seller",
+      "Lienholder on record: First Bank (since 2024-06-01)",
+      "State has a stop on this vehicle",
       "Registered in NJ, listing says NY",
       "Registration expired 2025-01-01",
+      "Listing shows 41,000 miles but the state's last odometer reading was 68,000",
     ]);
   });
-  it("is pending until the state has responded", () => {
+  it("matches the seller against any listed owner and reports a lease", () => {
     const s = summarizeMvr(
-      { inquiry: { createdDate: "2026-09-27T00:00:00Z", processedDate: null } },
+      {
+        vehicle: { vin: "WP0AA2996XS620000" },
+        owners: [
+          { businessName: "Ally Financial" },
+          { firstName: "Jim", lastName: "Bowen", suffix: "Jr" },
+        ],
+        lessor: { businessName: "Ally Financial", leaseEndDate: "2027-01-01" },
+        registration: { expirationDate: "2027-01-01", address: { state: "NY" } },
+      },
       ctx,
     );
-    expect(s.verdict).toBe("pending");
-    expect(s.processed).toBe(false);
+    expect(s.ownerMatch).toBe("match");
+    expect(s.lessor).toBe("Ally Financial");
+    expect(s.flags).toEqual(["Leased vehicle; lessor on record: Ally Financial"]);
+  });
+  it("is pending until the record has content, unknown when processed with none", () => {
+    expect(summarizeMvr({}, ctx).verdict).toBe("pending");
+    expect(summarizeMvr(null, ctx).processed).toBe(false);
+    const u = summarizeMvr(
+      {},
+      { ...ctx, inquiry: { processedDate: "2026-09-27T01:00:00Z", error: "No record found" } },
+    );
+    expect(u.verdict).toBe("unknown");
+    expect(u.flags).toEqual(["State lookup error: No record found"]);
   });
 });

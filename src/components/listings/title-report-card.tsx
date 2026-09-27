@@ -49,12 +49,36 @@ export function MvrReportSection({ mvr }: { mvr: MvrSummary }) {
         <dt>Registration</dt>
         <dd>
           {mvr.registrationState ?? mvr.state}
+          {mvr.plateNumber ? ` · plate ${mvr.plateNumber}` : ""}
           {mvr.registrationExpires ? ` · expires ${mvr.registrationExpires}` : ""}
         </dd>
         {mvr.titleState || mvr.titleNumber ? (
           <>
             <dt>Title</dt>
-            <dd>{[mvr.titleState, mvr.titleNumber].filter(Boolean).join(" · ")}</dd>
+            <dd>
+              {[
+                mvr.titleState,
+                mvr.titleType,
+                mvr.titleNumber,
+                mvr.titleIssued ? `issued ${mvr.titleIssued}` : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </dd>
+          </>
+        ) : null}
+        {mvr.odometer != null ? (
+          <>
+            <dt>Last odometer on record</dt>
+            <dd>
+              {mvr.odometer.toLocaleString()} mi{mvr.odometerDate ? ` (${mvr.odometerDate})` : ""}
+            </dd>
+          </>
+        ) : null}
+        {mvr.vehicle ? (
+          <>
+            <dt>Vehicle on record</dt>
+            <dd>{mvr.vehicle}</dd>
           </>
         ) : null}
       </dl>

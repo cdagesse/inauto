@@ -7,6 +7,7 @@ import { env } from "@/env/server";
 import { fetchTitleReportRaw, parseTitleReport, VituError } from "@/lib/sources/vitu";
 import {
   createMvrInquiry,
+  loadInquiryStatus,
   loadUnifiedRecord,
   stateFromLocation,
   summarizeMvr,
@@ -24,6 +25,7 @@ interface OrderRow {
   vin: string | null;
   listingId: string | null;
   location: string | null;
+  miles: number | null;
   sellerLegalName: string | null;
   sellerName: string | null;
   details: Record<string, unknown> | null;
@@ -73,6 +75,7 @@ export async function runTitleVetting(
       vin: sql<string | null>`coalesce(${serviceOrders.vin}, ${listings.vin})`,
       listingId: serviceOrders.listingId,
       location: listings.location,
+      miles: listings.miles,
       sellerLegalName: sql<string | null>`${listings.sellerDetails}->>'legalName'`,
       sellerName: users.name,
       details: serviceOrders.details,
@@ -152,18 +155,34 @@ export async function runTitleVetting(
             if (e instanceof VituError && e.step === "token") break;
           }
         }
-      } else if (!result.mvr && mvrState.inquiryId != null && cfg.mvr!.unifiedPath) {
+      } else if (!result.mvr && mvrState.inquiryId != null) {
         try {
-          const record = await loadUnifiedRecord({ ...cfg, ...cfg.mvr! }, mvrState.inquiryId);
+          const mc = { ...cfg, ...cfg.mvr! };
+          const inquiry = await loadInquiryStatus(mc, mvrState.inquiryId);
+          // Before the state responds the record endpoint may 4xx; treat that as still pending.
+          const record = await loadUnifiedRecord(mc, mvrState.inquiryId).catch((e) => {
+            if (
+              e instanceof VituError &&
+              e.status >= 400 &&
+              e.status < 500 &&
+              e.status !== 401 &&
+              e.status !== 403
+            )
+              return null;
+            throw e;
+          });
           const summary: MvrSummary = summarizeMvr(record, {
             vin,
             state: mvrState.state,
             refNumber: mvrState.refNumber,
             inquiryId: mvrState.inquiryId,
             sellerName: o.sellerLegalName ?? o.sellerName,
+            listingMiles: o.miles,
+            inquiry,
           });
           if (summary.processed) {
             details.mvrRecord = record;
+            if (inquiry) details.mvrInquiry = inquiry;
             result.mvr = summary;
             touched = true;
             out.processed.push({ id: o.id, step: "mvr", verdict: summary.verdict });
