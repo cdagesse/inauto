@@ -2651,3 +2651,18 @@ table.compare td.down {
   gap: 10px;
   margin-left: 8px;
 }
+
+/* icon buttons (garage row actions) */
+.row-actions {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+.btn.icon {
+  padding: 5px 7px;
+  line-height: 0;
+}
+.btn.icon.danger:hover {
+  color: var(--down);
+  border-color: var(--down);
+}

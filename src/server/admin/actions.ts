@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireAdmin } from "@/auth";
 import { type ActionResult, fail, toError } from "@/server/result";
+import * as listingsCore from "./core/listings";
 import * as modelsCore from "./core/models";
 import * as review from "./core/review";
 import * as usersCore from "./core/users";
@@ -43,6 +44,36 @@ async function run(back: string, r: Promise<ActionResult | ActionResult<unknown>
   const sep = back.includes("?") ? "&" : "?";
   if (!res.ok) redirect(`${back}${sep}error=${encodeURIComponent(res.error)}`);
   redirect(`${back}${sep}ok=${encodeURIComponent(okMsg ?? "Done.")}`);
+}
+
+/* ---------------- listings ---------------- */
+
+export async function adminDeleteListing(fd: FormData): Promise<ActionResult> {
+  try {
+    const admin = await requireAdmin();
+    const parsed = z
+      .object({ id: uuid, reason: z.string().trim().max(500).default("") })
+      .safeParse({ id: str(fd, "id"), reason: str(fd, "reason") });
+    if (!parsed.success) return fail("Invalid request.");
+    const r = await listingsCore.deleteListing(
+      admin.id,
+      parsed.data.id,
+      parsed.data.reason || "Removed by admin",
+    );
+    if (!r.ok) return r;
+    revalidatePath("/listings");
+    revalidatePath("/");
+    revalidatePath(`/admin/users/${r.data.sellerId}`);
+    return { ok: true };
+  } catch (e) {
+    return adminError(e);
+  }
+}
+/** From the listing page or the admin user page; returns to `back` (same-origin path only). */
+export async function adminDeleteListingForm(fd: FormData) {
+  const back = str(fd, "back");
+  const safe = back.startsWith("/") && !back.startsWith("//") ? back : "/admin/users";
+  await run(safe, adminDeleteListing(fd), "Listing removed.");
 }
 
 /* ---------------- users ---------------- */

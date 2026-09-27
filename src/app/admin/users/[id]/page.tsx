@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 import { fmtDate, mi, usd } from "@/components/account/money";
 import { Flash } from "@/components/admin/flash";
 import { StatusPill } from "@/components/admin/status-pill";
-import { setUserRoleForm, setUserStatusForm } from "@/server/admin/actions";
+import { setUserRoleForm, setUserStatusForm, adminDeleteListingForm } from "@/server/admin/actions";
 import { getUserDetail } from "@/server/admin/queries";
 
 export const dynamic = "force-dynamic";
@@ -187,6 +187,7 @@ export default async function AdminUserPage({
                   <th className="n">Asking</th>
                   <th className="n">High bid</th>
                   <th>Created</th>
+                  <th>Remove</th>
                 </tr>
               </thead>
               <tbody>
@@ -202,6 +203,16 @@ export default async function AdminUserPage({
                     <td className="n">{l.askingPrice != null ? usd(l.askingPrice) : ""}</td>
                     <td className="n">{l.highBid != null ? usd(Number(l.highBid)) : ""}</td>
                     <td className="mono">{fmtDate(l.createdAt)}</td>
+                    <td>
+                      <form action={adminDeleteListingForm} className="inline-form">
+                        <input type="hidden" name="id" value={l.id} />
+                        <input type="hidden" name="back" value={`/admin/users/${d.user.id}`} />
+                        <input name="reason" placeholder="Reason" maxLength={500} />
+                        <button type="submit" className="btn sm danger">
+                          Delete
+                        </button>
+                      </form>
+                    </td>
                   </tr>
                 ))}
               </tbody>
