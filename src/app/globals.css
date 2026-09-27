@@ -2528,3 +2528,17 @@ table.compare td.down {
     justify-self: start;
   }
 }
+
+/* listing page: market sliver in the sidebar, full block expands below */
+.market-sliver .sliver-kv dd.up {
+  color: var(--up);
+}
+.market-sliver .sliver-kv dd.down {
+  color: var(--down);
+}
+.expanded-region {
+  padding-top: 8px;
+}
+.expanded-region[hidden] {
+  display: none;
+}

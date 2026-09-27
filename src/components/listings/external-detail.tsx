@@ -6,6 +6,7 @@ import { PLATFORMS } from "@/lib/sources/platforms";
 import type { ValuationResult } from "@/lib/valuation/types";
 import type { ExternalDetail as ExternalDetailData } from "@/server/queries/external";
 import { Countdown } from "./countdown";
+import { ExpandToggle } from "./expandable";
 import { PlatformMark, SourceBadge } from "./source-badge";
 
 export interface InAutoRead {
@@ -26,6 +27,7 @@ export function ExternalDetail({
   showPhotos,
   signedIn,
   market,
+  expandId,
 }: {
   l: ExternalDetailData;
   read: InAutoRead | null;
@@ -33,6 +35,8 @@ export function ExternalDetail({
   signedIn: boolean;
   /** Full market data section (KPIs, charts, comps), rendered under the listing details. */
   market?: React.ReactNode;
+  /** Expand/collapse key shared with the market region. */
+  expandId?: string;
 }) {
   const p = PLATFORMS[l.source] ?? PLATFORMS.other;
   const platformName = l.source === "other" ? l.sourceName : p.name;
@@ -202,15 +206,36 @@ export function ExternalDetail({
                   <Link href={read.reportHref}>See the full report</Link>.{" "}
                   {read.valuation.disclaimer}
                 </p>
+                {expandId ? (
+                  <div className="card-actions" style={{ marginTop: 8 }}>
+                    <ExpandToggle
+                      id={expandId}
+                      labelOpen="Hide full market data"
+                      labelClosed="Show full market data"
+                      className="btn sm primary"
+                    />
+                  </div>
+                ) : null}
               </>
             ) : read ? (
-              <p className="hint">
-                No InAuto market report yet for the {read.modelName}.{" "}
-                <Link href={read.reportHref}>
-                  {read.pending ? "Build one now" : "Open the model page"}
-                </Link>
-                .
-              </p>
+              <>
+                <p className="hint">
+                  No InAuto market report yet for the {read.modelName}.{" "}
+                  <Link href={read.reportHref}>
+                    {read.pending ? "Build one now" : "Open the model page"}
+                  </Link>
+                  .
+                </p>
+                {expandId ? (
+                  <div className="card-actions" style={{ marginTop: 8 }}>
+                    <ExpandToggle
+                      id={expandId}
+                      labelOpen="Hide report progress"
+                      labelClosed="Show report progress"
+                    />
+                  </div>
+                ) : null}
+              </>
             ) : (
               <p className="hint">This listing is not matched to a model in our catalog yet.</p>
             )}
