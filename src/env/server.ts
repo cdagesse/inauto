@@ -31,6 +31,8 @@ const schema = z.object({
   OCD_API_KEY: optionalString,
   OCD_MONTHLY_BUDGET: z.coerce.number().int().positive().default(10),
   BLOB_READ_WRITE_TOKEN: optionalString,
+  /** Claude API key for the listing description assistant; the feature hides without it. */
+  ANTHROPIC_API_KEY: optionalString,
   /** "true" shows third-party listing photos. Off until platform terms are cleared. */
   EXTERNAL_PHOTOS: optionalString,
 });
