@@ -13,6 +13,7 @@ import { ServiceOrderForm } from "@/components/listings/service-order-form";
 import { VinTimeline } from "@/components/listings/vin-timeline";
 import { verdictClass, verdictLabel } from "@/components/listings/verdict";
 import type { PriceGuidance } from "@/lib/valuation/types";
+import { adminDeleteListingForm } from "@/server/admin/actions";
 import { markListingSoldForm, publishListingForm, withdrawListingForm } from "@/server/forms";
 import { minimumIncrement } from "@/server/listings-schema";
 import { getListingForViewer } from "@/server/queries/listings";
@@ -278,6 +279,23 @@ export default async function ListingPage({
                   </>
                 ) : null}
               </div>
+            </div>
+          ) : null}
+
+          {session?.user?.role === "admin" ? (
+            <div className="panel">
+              <div className="lab">Admin</div>
+              <form action={adminDeleteListingForm} className="stack" style={{ marginTop: 8 }}>
+                <input type="hidden" name="id" value={l.id} />
+                <input type="hidden" name="back" value="/listings" />
+                <input name="reason" placeholder="Reason (kept in the audit log)" maxLength={500} />
+                <button type="submit" className="btn sm danger">
+                  Remove this listing
+                </button>
+              </form>
+              <p className="hint" style={{ marginTop: 6 }}>
+                Deletes the listing and its bids. The seller keeps their account.
+              </p>
             </div>
           ) : null}
 

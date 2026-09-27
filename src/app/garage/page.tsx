@@ -5,7 +5,13 @@ import { fmtDate, mi, usd } from "@/components/account/money";
 import { GarageCarForm } from "@/components/garage/car-form";
 import { BrandLogo } from "@/components/site/brand-logo";
 import { listMarketModels } from "@/lib/market/source";
-import { deleteGarageCarForm, moveGarageCarForm, withdrawListingForm } from "@/server/forms";
+import {
+  deleteGarageCarForm,
+  deleteListingForm,
+  moveGarageCarForm,
+  withdrawListingForm,
+} from "@/server/forms";
+import { ListingRowActions } from "@/components/listings/listing-row-actions";
 import { listGarage } from "@/server/queries/garage";
 import { listMyListings } from "@/server/queries/listings";
 import { slugify } from "@/server/result";
@@ -236,12 +242,15 @@ export default async function GaragePage({
                     <td className="mono">{fmtDate(l.createdAt)}</td>
                     <td>
                       <div className="card-actions">
-                        {l.status !== "sold" && l.status !== "withdrawn" ? (
-                          <Link href={`/listings/${l.id}/edit`} className="btn sm">
-                            Edit
-                          </Link>
-                        ) : null}
-                        {l.status === "active" || l.status === "ended" ? (
+                        <ListingRowActions
+                          id={l.id}
+                          title={l.title}
+                          canEdit={l.status !== "sold" && l.status !== "withdrawn"}
+                          canDelete={!l.hasBids}
+                          hasBids={l.hasBids}
+                          deleteAction={deleteListingForm}
+                        />
+                        {l.hasBids && (l.status === "active" || l.status === "ended") ? (
                           <form action={withdrawListingForm}>
                             <input type="hidden" name="id" value={l.id} />
                             <button type="submit" className="btn sm danger">

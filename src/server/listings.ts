@@ -148,26 +148,43 @@ export async function updateListing(raw: unknown): Promise<ActionResult<{ id: st
   }
 }
 
-/** Owner deletes a draft that was never published. Published listings are withdrawn instead. */
-export async function deleteDraftListing(fd: FormData): Promise<ActionResult> {
+/**
+ * Owner deletes their listing outright. Allowed in any status as long as
+ * nobody has bid on it; an auction with bids must be taken down (withdrawn)
+ * instead so bidders keep a record. Bids cascade; service orders keep their
+ * row with the listing reference cleared.
+ */
+export async function deleteListing(fd: FormData): Promise<ActionResult> {
   try {
     const user = await requireUser();
     const parsed = z.object({ id: z.string().uuid() }).safeParse({ id: fd.get("id") });
     if (!parsed.success) return fail("Invalid request.");
+    const [cur] = await db
+      .select({
+        id: listings.id,
+        bidCount: sql<number>`(select count(*) from ${bids} where ${bids.listingId} = ${listings.id})::int`,
+      })
+      .from(listings)
+      .where(and(eq(listings.id, parsed.data.id), eq(listings.sellerId, user.id)))
+      .limit(1);
+    if (!cur) return fail("Listing not found.");
+    if (Number(cur.bidCount) > 0)
+      return fail("This auction has bids, so it cannot be deleted. Take it down instead.");
     await db
       .delete(listings)
-      .where(
-        and(
-          eq(listings.id, parsed.data.id),
-          eq(listings.sellerId, user.id),
-          eq(listings.status, "draft"),
-        ),
-      );
+      .where(and(eq(listings.id, parsed.data.id), eq(listings.sellerId, user.id)));
     revalidatePath("/garage");
+    revalidatePath("/listings");
+    revalidatePath("/");
     return { ok: true };
   } catch (e) {
     return toError(e);
   }
+}
+
+/** Kept for the edit page's "Delete draft" button. */
+export async function deleteDraftListing(fd: FormData): Promise<ActionResult> {
+  return deleteListing(fd);
 }
 
 export async function publishListing(fd: FormData): Promise<ActionResult> {
