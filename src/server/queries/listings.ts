@@ -11,6 +11,7 @@ import {
   models,
   networkMembers,
   networks,
+  serviceOrders,
   users,
 } from "@/db/schema";
 import { type ListingFilter, minimumIncrement, PAGE_SIZE } from "../listings-schema";
@@ -257,4 +258,32 @@ export async function listMyListings(userId: string) {
     .orderBy(desc(listings.createdAt))
     .limit(100);
   return rows.map((r) => ({ ...r.listing, hasBids: Number(r.bidCount) > 0 }));
+}
+
+/** Latest completed title check on a listing, for the buyer who ordered it or the listing owner. */
+export async function getTitleCheckForViewer(listingId: string, viewerId: string | null) {
+  if (!viewerId || !/^[0-9a-f-]{36}$/.test(listingId)) return null;
+  const [row] = await db
+    .select({
+      result: serviceOrders.result,
+      reviewedAt: serviceOrders.reviewedAt,
+      userId: serviceOrders.userId,
+    })
+    .from(serviceOrders)
+    .innerJoin(listings, eq(listings.id, serviceOrders.listingId))
+    .where(
+      and(
+        eq(serviceOrders.listingId, listingId),
+        eq(serviceOrders.kind, "title_vetting"),
+        eq(serviceOrders.status, "complete"),
+        sql`${serviceOrders.result}->'summary' is not null`,
+        or(eq(serviceOrders.userId, viewerId), eq(listings.sellerId, viewerId)),
+      ),
+    )
+    .orderBy(desc(serviceOrders.reviewedAt))
+    .limit(1);
+  if (!row) return null;
+  const summary = (row.result as { summary?: unknown } | null)?.summary as
+    import("@/lib/sources/vitu").TitleSummary | undefined;
+  return summary ? { summary, reviewedAt: row.reviewedAt } : null;
 }

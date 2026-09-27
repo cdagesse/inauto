@@ -26,7 +26,8 @@ import {
 } from "@/server/forms";
 import { OwnerBar } from "@/components/listings/owner-bar";
 import { minimumIncrement } from "@/server/listings-schema";
-import { getListingForViewer } from "@/server/queries/listings";
+import { getListingForViewer, getTitleCheckForViewer } from "@/server/queries/listings";
+import { TitleReportCard } from "@/components/listings/title-report-card";
 import { getVinTimeline } from "@/server/queries/vin";
 
 export async function generateMetadata({
@@ -57,7 +58,10 @@ export default async function ListingPage({
   const viewerId = session?.user?.id ?? null;
   const l = await getListingForViewer(id, viewerId);
   if (!l) notFound();
-  const history = await getVinTimeline(l.historyVin, { kind: "inauto", id: l.id });
+  const [history, titleCheck] = await Promise.all([
+    getVinTimeline(l.historyVin, { kind: "inauto", id: l.id }),
+    getTitleCheckForViewer(l.id, viewerId),
+  ]);
   const closed = l.status === "sold" || l.status === "ended" || l.status === "withdrawn";
   const ended = l.ended || closed;
   const winningMine = l.status === "sold" && l.bids[0]?.mine === true;
@@ -295,6 +299,12 @@ export default async function ListingPage({
             )
           ) : null}
 
+          {titleCheck ? (
+            <TitleReportCard
+              summary={titleCheck.summary}
+              when={fmtDate(titleCheck.reviewedAt ?? new Date())}
+            />
+          ) : null}
           <div className="panel protect">
             <div className="lab">Buyer protection</div>
             <h3 className="display" style={{ fontSize: 18, margin: "4px 0 8px" }}>
