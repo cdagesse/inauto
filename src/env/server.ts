@@ -54,8 +54,8 @@ const schema = z.object({
   /** LoadUnifiedInquiryRecord path with "{id}" (spec: /inquiry/{inquiryId}/vitu-record). */
   VITU_MVR_UNIFIED_PATH: z.string().default("/inquiry/{id}/vitu-record"),
   /** LoadInquiryById path with "{id}", for processedDate/error. Optional; the record's content is the fallback signal. */
-  VITU_MVR_INQUIRY_PATH: optionalString,
-  VITU_MVR_LOAD_BY_REF_PATH: optionalString,
+  VITU_MVR_INQUIRY_PATH: z.string().default("/inquiry/id/{id}"),
+  VITU_MVR_LOAD_BY_REF_PATH: z.string().default("/inquiry/refNumber/{ref}"),
   VITU_MVR_LOCATION_ID: optionalString,
   /** JSON: per-state extra InquiryDTO fields, e.g. {"TX":{"dealerNumber":150786,"sellerUserName":"x"}} */
   VITU_MVR_STATE_EXTRAS: optionalString,
@@ -64,6 +64,18 @@ const schema = z.object({
   /** "true" shows third-party listing photos. Off until platform terms are cleared. */
   EXTERNAL_PHOTOS: optionalString,
 });
+
+/** "true" / "1" / "yes" / "on", any case, with stray whitespace or quotes. */
+function flag(v: string | undefined): boolean | null {
+  if (v == null) return null;
+  const s = v
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .toLowerCase();
+  if (["true", "1", "yes", "on"].includes(s)) return true;
+  if (["false", "0", "no", "off"].includes(s)) return false;
+  return null;
+}
 
 function parseJsonObject(v: string | undefined): Record<string, Record<string, unknown>> | null {
   if (!v) return null;
@@ -101,20 +113,20 @@ export const env = {
           authUrl: parsed.data.VITU_AUTH_URL,
           scope: parsed.data.VITU_SCOPE,
           nmvtis:
-            parsed.data.VITU_NMVTIS_ENABLED !== "false"
+            flag(parsed.data.VITU_NMVTIS_ENABLED) !== false
               ? {
                   apiBase: parsed.data.VITU_NMVTIS_API_BASE,
                   locationId: parsed.data.VITU_MVR_LOCATION_ID ?? null,
                 }
               : null,
           mvr:
-            parsed.data.VITU_MVR_ENABLED === "true"
+            flag(parsed.data.VITU_MVR_ENABLED) === true
               ? {
                   apiBase: parsed.data.VITU_MVR_API_BASE,
                   createPath: parsed.data.VITU_MVR_CREATE_PATH,
                   unifiedPath: parsed.data.VITU_MVR_UNIFIED_PATH,
-                  inquiryPath: parsed.data.VITU_MVR_INQUIRY_PATH ?? null,
-                  loadByRefPath: parsed.data.VITU_MVR_LOAD_BY_REF_PATH ?? null,
+                  inquiryPath: parsed.data.VITU_MVR_INQUIRY_PATH,
+                  loadByRefPath: parsed.data.VITU_MVR_LOAD_BY_REF_PATH,
                   locationId: parsed.data.VITU_MVR_LOCATION_ID ?? null,
                   stateExtras: parseJsonObject(parsed.data.VITU_MVR_STATE_EXTRAS),
                 }

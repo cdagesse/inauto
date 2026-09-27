@@ -70,6 +70,8 @@ export default async function AdminVitu({
           const test = (d.test ?? {}) as { state?: string; sellerName?: string; miles?: number };
           const nm = d.nmvtis as { inquiryId?: number | null; refNumber?: string } | undefined;
           const mv = d.mvr as { inquiryId?: number | null; refNumber?: string } | undefined;
+          const nmErr = d.nmvtisLastError as { at: string; notes: string[] } | undefined;
+          const mvErr = d.mvrLastError as { at: string; notes: string[] } | undefined;
           return (
             <div key={r.id} className="panel vitu-test-row">
               <div className="vitu-test-head">
@@ -84,8 +86,12 @@ export default async function AdminVitu({
                     : ""}
                   <div className="hint">
                     {fmtDate(r.createdAt)} · {r.status}
-                    {nm ? ` · NMVTIS inquiry ${nm.inquiryId ?? "?"}` : ""}
-                    {mv ? ` · MVR inquiry ${mv.inquiryId ?? "?"}` : ""}
+                    {nm
+                      ? ` · NMVTIS inquiry ${nm.inquiryId || "pending id"} (ref ${nm.refNumber})`
+                      : " · NMVTIS not started"}
+                    {mv
+                      ? ` · MVR inquiry ${mv.inquiryId || "pending id"} (ref ${mv.refNumber})`
+                      : " · MVR not started"}
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
@@ -112,6 +118,20 @@ export default async function AdminVitu({
               ) : (
                 <p className="hint">No results yet.</p>
               )}
+              {nmErr || mvErr ? (
+                <div className="vitu-errors">
+                  {nmErr ? (
+                    <p className="err">
+                      NMVTIS ({fmtDate(new Date(nmErr.at))}): {nmErr.notes.join(" | ")}
+                    </p>
+                  ) : null}
+                  {mvErr ? (
+                    <p className="err">
+                      MVR ({fmtDate(new Date(mvErr.at))}): {mvErr.notes.join(" | ")}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
               <details>
                 <summary className="hint">Raw Vitu responses</summary>
                 <pre className="vitu-raw">
