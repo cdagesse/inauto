@@ -14,9 +14,12 @@ export function SiteHeader() {
     <header className="site-head">
       <HeaderHeight />
       <div className="wrap bar">
-        <Link href="/" className="brand">
-          <i aria-hidden="true" />
-          InAuto
+        <Link href="/" className="brand" aria-label="InAuto home">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/urcar-dark.png" alt="" className="brand-img dark" aria-hidden="true" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/urcar-light.png" alt="" className="brand-img light" aria-hidden="true" />
+          <span className="sr-only">InAuto</span>
         </Link>
         <nav className="nav" aria-label="Primary">
           <Link href="/listings">Buy</Link>

@@ -6,6 +6,8 @@ Features and fixes as they ship, newest first. One line per change, with the pul
 
 ### Features
 
+- UrCar logo in the header and footer, white wordmark in dark mode and dark wordmark in light mode (#46)
+
 - Mobile pass: home hero, Buy page header and source menu, car-page headers and sticky bar all fit a 390px phone (#45)
 
 - Home page bottom shows "Segments at a glance" (median, 90-day move, sales, for sale, monthly volume, price index) instead of one featured report (#43)
