@@ -9,6 +9,7 @@ import type { ExternalDetail as ExternalDetailData } from "@/server/queries/exte
 import { Countdown } from "./countdown";
 import { ExpandToggle } from "./expandable";
 import { PlatformMark, SourceBadge } from "./source-badge";
+import { StickyHead } from "./sticky-head";
 
 export interface InAutoRead {
   valuation: ValuationResult | null;
@@ -67,7 +68,7 @@ export function ExternalDetail({
 
   return (
     <article className="external-page">
-      <div className="page-head compact">
+      <StickyHead photo={photos[0] ?? null}>
         <div className="head-main">
           <div className="eyebrow">
             <Link href="/listings">Listings</Link> /{" "}
@@ -119,7 +120,7 @@ export function ExternalDetail({
               : ""}
           </div>
         </div>
-      </div>
+      </StickyHead>
 
       <div className="grid-2 listing-body">
         <div>

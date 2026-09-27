@@ -1,4 +1,5 @@
 import { BrandLogo } from "@/components/site/brand-logo";
+import { StickyHead } from "@/components/listings/sticky-head";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -95,7 +96,7 @@ export default async function ListingPage({
   return (
     <article className={l.isOwner || session?.user?.role === "admin" ? "has-owner-bar" : undefined}>
       {error ? <p className="err">{error}</p> : null}
-      <div className="page-head compact">
+      <StickyHead photo={l.photos[0] ?? null}>
         <div className="head-main">
           <div className="eyebrow">
             <Link href="/listings">Listings</Link> /{" "}
@@ -170,7 +171,7 @@ export default async function ListingPage({
             </>
           )}
         </div>
-      </div>
+      </StickyHead>
 
       <div className="grid-2 listing-body">
         <div>
