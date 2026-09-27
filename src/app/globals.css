@@ -3303,3 +3303,11 @@ header.site-head {
     aspect-ratio: 4 / 3;
   }
 }
+/* one column: card above, controls below (an older .featured rule set two columns) */
+.featured {
+  grid-template-columns: 1fr;
+  align-items: stretch;
+}
+.featured-body .pill.accent {
+  margin-bottom: 4px;
+}
