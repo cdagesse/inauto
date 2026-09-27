@@ -27,7 +27,7 @@ export default async function AdminVitu({
         <div className="lab">Vitu VIN test</div>
         <p className="hint" style={{ margin: "4px 0 10px" }}>
           {cfg
-            ? `Credentials set · NMVTIS ${cfg.nmvtis ? "on" : "off"} · MVR ${cfg.mvr ? "on" : "off"} · ${cfg.authUrl.includes("auth.test") ? "sandbox" : cfg.authUrl.includes("stage") ? "stage" : "production"}`
+            ? `Credentials set · NMVTIS ${cfg.nmvtis ? "on" : "off"} · MVR ${cfg.mvr ? `on${cfg.mvr.locationId ? ` (location ${cfg.mvr.locationId})` : " (no location id)"}` : "off"} · ${cfg.authUrl.includes("auth.test") ? "sandbox" : cfg.authUrl.includes("stage") ? "stage" : "production"}`
             : "VITU_CLIENT_ID / VITU_CLIENT_SECRET are not set; checks will be skipped."}{" "}
           Each run creates real inquiries (both products bill per inquiry). Results arrive
           asynchronously: use Refresh, or wait for the notification webhook.
