@@ -2702,6 +2702,24 @@ table.compare td.down {
   align-items: center;
 }
 
+.owner-bar .admin-remove {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding-left: 10px;
+  border-left: 1px solid var(--rule);
+}
+.owner-bar .admin-remove input[name="reason"] {
+  font: inherit;
+  font-size: 13px;
+  padding: 5px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--ink);
+  width: 180px;
+}
+
 /* listing description assistant */
 .assistant-cta {
   display: flex;
