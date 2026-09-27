@@ -8,6 +8,7 @@ import {
   createNmvtisInquiry,
   isNotReady,
   loadNmvtisInquiry,
+  loadNmvtisInquiryByRef,
   loadNmvtisRecord,
   summarizeNmvtis,
   type TitleSummary,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/sources/vitu";
 import {
   createMvrInquiry,
+  loadInquiryByRef,
   loadInquiryStatus,
   loadUnifiedRecord,
   type MvrSummary,
@@ -57,6 +59,9 @@ export interface TestInputs {
 }
 
 const isVin = (v: string) => /^[A-HJ-NPR-Z0-9]{11,17}$/.test(v);
+const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+/** Sandbox creates sometimes answer inquiryId 0; treat that as "unknown, resolve by refNumber". */
+const realId = (id: number | null | undefined) => (typeof id === "number" && id > 0 ? id : null);
 
 /**
  * Fulfils title-vetting orders through Vitu. Two independent, asynchronous parts:
@@ -144,34 +149,57 @@ export async function runTitleVetting(
           details.nmvtisCreateResponse = created.raw;
           touched = true;
           out.processed.push({ id: o.id, step: "nmvtis-created" });
-        } else if (ref.inquiryId != null) {
-          const inquiry = await loadNmvtisInquiry(nmvtis, ref.inquiryId).catch((e) => {
-            if (isNotReady(e)) return null;
+        } else {
+          const notes: string[] = [];
+          const soft = (label: string) => (e: unknown) => {
+            if (isNotReady(e)) {
+              notes.push(`${label}: ${errText(e)}`);
+              return null;
+            }
             throw e;
-          });
-          const record = await loadNmvtisRecord(nmvtis, ref.inquiryId).catch((e) => {
-            if (isNotReady(e)) return null;
-            throw e;
-          });
+          };
+          // Resolve the inquiry: by id when we have a real one, else by our refNumber.
+          let inquiry = realId(ref.inquiryId)
+            ? await loadNmvtisInquiry(nmvtis, ref.inquiryId!).catch(soft("load by id"))
+            : null;
+          if (!inquiry)
+            inquiry = await loadNmvtisInquiryByRef(nmvtis, ref.refNumber).catch(
+              soft("load by refNumber"),
+            );
+          const inquiryId = realId(inquiry?.inquiryId) ?? realId(ref.inquiryId);
+          if (inquiryId && inquiryId !== ref.inquiryId) {
+            details.nmvtis = { ...ref, inquiryId } satisfies InquiryRef;
+            touched = true;
+          }
+          const record = inquiryId
+            ? await loadNmvtisRecord(nmvtis, inquiryId).catch(soft("load record"))
+            : null;
           const summary: TitleSummary = summarizeNmvtis(record, {
             vin,
-            inquiryId: ref.inquiryId,
+            inquiryId,
             refNumber: ref.refNumber,
             inquiry,
             listingMiles: miles,
           });
+          if (inquiry) details.nmvtisInquiry = inquiry;
+          if (notes.length) details.nmvtisLastError = { at: new Date().toISOString(), notes };
+          else delete details.nmvtisLastError;
           if (summary.processed) {
             details.report = record;
-            if (inquiry) details.nmvtisInquiry = inquiry;
             result.summary = summary;
             touched = true;
             out.processed.push({ id: o.id, step: "nmvtis", verdict: summary.verdict });
-          } else log(`${o.id} nmvtis still pending`);
+          } else {
+            touched = touched || !!inquiry || notes.length > 0;
+            log(`${o.id} nmvtis still pending${notes.length ? ` (${notes.join(" | ")})` : ""}`);
+          }
         }
       } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
+        const msg = errText(e);
         out.errors.push(`${o.id} nmvtis: ${msg}`);
         log(`error ${o.id} nmvtis: ${msg}`);
+        details.nmvtisLastError = { at: new Date().toISOString(), notes: [msg] };
+        touched = true;
         if (e instanceof VituError && e.step === "token") stop = true;
       }
     }
@@ -194,33 +222,58 @@ export async function runTitleVetting(
             details.mvrCreateResponse = created.raw;
             touched = true;
             out.processed.push({ id: o.id, step: "mvr-created" });
-          } else if (ref.inquiryId != null) {
-            const inquiry = await loadInquiryStatus(mvr, ref.inquiryId);
-            const record = await loadUnifiedRecord(mvr, ref.inquiryId).catch((e) => {
-              if (isNotReady(e)) return null;
-              throw e;
-            });
+          } else {
+            const notes: string[] = [];
+            let inquiry = realId(ref.inquiryId)
+              ? await loadInquiryStatus(mvr, ref.inquiryId!)
+              : null;
+            if (!inquiry) inquiry = await loadInquiryByRef(mvr, ref.refNumber);
+            const inquiryId = realId(inquiry?.inquiryId) ?? realId(ref.inquiryId);
+            if (inquiryId && inquiryId !== ref.inquiryId) {
+              details.mvr = { ...ref, inquiryId } satisfies InquiryRef;
+              touched = true;
+            }
+            const record = inquiryId
+              ? await loadUnifiedRecord(mvr, inquiryId).catch((e) => {
+                  if (isNotReady(e)) {
+                    notes.push(`load record: ${errText(e)}`);
+                    return null;
+                  }
+                  throw e;
+                })
+              : null;
+            if (!inquiryId)
+              notes.push(
+                "no inquiry id yet (create answered 0 and refNumber lookup found nothing)",
+              );
             const summary: MvrSummary = summarizeMvr(record, {
               vin,
               state: ref.state ?? state ?? "",
               refNumber: ref.refNumber,
-              inquiryId: ref.inquiryId,
+              inquiryId,
               sellerName,
               listingMiles: miles,
               inquiry,
             });
+            if (inquiry) details.mvrInquiry = inquiry;
+            if (notes.length) details.mvrLastError = { at: new Date().toISOString(), notes };
+            else delete details.mvrLastError;
             if (summary.processed) {
               details.mvrRecord = record;
-              if (inquiry) details.mvrInquiry = inquiry;
               result.mvr = summary;
               touched = true;
               out.processed.push({ id: o.id, step: "mvr", verdict: summary.verdict });
-            } else log(`${o.id} mvr still pending`);
+            } else {
+              touched = touched || !!inquiry || notes.length > 0;
+              log(`${o.id} mvr still pending${notes.length ? ` (${notes.join(" | ")})` : ""}`);
+            }
           }
         } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
+          const msg = errText(e);
           out.errors.push(`${o.id} mvr: ${msg}`);
           log(`error ${o.id} mvr: ${msg}`);
+          details.mvrLastError = { at: new Date().toISOString(), notes: [msg] };
+          touched = true;
           if (e instanceof VituError && e.step === "token") stop = true;
         }
       }

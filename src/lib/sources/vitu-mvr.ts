@@ -6,7 +6,7 @@
  * LoadUnifiedInquiryRecord. Concrete paths and field names come from the
  * spec (portal login) and are configured, not hard-coded.
  */
-import { type VituConfig, VituError, vituCall } from "./vitu";
+import { type VituConfig, vituCall } from "./vitu";
 
 export interface MvrConfig extends VituConfig {
   /** Base of the MVR API, e.g. https://api-test.vitu.com/lookup-national-vr-public-api/v1 */
@@ -85,13 +85,21 @@ export async function loadInquiryStatus(
   }
 }
 
-export async function loadInquiryByRef(c: MvrConfig, refNumber: string): Promise<unknown> {
-  if (!c.loadByRefPath) throw new VituError("report", 0, "VITU_MVR_LOAD_BY_REF_PATH not set");
-  return vituCall<unknown>(
-    c,
-    "GET",
-    c.loadByRefPath.replace("{ref}", encodeURIComponent(refNumber)),
-  );
+/** LoadInquiryByRefNumber when its path is configured; null (never throws) otherwise or on failure. */
+export async function loadInquiryByRef(
+  c: MvrConfig,
+  refNumber: string,
+): Promise<MvrInquiryStatus | null> {
+  if (!c.loadByRefPath) return null;
+  try {
+    return await vituCall<MvrInquiryStatus>(
+      c,
+      "GET",
+      c.loadByRefPath.replace("{ref}", encodeURIComponent(refNumber)),
+    );
+  } catch {
+    return null;
+  }
 }
 
 /* ---------- pure helpers ---------- */

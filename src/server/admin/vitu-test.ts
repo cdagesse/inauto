@@ -26,7 +26,7 @@ const schema = z.object({
     .toUpperCase()
     .regex(/^[A-Z]{2}$/, "State must be two letters"),
   sellerName: z.string().trim().max(120).optional().or(z.literal("")),
-  miles: z.coerce.number().int().min(0).max(2_000_000).optional().or(z.literal("")),
+  miles: z.coerce.number().int().min(0).max(2_000_000).optional(),
 });
 
 export async function createVituTest(fd: FormData) {
@@ -35,7 +35,7 @@ export async function createVituTest(fd: FormData) {
     vin: fd.get("vin"),
     state: fd.get("state"),
     sellerName: fd.get("sellerName") ?? "",
-    miles: fd.get("miles") || "",
+    miles: String(fd.get("miles") ?? "").trim() || undefined,
   });
   if (!parsed.success)
     redirect(
@@ -80,7 +80,7 @@ export async function refreshVituTest(fd: FormData) {
     ? run.errors.join(" | ")
     : run.processed.length
       ? `Updated: ${run.processed.map((p) => `${p.step}${p.verdict ? ` ${p.verdict}` : ""}`).join(", ")}`
-      : "Still waiting on Vitu.";
+      : "Still waiting on Vitu. Any error Vitu returned is shown on the row.";
   redirect(`/admin/vitu?${run.errors.length ? "error" : "ok"}=${encodeURIComponent(msg)}`);
 }
 
