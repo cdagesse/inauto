@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { longDate } from "@/components/market/format";
 import { NodeCard } from "@/components/market/market-nodes";
 import { SegmentsTable } from "@/components/market/segments-table";
