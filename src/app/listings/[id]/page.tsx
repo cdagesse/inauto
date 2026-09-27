@@ -285,6 +285,7 @@ export default async function ListingPage({
           {titleCheck ? (
             <TitleReportCard
               summary={titleCheck.summary}
+              mvr={titleCheck.mvr}
               when={fmtDate(titleCheck.reviewedAt ?? new Date())}
             />
           ) : null}

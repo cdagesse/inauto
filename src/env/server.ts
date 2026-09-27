@@ -45,9 +45,34 @@ const schema = z.object({
   /** Title/NMVTIS report endpoint path from Vitu's API spec; "{vin}" is substituted. Unset = job idles. */
   VITU_TITLE_PATH: optionalString,
   VITU_TITLE_METHOD: z.enum(["GET", "POST"]).default("POST"),
+  /** MVR (registration/owner/lien) verification. Base from the spec's servers block. */
+  VITU_MVR_ENABLED: optionalString,
+  VITU_MVR_API_BASE: z
+    .string()
+    .url()
+    .default("https://api-test.vitu.com/lookup-national-vr-public-api/v1"),
+  VITU_MVR_CREATE_PATH: z.string().default("/inquiry"),
+  /** LoadUnifiedInquiryRecord path with "{id}"; from the spec. Unset = inquiries are created but not read back. */
+  VITU_MVR_UNIFIED_PATH: optionalString,
+  VITU_MVR_LOAD_BY_REF_PATH: optionalString,
+  VITU_MVR_LOCATION_ID: optionalString,
+  /** JSON: per-state extra InquiryDTO fields, e.g. {"TX":{"dealerNumber":150786,"sellerUserName":"x"}} */
+  VITU_MVR_STATE_EXTRAS: optionalString,
+  /** Shared secret Vitu's notification subscription must send as ?key= (or X-Webhook-Key). */
+  VITU_WEBHOOK_KEY: optionalString,
   /** "true" shows third-party listing photos. Off until platform terms are cleared. */
   EXTERNAL_PHOTOS: optionalString,
 });
+
+function parseJsonObject(v: string | undefined): Record<string, Record<string, unknown>> | null {
+  if (!v) return null;
+  try {
+    const o = JSON.parse(v);
+    return o && typeof o === "object" && !Array.isArray(o) ? o : null;
+  } catch {
+    return null;
+  }
+}
 
 const parsed = schema.safeParse(process.env);
 if (!parsed.success) {
@@ -77,6 +102,18 @@ export const env = {
           scope: parsed.data.VITU_SCOPE,
           titlePath: parsed.data.VITU_TITLE_PATH ?? null,
           titleMethod: parsed.data.VITU_TITLE_METHOD,
+          mvr:
+            parsed.data.VITU_MVR_ENABLED === "true"
+              ? {
+                  apiBase: parsed.data.VITU_MVR_API_BASE,
+                  createPath: parsed.data.VITU_MVR_CREATE_PATH,
+                  unifiedPath: parsed.data.VITU_MVR_UNIFIED_PATH ?? null,
+                  loadByRefPath: parsed.data.VITU_MVR_LOAD_BY_REF_PATH ?? null,
+                  locationId: parsed.data.VITU_MVR_LOCATION_ID ?? null,
+                  stateExtras: parseJsonObject(parsed.data.VITU_MVR_STATE_EXTRAS),
+                }
+              : null,
         }
       : null,
+  vituWebhookKey: parsed.data.VITU_WEBHOOK_KEY ?? null,
 };
