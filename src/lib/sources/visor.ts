@@ -21,7 +21,7 @@
  * Keys are only ever read from the environment by the job runner and passed in here.
  */
 import { fetchJson, redactParams } from "./http";
-import { toDateOnly, toInt, toStr, pick } from "./parse";
+import { deriveSoldDate, toDateOnly, toInt, toStr, pick } from "./parse";
 import type { CallRecorder, NormalizedDealerRow } from "./types";
 
 export const VISOR_BASE = "https://api.visor.vin";
@@ -115,7 +115,7 @@ export function selectTrims(facetBody: unknown, pattern: string): string[] {
     .map((b) => b.value);
 }
 
-export function normalizeVisorRow(r: unknown): NormalizedDealerRow | null {
+export function normalizeVisorRow(r: unknown, now: Date = new Date()): NormalizedDealerRow | null {
   const id = toStr(pick(r, "id"));
   if (!id) return null;
   const opts = pick(r, "options_packages");
@@ -133,7 +133,9 @@ export function normalizeVisorRow(r: unknown): NormalizedDealerRow | null {
     dealerName: toStr(pick(r, "dealer_name")),
     state: toStr(pick(r, "state")),
     daysOnMarket: toInt(pick(r, "days_on_market")),
-    soldDate: toDateOnly(pick(r, "sold_date")),
+    soldDate:
+      toDateOnly(pick(r, "sold_date")) ??
+      deriveSoldDate(pick(r, "listed_at"), pick(r, "days_on_market"), now),
     raw: r,
   };
 }
