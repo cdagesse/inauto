@@ -3304,6 +3304,10 @@ header.site-head {
   padding-top: 8px;
 }
 
+.home-segments {
+  padding-block: 8px 24px;
+}
+
 /* hero carousel: bigger photo, controls under it */
 .home-hero.with-featured {
   grid-template-columns: minmax(0, 1fr) minmax(360px, 1fr);
