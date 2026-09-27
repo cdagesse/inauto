@@ -12,6 +12,20 @@ const MAX_AUCTION_ROWS = 1000;
  * Loads everything buildSnapshot needs for one model. Returns null when the
  * model is unknown or has no market rows at all, so callers can fall back.
  */
+/**
+ * Sold date with a fallback for rows stored before the normalizer derived it:
+ * listed date plus days on market, never after the fetch. Mirrors
+ * scripts/backfill-sold-date.sql and deriveSoldDate() in the Visor normalizer.
+ */
+const effectiveSoldDate = sql<string | null>`coalesce(
+  ${dealerSales.soldDate},
+  least(
+    ((${dealerSales.rawJson}->>'listed_at')::timestamp
+      + make_interval(days => greatest(coalesce(${dealerSales.daysOnMarket}, 0), 0)))::date,
+    ${dealerSales.fetchedAt}::date
+  )
+)`;
+
 export async function loadSnapshotInput(
   makeSlug: string,
   modelSlug: string,
@@ -45,13 +59,13 @@ export async function loadSnapshotInput(
         packages: dealerSales.packages,
         state: dealerSales.state,
         daysOnMarket: dealerSales.daysOnMarket,
-        soldDate: dealerSales.soldDate,
+        soldDate: effectiveSoldDate,
         generationId: dealerSales.generationId,
         excludedReason: dealerSales.excludedReason,
       })
       .from(dealerSales)
       .where(eq(dealerSales.modelId, head.modelId))
-      .orderBy(desc(dealerSales.soldDate))
+      .orderBy(desc(effectiveSoldDate))
       .limit(MAX_DEALER_ROWS),
     db
       .select({

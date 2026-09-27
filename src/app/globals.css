@@ -2349,3 +2349,182 @@ svg .lbl {
     gap: 2px;
   }
 }
+
+/* Markets drill-down: segments → makes → models */
+.markets-search {
+  padding-block: 4px 20px;
+}
+.markets-compare {
+  padding-block: 20px 8px;
+}
+.market-section {
+  padding-block: 28px 8px;
+}
+table.compare th,
+table.compare td {
+  vertical-align: middle;
+}
+table.compare td .hint {
+  margin-top: 2px;
+}
+table.compare td.up {
+  color: var(--up);
+}
+table.compare td.down {
+  color: var(--down);
+}
+.seg-link-name {
+  font-family: var(--display);
+  font-stretch: 110%;
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.seg-link-name:hover {
+  color: var(--accent);
+}
+.spark-cell {
+  width: 170px;
+  min-width: 150px;
+}
+.spark {
+  margin: 0;
+  min-width: 0;
+}
+.spark figcaption {
+  margin-bottom: 2px;
+}
+.spark svg {
+  display: block;
+  overflow: visible;
+}
+.spark-bar {
+  fill: var(--s1);
+}
+.spark-bar.partial {
+  fill: color-mix(in srgb, var(--s1) 45%, transparent);
+}
+.spark-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.spark-base {
+  stroke: var(--rule-2);
+  stroke-dasharray: 3 3;
+}
+.spark-dot {
+  fill: var(--accent);
+}
+.spark-axis,
+.spark-empty {
+  font-family: var(--mono);
+  font-size: 9px;
+  fill: var(--ink-3);
+}
+.spark-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.spark-pair.wide {
+  gap: 24px;
+  padding-top: 8px;
+}
+.node-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
+  padding-block: 8px;
+}
+.node-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.node-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.node-card .name {
+  font-family: var(--display);
+  font-stretch: 112%;
+  font-weight: 800;
+  font-size: 22px;
+  line-height: 1.05;
+}
+.node-card .blurb {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.node-nums {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 8px;
+  align-items: end;
+}
+.node-nums .big {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 20px;
+  line-height: 1.1;
+}
+.node-nums .chg-cell {
+  justify-self: end;
+}
+.node-card .foot {
+  margin-top: auto;
+  padding-top: 4px;
+}
+.node-card .pending-note {
+  margin: 0;
+}
+.node-kpis {
+  grid-template-columns: 1.4fr repeat(4, 1fr);
+}
+.make-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 8px;
+}
+.make-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  color: var(--ink);
+  text-decoration: none;
+  border: 1px solid var(--rule);
+  background: var(--card);
+  border-radius: 999px;
+  padding: 6px 12px 6px 8px;
+}
+.make-chip:hover {
+  border-color: var(--ink-3);
+}
+.make-chip .count {
+  margin-left: 0;
+}
+@media (max-width: 900px) {
+  .node-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .spark-pair.wide {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 520px) {
+  .node-nums {
+    grid-template-columns: 1fr 1fr;
+  }
+  .node-nums .chg-cell {
+    justify-self: start;
+  }
+}
