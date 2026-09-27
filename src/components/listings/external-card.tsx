@@ -23,16 +23,13 @@ export function ExternalCard({ l, showPhotos }: { l: ExternalCardData; showPhoto
       >
         {!photo ? <PlatformMark source={l.source} /> : null}
       </div>
-      <div className="lab">
-        <SourceBadge source={l.source} sourceName={l.sourceName} status={status} />
-        {live && l.endsAt ? (
-          <>
-            {" "}
-            · <Countdown endsAt={l.endsAt} />
-          </>
-        ) : status === "ended" ? (
-          <span> · {outcomeLabel(status)}</span>
-        ) : null}
+      <div className="lab card-meta">
+        <span className="meta-main">
+          <SourceBadge source={l.source} sourceName={l.sourceName} status={status} compact />
+        </span>
+        <span className={`meta-side${status === "sold" ? " up" : status === "rnm" ? " down" : ""}`}>
+          {live ? l.endsAt ? <Countdown endsAt={l.endsAt} /> : "Live" : outcomeLabel(status)}
+        </span>
       </div>
       <h3 className="display" style={{ fontSize: 18, margin: "2px 0 4px" }}>
         {l.title}

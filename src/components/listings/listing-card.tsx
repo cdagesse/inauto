@@ -55,28 +55,31 @@ export function ListingCard({ l, highlight = false }: { l: ListingCardData; high
       >
         {!photo ? <span className="lab">No photo</span> : null}
       </div>
-      <div className="lab">
-        {highlight ? <span className="pill accent inauto-pill">On InAuto</span> : null}
-        {l.type === "auction" ? "Auction" : l.type === "private" ? "Private network" : "Classified"}
-        {l.status === "sold" ? (
-          <span className="up"> · Sold</span>
-        ) : l.status === "ended" ? (
-          <span className="down"> · Not sold</span>
-        ) : l.status === "withdrawn" ? (
-          " · Withdrawn"
-        ) : l.type === "auction" && l.auctionEndsAt ? (
-          <>
-            {" "}
-            · <Countdown endsAt={l.auctionEndsAt} />
-          </>
-        ) : (
-          ""
-        )}
-        {l.titleVetted ? (
-          <span className="pill up" style={{ marginLeft: 6 }}>
-            Title vetted
-          </span>
-        ) : null}
+      <div className="lab card-meta">
+        <span className="meta-main">
+          {highlight ? <span className="pill accent inauto-pill">On InAuto</span> : null}
+          {l.type === "auction"
+            ? "Auction"
+            : l.type === "private"
+              ? "Private network"
+              : "Classified"}
+          {l.titleVetted ? (
+            <span className="pill up" style={{ marginLeft: 6 }}>
+              Title vetted
+            </span>
+          ) : null}
+        </span>
+        <span className="meta-side">
+          {l.status === "sold" ? (
+            <span className="up">Sold</span>
+          ) : l.status === "ended" ? (
+            <span className="down">Not sold</span>
+          ) : l.status === "withdrawn" ? (
+            "Withdrawn"
+          ) : l.type === "auction" && l.auctionEndsAt ? (
+            <Countdown endsAt={l.auctionEndsAt} />
+          ) : null}
+        </span>
       </div>
       <h3 className="display" style={{ fontSize: 18, margin: "2px 0 4px" }}>
         {l.title}

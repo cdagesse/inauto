@@ -28,6 +28,6 @@ describe("labels", () => {
     expect(priceLabel("live", true)).toBe("current bid");
     expect(priceLabel("live", false)).toBe("No bids yet");
     expect(priceLabel("sold", true)).toBe("sold for");
-    expect(priceLabel("rnm", true)).toMatch(/reserve not met/);
+    expect(priceLabel("rnm", true)).toBe("high bid");
   });
 });

@@ -39,11 +39,8 @@ export function priceLabel(status: ExternalStatus, hasPrice: boolean): string {
       return "current bid";
     case "sold":
       return "sold for";
-    case "rnm":
-      return "high bid, reserve not met";
-    case "withdrawn":
-      return "high bid, withdrawn";
     default:
+      // The card's meta row already says Not sold / Withdrawn / Result pending.
       return "high bid";
   }
 }
