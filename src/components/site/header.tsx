@@ -17,9 +17,9 @@ export function SiteHeader() {
           InAuto
         </Link>
         <nav className="nav" aria-label="Primary">
-          <Link href="/markets">Markets</Link>
           <Link href="/listings">Buy</Link>
           <Link href="/sell">Sell</Link>
+          <Link href="/markets">Market reports</Link>
           <Link href="/tools">Buyer tools</Link>
           <Link href="/garage">Garage</Link>
         </nav>
