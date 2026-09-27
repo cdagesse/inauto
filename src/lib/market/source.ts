@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import type { MarketSnapshot } from "./types";
 import { listModelsWithData } from "./queries";
-import { loadStoredSnapshot, rebuildSnapshot } from "./store";
+import { loadStoredSnapshot, loadStoredSummaries, rebuildSnapshot } from "./store";
 import gt3rs from "@/data/fixtures/porsche-911-gt3-rs.json";
 
 /**
@@ -22,9 +22,18 @@ const FIXTURES: Record<string, MarketSnapshot> = {
  * cheap. Pages therefore never aggregate tens of thousands of rows per request.
  */
 async function fromDb(makeSlug: string, modelSlug: string): Promise<MarketSnapshot | null> {
+  // The stored-snapshot table may not exist yet (migration pending); never let
+  // that hide the live build path.
   try {
     const stored = await loadStoredSnapshot(makeSlug, modelSlug);
     if (stored) return stored;
+  } catch (err) {
+    console.warn(
+      `market snapshot: store read failed for ${makeSlug}/${modelSlug}`,
+      (err as Error).message,
+    );
+  }
+  try {
     return await rebuildSnapshot(makeSlug, modelSlug);
   } catch (err) {
     console.warn(
@@ -47,7 +56,9 @@ export interface MarketModelSummary {
   headline: number;
 }
 
-function summarize(s: MarketSnapshot): MarketModelSummary {
+function summarize(
+  s: Pick<MarketSnapshot, "make" | "model" | "totals" | "order" | "generations">,
+): MarketModelSummary {
   const first = s.order.map((c) => s.generations[c]).find((g) => g && g.median > 0);
   return { make: s.make, model: s.model, totals: s.totals, headline: first?.median ?? 0 };
 }
@@ -70,6 +81,17 @@ export const listMarketSnapshots = cache(async (): Promise<MarketSnapshot[]> => 
   return [...out.values()];
 });
 
-export const listMarketModels = cache(async (): Promise<MarketModelSummary[]> =>
-  (await listMarketSnapshots()).map(summarize),
-);
+/**
+ * Slim per-model summaries for indexes (home, garage links, static params).
+ * Reads the stored summaries (a few KB each) and only falls back to full
+ * snapshots when the store is empty or unavailable.
+ */
+export const listMarketModels = cache(async (): Promise<MarketModelSummary[]> => {
+  try {
+    const stored = await loadStoredSummaries();
+    if (stored.length) return stored.map(summarize);
+  } catch (err) {
+    console.warn("market index: summaries unavailable", (err as Error).message);
+  }
+  return (await listMarketSnapshots()).map(summarize);
+});

@@ -68,24 +68,31 @@ export async function rebuildSnapshot(
   const snapshot = buildSnapshot(input);
   const modelId = await modelIdFor(db, makeSlug, modelSlug);
   if (modelId) {
-    await db
-      .insert(marketSnapshots)
-      .values({
-        modelId,
-        builtAt: now,
-        dataThrough: snapshot.dataThrough,
-        summary: summarize(snapshot),
-        snapshot,
-      })
-      .onConflictDoUpdate({
-        target: marketSnapshots.modelId,
-        set: {
+    try {
+      await db
+        .insert(marketSnapshots)
+        .values({
+          modelId,
           builtAt: now,
           dataThrough: snapshot.dataThrough,
           summary: summarize(snapshot),
           snapshot,
-        },
-      });
+        })
+        .onConflictDoUpdate({
+          target: marketSnapshots.modelId,
+          set: {
+            builtAt: now,
+            dataThrough: snapshot.dataThrough,
+            summary: summarize(snapshot),
+            snapshot,
+          },
+        });
+    } catch (err) {
+      console.warn(
+        `market snapshot: store write failed for ${makeSlug}/${modelSlug}`,
+        (err as Error).message,
+      );
+    }
   }
   return snapshot;
 }
