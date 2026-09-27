@@ -19,7 +19,7 @@ import {
   listPurchaseRequestsForSeller,
   listPurchasesForBuyer,
 } from "@/server/queries/purchases";
-import { cancelPurchaseForm, markInquiryReadForm } from "@/server/forms";
+import { markInquiryReadForm } from "@/server/forms";
 import { slugify } from "@/server/result";
 
 export const metadata: Metadata = { title: "My garage" };
