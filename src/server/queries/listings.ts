@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, inArray, lt, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, inArray, lt, lte, ne, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db";
@@ -15,6 +15,8 @@ import {
 } from "@/db/schema";
 import { type ListingFilter, minimumIncrement, PAGE_SIZE } from "../listings-schema";
 import { type ActionResult, fail, toError } from "../result";
+
+const escapeLike = (s: string) => s.replace(/[%_\\]/g, (c) => `\\${c}`);
 
 /** Places a bid. Runs in a transaction with the listing row locked so concurrent bids serialize. */
 export async function placeBid(
@@ -120,6 +122,24 @@ export async function listActiveListings(
   const conds = [statusCond, visibleTo(viewerId)];
   if (filter.type) conds.push(eq(listings.type, filter.type));
   if (filter.make) conds.push(sql`lower(${listings.make}) = ${filter.make.toLowerCase()}`);
+  if (filter.model) conds.push(ilike(listings.model, `%${escapeLike(filter.model)}%`));
+  if (filter.trim)
+    conds.push(
+      or(
+        ilike(listings.trim, `%${escapeLike(filter.trim)}%`),
+        ilike(listings.title, `%${escapeLike(filter.trim)}%`),
+      )!,
+    );
+  if (filter.yearMin != null) conds.push(gte(listings.year, filter.yearMin));
+  if (filter.yearMax != null) conds.push(lte(listings.year, filter.yearMax));
+  if (filter.milesMin != null) conds.push(gte(listings.miles, filter.milesMin));
+  if (filter.milesMax != null) conds.push(lte(listings.miles, filter.milesMax));
+  // Price: the asking price, or for auctions the current high bid.
+  const priceExpr = sql<
+    number | null
+  >`coalesce(${listings.askingPrice}, (select max(${bids.amount}) from ${bids} where ${bids.listingId} = ${listings.id}))`;
+  if (filter.priceMin != null) conds.push(sql`${priceExpr} >= ${filter.priceMin}`);
+  if (filter.priceMax != null) conds.push(sql`${priceExpr} <= ${filter.priceMax}`);
   if (cur)
     conds.push(
       or(
