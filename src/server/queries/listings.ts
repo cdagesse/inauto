@@ -275,15 +275,16 @@ export async function getTitleCheckForViewer(listingId: string, viewerId: string
       and(
         eq(serviceOrders.listingId, listingId),
         eq(serviceOrders.kind, "title_vetting"),
-        eq(serviceOrders.status, "complete"),
-        sql`${serviceOrders.result}->'summary' is not null`,
+        sql`${serviceOrders.status} in ('complete', 'in_progress')`,
+        sql`(${serviceOrders.result}->'summary' is not null or ${serviceOrders.result}->'mvr' is not null)`,
         or(eq(serviceOrders.userId, viewerId), eq(listings.sellerId, viewerId)),
       ),
     )
     .orderBy(desc(serviceOrders.reviewedAt))
     .limit(1);
   if (!row) return null;
-  const summary = (row.result as { summary?: unknown } | null)?.summary as
-    import("@/lib/sources/vitu").TitleSummary | undefined;
-  return summary ? { summary, reviewedAt: row.reviewedAt } : null;
+  const r = row.result as { summary?: unknown; mvr?: unknown } | null;
+  const summary = (r?.summary as import("@/lib/sources/vitu").TitleSummary | undefined) ?? null;
+  const mvr = (r?.mvr as import("@/lib/sources/vitu-mvr").MvrSummary | undefined) ?? null;
+  return summary || mvr ? { summary, mvr, reviewedAt: row.reviewedAt } : null;
 }
