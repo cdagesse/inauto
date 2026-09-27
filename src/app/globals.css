@@ -2644,6 +2644,7 @@ table.compare td.down {
 }
 .expanded-region[hidden] {
   display: none;
+}
 .clerk-sync {
   display: inline-flex;
   align-items: center;
