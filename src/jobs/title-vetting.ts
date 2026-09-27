@@ -70,7 +70,7 @@ const PLACEHOLDER_IDS = new Set([0, 999999]);
 const realId = (id: number | null | undefined) =>
   typeof id === "number" && id > 0 && !PLACEHOLDER_IDS.has(id) ? id : null;
 const PLACEHOLDER_NOTE =
-  "Vitu answered the create with a placeholder id, so no inquiry was made. Vitu's portal does this while the application's registration to this product is pending or unapproved: check the application's APIs in the developer portal, and set VITU_MVR_LOCATION_ID if the account has locations.";
+  "Vitu answered the create with a placeholder id, so no inquiry exists on their side. Expand the raw responses: if the create's headers include x-kong-mocking-plugin, the gateway mocked the call and the account needs provisioning from Vitu support; otherwise try the sandbox test strings from the spec examples (NY DIALTEST10) or add request flags through VITU_MVR_STATE_EXTRAS.";
 
 /**
  * Fulfils title-vetting orders through Vitu. Two independent, asynchronous parts:
