@@ -6,6 +6,7 @@ import { mi, usd } from "@/components/account/money";
 import type { PriceGuidance } from "@/lib/valuation/types";
 import { createListing } from "@/server/listings";
 import { getPriceGuidance } from "@/server/pricing";
+import { DescriptionAssistant } from "./description-assistant";
 import { PhotoUpload } from "./photo-upload";
 import { verdictClass, verdictLabel } from "./verdict";
 
@@ -50,9 +51,12 @@ export interface SellWizardInitial {
 export function SellWizard({
   networks,
   initial = {},
+  assistantEnabled = false,
 }: {
   networks: Net[];
   initial?: SellWizardInitial;
+  /** True when ANTHROPIC_API_KEY is configured on the server. */
+  assistantEnabled?: boolean;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -514,6 +518,21 @@ export function SellWizard({
               onChange={(e) => setListing({ ...listing, description: e.target.value })}
               placeholder="Ownership history, service, options, known issues. Buyers reward candor."
             />
+            {assistantEnabled ? (
+              <DescriptionAssistant
+                car={{
+                  year: Number.isFinite(year) ? year : null,
+                  make: car.make,
+                  model: car.model,
+                  trim: car.trim || null,
+                  miles: Number.isFinite(miles) ? miles : null,
+                  color: car.color || null,
+                  vin: car.vin || null,
+                }}
+                current={listing.description}
+                onAccept={(text) => setListing((l) => ({ ...l, description: text }))}
+              />
+            ) : null}
           </div>
           <div className="fld">
             <span className="lab">Photos</span>

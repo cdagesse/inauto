@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSignedIn } from "@/components/account/require-signin";
 import { SellWizard, type SellWizardInitial } from "@/components/listings/sell-wizard";
 import { listMyNetworks } from "@/server/queries/networks";
+import { env } from "@/env/server";
 
 export const metadata: Metadata = { title: "List your car" };
 
@@ -58,7 +59,11 @@ export default async function SellListPage({
           </p>
         </div>
       </div>
-      <SellWizard networks={nets.map((n) => ({ id: n.id, name: n.name }))} initial={initial} />
+      <SellWizard
+        networks={nets.map((n) => ({ id: n.id, name: n.name }))}
+        initial={initial}
+        assistantEnabled={!!env.ANTHROPIC_API_KEY}
+      />
     </div>
   );
 }

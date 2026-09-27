@@ -82,7 +82,16 @@ export const updateListingSchema = createListingSchema
     askingPrice: true,
     reservePrice: true,
   })
-  .extend({ id: z.string().uuid() });
+  .extend({
+    id: z.string().uuid(),
+    sellerDetails: z
+      .object({
+        legalName: z.string().trim().max(120).optional(),
+        address: z.string().trim().max(300).optional(),
+        phone: z.string().trim().max(40).optional(),
+      })
+      .optional(),
+  });
 export type UpdateListingInput = z.infer<typeof updateListingSchema>;
 
 export const listingFilterSchema = z.object({

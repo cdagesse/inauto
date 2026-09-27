@@ -14,6 +14,12 @@ import {
 import { ListingRowActions } from "@/components/listings/listing-row-actions";
 import { listGarage } from "@/server/queries/garage";
 import { listMyListings } from "@/server/queries/listings";
+import {
+  listInquiriesForSeller,
+  listPurchaseRequestsForSeller,
+  listPurchasesForBuyer,
+} from "@/server/queries/purchases";
+import { markInquiryReadForm } from "@/server/forms";
 import { slugify } from "@/server/result";
 
 export const metadata: Metadata = { title: "My garage" };
@@ -43,10 +49,13 @@ export default async function GaragePage({
 }) {
   const { error } = await searchParams;
   const user = await requireSignedIn("/garage");
-  const [cars, markets, mine] = await Promise.all([
+  const [cars, markets, mine, requests, inquiries, buying] = await Promise.all([
     listGarage(user.id),
     listMarketModels(),
     listMyListings(user.id),
+    listPurchaseRequestsForSeller(user.id),
+    listInquiriesForSeller(user.id),
+    listPurchasesForBuyer(user.id),
   ]);
   const marketIndex = new Map(
     markets.flatMap((m) => {
@@ -271,6 +280,114 @@ export default async function GaragePage({
       <section className="shelf">
         <GarageCarForm />
       </section>
+
+      {requests.length || inquiries.length ? (
+        <section className="shelf">
+          <h2 className="sec">
+            Buyers <span className="count">{requests.length + inquiries.length}</span>
+          </h2>
+          <p className="sub">Purchase requests and questions about your listings.</p>
+          {requests.length ? (
+            <div className="tw">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Purchase request</th>
+                    <th>Buyer</th>
+                    <th>Buying</th>
+                    <th className="n">Price</th>
+                    <th>Status</th>
+                    <th>Sent</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {requests.map((r) => (
+                    <tr key={r.id}>
+                      <td>
+                        <Link href={`/purchases/${r.id}`}>{r.title}</Link>
+                      </td>
+                      <td>{r.buyerName}</td>
+                      <td>{r.mode === "in_person" ? "In person" : "Online"}</td>
+                      <td className="n">{usd(r.price)}</td>
+                      <td>
+                        <span
+                          className={`pill ${r.status === "accepted" || r.status === "completed" ? "up" : r.status === "submitted" ? "accent" : ""}`}
+                        >
+                          {r.status}
+                        </span>
+                      </td>
+                      <td className="mono">{fmtDate(r.createdAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+          {inquiries.length ? (
+            <div className="stack" style={{ marginTop: 14 }}>
+              {inquiries.map((q) => (
+                <div key={q.id} className={`panel inquiry${q.readAt ? "" : " unread"}`}>
+                  <div className="lab">
+                    <Link href={`/listings/${q.listingId}`}>{q.title}</Link> ·{" "}
+                    {q.buyerName ?? q.buyerEmail ?? "Buyer"} · {fmtDate(q.createdAt)}
+                    {q.readAt ? "" : " · new"}
+                  </div>
+                  <p style={{ margin: "6px 0" }}>{q.message}</p>
+                  <div className="hint">Reply to {q.contact || q.buyerEmail || "the buyer"}</div>
+                  {q.readAt ? null : (
+                    <form action={markInquiryReadForm} style={{ marginTop: 8 }}>
+                      <input type="hidden" name="id" value={q.id} />
+                      <button type="submit" className="btn sm">
+                        Mark read
+                      </button>
+                    </form>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      {buying.length ? (
+        <section className="shelf">
+          <h2 className="sec">
+            My purchase requests <span className="count">{buying.length}</span>
+          </h2>
+          <div className="tw">
+            <table>
+              <thead>
+                <tr>
+                  <th>Car</th>
+                  <th>Buying</th>
+                  <th className="n">Price</th>
+                  <th>Status</th>
+                  <th>Sent</th>
+                </tr>
+              </thead>
+              <tbody>
+                {buying.map((r) => (
+                  <tr key={r.id}>
+                    <td>
+                      <Link href={`/purchases/${r.id}`}>{r.title}</Link>
+                    </td>
+                    <td>{r.mode === "in_person" ? "In person" : "Online"}</td>
+                    <td className="n">{usd(r.price)}</td>
+                    <td>
+                      <span
+                        className={`pill ${r.status === "accepted" || r.status === "completed" ? "up" : r.status === "submitted" ? "accent" : ""}`}
+                      >
+                        {r.status}
+                      </span>
+                    </td>
+                    <td className="mono">{fmtDate(r.createdAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

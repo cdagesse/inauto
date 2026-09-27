@@ -21,11 +21,9 @@ export function PhotoUpload({
   const { user } = useUser();
   const userId = user?.id ?? null; // Clerk id; the token broker checks the same prefix
   const inputId = useId();
-  const urlId = useId();
   const [pending, setPending] = useState<Pending[]>([]);
   const [drag, setDrag] = useState(false);
-  const [link, setLink] = useState("");
-  const [linkError, setLinkError] = useState<string | null>(null);
+  const [dragFrom, setDragFrom] = useState<number | null>(null);
   // Latest value for the async upload callbacks, which outlive a render.
   const valueRef = useRef(value);
   useEffect(() => {
@@ -72,23 +70,6 @@ export function PhotoUpload({
     onChange(next);
   }
 
-  function addLink() {
-    setLinkError(null);
-    try {
-      const u = new URL(link.trim());
-      if (u.protocol !== "https:") throw new Error("https only");
-      if (value.length >= max) throw new Error(`Up to ${max} photos.`);
-      onChange([...value, u.toString()]);
-      setLink("");
-    } catch (e) {
-      setLinkError(
-        e instanceof Error && e.message !== "Invalid URL"
-          ? e.message
-          : "Enter an https image link.",
-      );
-    }
-  }
-
   const full = value.length >= max;
   return (
     <div className="photos">
@@ -128,7 +109,30 @@ export function PhotoUpload({
       {value.length + pending.length > 0 ? (
         <ul className="thumbs" aria-label="Photos">
           {value.map((url, i) => (
-            <li key={url} className={i === 0 ? "cover" : undefined}>
+            <li
+              key={url}
+              className={`${i === 0 ? "cover" : ""}${dragFrom === i ? " dragging" : ""}`}
+              draggable
+              onDragStart={(e) => {
+                setDragFrom(i);
+                e.dataTransfer.effectAllowed = "move";
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (dragFrom == null || dragFrom === i) return;
+                const next = value.slice();
+                const [moved] = next.splice(dragFrom, 1);
+                next.splice(i, 0, moved!);
+                setDragFrom(null);
+                onChange(next);
+              }}
+              onDragEnd={() => setDragFrom(null)}
+              title="Drag to reorder"
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={url} alt={`Photo ${i + 1}`} loading="lazy" />
               {i === 0 ? <span className="pill accent">Cover</span> : null}
@@ -185,29 +189,6 @@ export function PhotoUpload({
           ))}
         </ul>
       ) : null}
-
-      <div className="fld">
-        <label htmlFor={urlId}>Add by link (https)</label>
-        <div style={{ display: "flex", gap: 6 }}>
-          <input
-            id={urlId}
-            className="mono"
-            value={link}
-            onChange={(e) => setLink(e.target.value)}
-            placeholder="https://…/photo.jpg"
-            disabled={full}
-          />
-          <button
-            type="button"
-            className="btn sm"
-            onClick={addLink}
-            disabled={full || !link.trim()}
-          >
-            Add
-          </button>
-        </div>
-        {linkError ? <span className="err">{linkError}</span> : null}
-      </div>
     </div>
   );
 }

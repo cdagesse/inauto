@@ -5,6 +5,7 @@ import { requireSignedIn } from "@/components/account/require-signin";
 import { EditListingForm } from "@/components/listings/edit-listing-form";
 import { deleteDraftListingForm, withdrawListingForm } from "@/server/forms";
 import { getListingForViewer } from "@/server/queries/listings";
+import { env } from "@/env/server";
 
 export const metadata: Metadata = { title: "Edit listing", robots: { index: false } };
 
@@ -49,6 +50,7 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
         </div>
       </div>
       <EditListingForm
+        assistantEnabled={!!env.ANTHROPIC_API_KEY}
         listing={{
           id: l.id,
           type: l.type,
@@ -71,6 +73,7 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
           askingPrice: l.askingPrice,
           reservePrice: l.reservePrice,
           hasBids: l.bids.length > 0,
+          sellerDetails: l.sellerDetails ?? null,
         }}
       />
     </div>

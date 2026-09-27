@@ -2719,3 +2719,192 @@ table.compare td.down {
   color: var(--ink);
   width: 180px;
 }
+
+/* listing description assistant */
+.assistant-cta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.assistant {
+  margin-top: 10px;
+  display: grid;
+  gap: 10px;
+}
+.assistant-log {
+  display: grid;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.bubble {
+  max-width: 85%;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+.bubble.assistant {
+  background: color-mix(in srgb, var(--ink) 6%, var(--card));
+  justify-self: start;
+  border-bottom-left-radius: 4px;
+}
+.bubble.user {
+  background: color-mix(in srgb, var(--accent) 16%, var(--card));
+  justify-self: end;
+  border-bottom-right-radius: 4px;
+}
+.assistant-questions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.assistant-questions .pill {
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: var(--body);
+  font-size: 12.5px;
+}
+.assistant-draft {
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--rule));
+  border-radius: 10px;
+  padding: 12px;
+  background: color-mix(in srgb, var(--accent) 5%, var(--card));
+}
+.assistant-draft p {
+  margin: 6px 0 10px;
+  white-space: pre-wrap;
+  font-size: 14px;
+}
+.assistant-input {
+  display: flex;
+  gap: 8px;
+}
+.assistant-input input {
+  flex: 1;
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+}
+.thumbs li.dragging {
+  opacity: 0.5;
+}
+.thumbs li[draggable="true"] {
+  cursor: grab;
+}
+/* purchase flow */
+.purchase {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.purchase-main {
+  display: grid;
+  gap: 14px;
+}
+.purchase-cart {
+  position: sticky;
+  top: 16px;
+}
+.cart-car {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 8px 0 12px;
+}
+.cart-car img {
+  width: 84px;
+  height: 63px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+.cart-lines {
+  display: block;
+}
+.cart-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--rule-2);
+}
+.cart-line.total {
+  border-top: 2px solid var(--ink);
+  font-weight: 700;
+}
+.cart-line dd {
+  margin: 0;
+}
+.addons {
+  display: grid;
+  gap: 10px;
+}
+.check.addon {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: start;
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+}
+.check.addon .hint {
+  display: block;
+}
+.addon-price {
+  white-space: nowrap;
+  color: var(--ink-2);
+}
+.steps-list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+  display: grid;
+  gap: 6px;
+}
+.doc-preview {
+  display: grid;
+  gap: 6px;
+}
+.doc-preview img,
+.doc-preview video {
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: 6px;
+  background: var(--paper);
+}
+.inquiry.unread {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--rule-2));
+}
+@media (max-width: 900px) {
+  .purchase {
+    grid-template-columns: 1fr;
+  }
+  .purchase-cart {
+    position: static;
+  }
+}
+
+/* title check card */
+.title-verdict {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0 8px;
+}
+.title-flags {
+  margin: 0 0 8px;
+  padding-left: 18px;
+  color: var(--down);
+  font-size: 13.5px;
+}

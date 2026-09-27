@@ -15,6 +15,10 @@
       "schedule": "*/10 * * * *"
     },
     {
+      "path": "/api/jobs/title-vetting",
+      "schedule": "*/10 * * * *"
+    },
+    {
       "path": "/api/jobs/live-auctions",
       "schedule": "0 * * * *"
     }

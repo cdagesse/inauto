@@ -11,6 +11,7 @@ import {
   relistListing,
 } from "./listings";
 import { revokeInvite } from "./networks";
+import { cancelPurchase, markInquiryRead } from "./purchases";
 import type { ActionResult } from "./result";
 
 /**
@@ -43,6 +44,12 @@ export async function deleteDraftListingForm(fd: FormData) {
 }
 export async function relistListingForm(fd: FormData) {
   await run(`/listings/${String(fd.get("id"))}`, relistListing(fd));
+}
+export async function markInquiryReadForm(fd: FormData) {
+  await run("/garage", markInquiryRead(fd));
+}
+export async function cancelPurchaseForm(fd: FormData) {
+  await run(`/purchases/${String(fd.get("id"))}`, cancelPurchase(fd));
 }
 export async function deleteListingForm(fd: FormData) {
   await run("/garage", deleteListing(fd));
