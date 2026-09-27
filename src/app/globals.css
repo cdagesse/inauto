@@ -3064,6 +3064,30 @@ table.compare td.down {
   margin-top: 12px;
 }
 
+/* header icons and garage tabs */
+.btn.with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  padding-inline: 0;
+}
+.garage-tabs {
+  flex-wrap: wrap;
+  margin: 4px 0 16px;
+}
+.garage-tabs .count {
+  margin-left: 4px;
+}
+.garage-tabs a.on .count {
+  color: var(--paper);
+}
+
 /* sticky listing header */
 .sticky-sentinel {
   height: 1px;

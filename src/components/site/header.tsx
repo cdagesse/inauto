@@ -21,7 +21,6 @@ export function SiteHeader() {
           <Link href="/sell">Sell</Link>
           <Link href="/markets">Market reports</Link>
           <Link href="/tools">Buyer tools</Link>
-          <Link href="/garage">Garage</Link>
         </nav>
         <div className="bar-right">
           <SearchBox size="compact" placeholder="Search e.g. Mercedes S63" />

@@ -45,9 +45,9 @@ const SHELVES = [
 export default async function GaragePage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; tab?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, tab: tabParam } = await searchParams;
   const user = await requireSignedIn("/garage");
   const [cars, markets, mine, requests, inquiries, buying] = await Promise.all([
     listGarage(user.id),
@@ -70,6 +70,28 @@ export default async function GaragePage({
   const marketFor = (make: string, model: string) =>
     marketIndex.get(`${slugify(make)}/${slugify(model)}`) ?? null;
 
+  // One tab per shelf, with counts; the first non-empty tab opens by default.
+  const tabs = [
+    ...SHELVES.map((s) => ({
+      key: s.key as string,
+      title: s.title,
+      count: cars.filter((c) => c.status === s.key).length,
+    })),
+    { key: "listings", title: "My listings", count: mine.length },
+    ...(requests.length || inquiries.length
+      ? [{ key: "buyers", title: "Buyers", count: requests.length + inquiries.length }]
+      : []),
+    ...(buying.length
+      ? [{ key: "buying", title: "My purchase requests", count: buying.length }]
+      : []),
+  ];
+  const tab =
+    tabs.find((t) => t.key === tabParam)?.key ??
+    ["owned", "listings", "wishlist", "previous", "buyers", "buying"].find((k) =>
+      tabs.find((t) => t.key === k && t.count > 0),
+    ) ??
+    "owned";
+
   return (
     <div>
       <div className="page-head">
@@ -91,16 +113,22 @@ export default async function GaragePage({
 
       {error ? <p className="err">{error}</p> : null}
 
-      {SHELVES.map((shelf) => {
+      <nav className="admin-tabs garage-tabs" aria-label="Garage sections">
+        {tabs.map((t) => (
+          <Link key={t.key} href={`/garage?tab=${t.key}`} className={t.key === tab ? "on" : ""}>
+            {t.title} <span className="count">{t.count}</span>
+          </Link>
+        ))}
+      </nav>
+
+      {SHELVES.filter((s) => s.key === tab).map((shelf) => {
         const rows = cars.filter((c) => c.status === shelf.key);
         return (
           <section key={shelf.key} className="shelf">
-            <h2 className="sec">
-              {shelf.title} <span className="count">{rows.length}</span>
-            </h2>
-            <p className="sub">{shelf.blurb}</p>
             {rows.length === 0 ? (
-              <p className="note">Nothing here yet.</p>
+              <p className="note">
+                Nothing here yet. {shelf.blurb} <a href="#add-car">Add a car.</a>
+              </p>
             ) : (
               <div className="car-grid">
                 {rows.map((c) => {
@@ -206,87 +234,77 @@ export default async function GaragePage({
         );
       })}
 
-      <section className="shelf">
-        <h2 className="sec">
-          My listings <span className="count">{mine.length}</span>
-        </h2>
-        <p className="sub">Cars you have listed for sale on InAuto.</p>
-        {mine.length === 0 ? (
-          <p className="note">
-            No listings yet. <Link href="/sell/list">List a car</Link> to get pricing guidance and
-            reach buyers.
-          </p>
-        ) : (
-          <div className="tw">
-            <table>
-              <thead>
-                <tr>
-                  <th>Listing</th>
-                  <th>Type</th>
-                  <th>Status</th>
-                  <th className="n">Price</th>
-                  <th>Created</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mine.map((l) => (
-                  <tr key={l.id}>
-                    <td>
-                      <Link href={`/listings/${l.id}`}>{l.title}</Link>
-                    </td>
-                    <td>{l.type}</td>
-                    <td>
-                      <span className={`pill ${l.status === "active" ? "up" : ""}`}>
-                        {l.status}
-                      </span>
-                    </td>
-                    <td className="n">
-                      {l.type === "auction"
-                        ? l.reservePrice
-                          ? `reserve ${usd(l.reservePrice)}`
-                          : "no reserve"
-                        : usd(l.askingPrice)}
-                    </td>
-                    <td className="mono">{fmtDate(l.createdAt)}</td>
-                    <td>
-                      <div className="card-actions">
-                        <ListingRowActions
-                          id={l.id}
-                          title={l.title}
-                          canEdit={l.status !== "sold" && l.status !== "withdrawn"}
-                          canDelete={!l.hasBids}
-                          hasBids={l.hasBids}
-                          deleteAction={deleteListingForm}
-                        />
-                        {l.hasBids && (l.status === "active" || l.status === "ended") ? (
-                          <form action={withdrawListingForm}>
-                            <input type="hidden" name="id" value={l.id} />
-                            <button type="submit" className="btn sm danger">
-                              Take down
-                            </button>
-                          </form>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      <section className="shelf">
-        <GarageCarForm />
-      </section>
-
-      {requests.length || inquiries.length ? (
+      {tab === "listings" ? (
         <section className="shelf">
-          <h2 className="sec">
-            Buyers <span className="count">{requests.length + inquiries.length}</span>
-          </h2>
-          <p className="sub">Purchase requests and questions about your listings.</p>
+          {mine.length === 0 ? (
+            <p className="note">
+              No listings yet. <Link href="/sell/list">List a car</Link> to get pricing guidance and
+              reach buyers.
+            </p>
+          ) : (
+            <div className="tw">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Listing</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th className="n">Price</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mine.map((l) => (
+                    <tr key={l.id}>
+                      <td>
+                        <Link href={`/listings/${l.id}`}>{l.title}</Link>
+                      </td>
+                      <td>{l.type}</td>
+                      <td>
+                        <span className={`pill ${l.status === "active" ? "up" : ""}`}>
+                          {l.status}
+                        </span>
+                      </td>
+                      <td className="n">
+                        {l.type === "auction"
+                          ? l.reservePrice
+                            ? `reserve ${usd(l.reservePrice)}`
+                            : "no reserve"
+                          : usd(l.askingPrice)}
+                      </td>
+                      <td className="mono">{fmtDate(l.createdAt)}</td>
+                      <td>
+                        <div className="card-actions">
+                          <ListingRowActions
+                            id={l.id}
+                            title={l.title}
+                            canEdit={l.status !== "sold" && l.status !== "withdrawn"}
+                            canDelete={!l.hasBids}
+                            hasBids={l.hasBids}
+                            deleteAction={deleteListingForm}
+                          />
+                          {l.hasBids && (l.status === "active" || l.status === "ended") ? (
+                            <form action={withdrawListingForm}>
+                              <input type="hidden" name="id" value={l.id} />
+                              <button type="submit" className="btn sm danger">
+                                Take down
+                              </button>
+                            </form>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      {tab === "buyers" && (requests.length || inquiries.length) ? (
+        <section className="shelf">
           {requests.length ? (
             <div className="tw">
               <table>
@@ -349,11 +367,8 @@ export default async function GaragePage({
         </section>
       ) : null}
 
-      {buying.length ? (
+      {tab === "buying" && buying.length ? (
         <section className="shelf">
-          <h2 className="sec">
-            My purchase requests <span className="count">{buying.length}</span>
-          </h2>
           <div className="tw">
             <table>
               <thead>
@@ -388,6 +403,10 @@ export default async function GaragePage({
           </div>
         </section>
       ) : null}
+
+      <section className="shelf">
+        <GarageCarForm />
+      </section>
     </div>
   );
 }

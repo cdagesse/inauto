@@ -48,7 +48,16 @@ export function UserMenu() {
           Admin
         </Link>
       ) : null}
-      <Link href="/garage" className="btn sm">
+      <Link href="/garage" className="btn sm with-icon" aria-label="My garage">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-9.5Z"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinejoin="round"
+          />
+          <path d="M7 21v-8h10v8M7 16h10" stroke="currentColor" strokeWidth="1.8" />
+        </svg>
         Garage
       </Link>
       <UserButton />
