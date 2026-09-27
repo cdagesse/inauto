@@ -8,6 +8,10 @@ Photos upload straight from the browser to the public-read Blob store `inauto-me
 4. URLs are attached to the listing when it is saved (`photos` column, max 24, https only). The first photo is the cover.
 5. `PhotoGallery` renders Blob URLs through `next/image` (`images.remotePatterns` in `next.config.ts`); pasted external links render with a plain `<img>`.
 
+## Content Security Policy
+
+The browser talks to Vercel Blob directly, so `connect-src` in `next.config.ts` must allow `https://blob.vercel-storage.com` and `https://*.blob.vercel-storage.com` (plus the public store host). Without them the token broker succeeds (200 in the logs) but the upload itself is blocked by the browser and the listing saves with no photos.
+
 ## Local development
 
 `vercel env pull` provides `BLOB_READ_WRITE_TOKEN`. The `onUploadCompleted` webhook needs a publicly reachable URL, so it never fires on localhost; nothing depends on it, because photos are attached at save time.

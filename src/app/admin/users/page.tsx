@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { fmtDate } from "@/components/account/money";
+import { ClerkSyncButton } from "@/components/admin/clerk-sync-button";
 import { Pager } from "@/components/admin/pager";
 import { StatusPill } from "@/components/admin/status-pill";
 import { listUsers } from "@/server/admin/queries";
@@ -29,6 +30,7 @@ export default async function AdminUsers({
         <button className="btn sm" type="submit">
           Search
         </button>
+        <ClerkSyncButton />
       </form>
       <div className="tw">
         <table>

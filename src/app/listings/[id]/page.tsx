@@ -251,6 +251,11 @@ export default async function ListingPage({
               <div className="lab">Your listing</div>
               {error ? <p className="err">{error}</p> : null}
               <div className="card-actions" style={{ marginTop: 8 }}>
+                {l.status !== "sold" && l.status !== "withdrawn" ? (
+                  <Link href={`/listings/${l.id}/edit`} className="btn sm">
+                    Edit listing
+                  </Link>
+                ) : null}
                 {l.status === "draft" ? (
                   <form action={publishListingForm}>
                     <input type="hidden" name="id" value={l.id} />

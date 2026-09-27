@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { CarFilter } from "@/lib/listings/filters";
 import type { ExternalCardData } from "@/server/queries/external";
 import { type ListingFeedRow, loadMoreExternal, loadMoreListings } from "@/server/listings-feed";
 import { ExternalCard } from "./external-card";
@@ -28,19 +29,21 @@ export function ListingsFeed({
 }: {
   own: Page<ListingFeedRow>;
   external: Page<ExternalCardData>;
-  ownFilter: {
-    type?: "classified" | "auction";
-    make?: string;
-    when?: "live" | "past";
-    result?: "sold" | "unsold";
-  } | null;
-  externalFilter: {
-    source?: ExternalCardData["source"];
-    make?: string;
-    limit?: number;
-    when?: "live" | "past";
-    result?: "sold" | "unsold";
-  } | null;
+  ownFilter:
+    | (CarFilter & {
+        type?: "classified" | "auction";
+        when?: "live" | "past";
+        result?: "sold" | "unsold";
+      })
+    | null;
+  externalFilter:
+    | (CarFilter & {
+        source?: ExternalCardData["source"];
+        limit?: number;
+        when?: "live" | "past";
+        result?: "sold" | "unsold";
+      })
+    | null;
   showPhotos: boolean;
   fallbackHref: string | null;
 }) {

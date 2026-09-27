@@ -2,12 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { z } from "zod";
 import { auth } from "@/auth";
+import { FilterDrawer } from "@/components/listings/filter-drawer";
 import { ListingsFeed } from "@/components/listings/infinite-feed";
+import { CAR_FILTER_KEYS, filterChips, keysForChip } from "@/lib/listings/filters";
 import { env } from "@/env/server";
 import { PLATFORMS, PLATFORM_KEYS } from "@/lib/sources/platforms";
 import { listingFilterSchema } from "@/server/listings-schema";
 import { countLiveBySource, listExternalListings } from "@/server/queries/external";
 import { listActiveListings } from "@/server/queries/listings";
+import { listSellMakes } from "@/server/queries/sell-catalog";
 
 export const metadata: Metadata = {
   title: "Cars for sale",
@@ -27,6 +30,14 @@ export default async function ListingsPage({
   const parsed = listingFilterSchema.safeParse({
     type: sp.type,
     make: sp.make,
+    model: sp.model,
+    trim: sp.trim,
+    yearMin: sp.yearMin,
+    yearMax: sp.yearMax,
+    priceMin: sp.priceMin,
+    priceMax: sp.priceMax,
+    milesMin: sp.milesMin,
+    milesMax: sp.milesMax,
     cursor: sp.cursor,
     when: sp.when,
     result: sp.result,
@@ -40,14 +51,18 @@ export default async function ListingsPage({
 
   const showOwn = source === "all" || source === "inauto";
   const showExternal = source !== "inauto" && filter.type !== "classified";
-  const [own, external, liveCounts] = await Promise.all([
+  const carFilter = Object.fromEntries(
+    CAR_FILTER_KEYS.map((k) => [k, filter[k]]).filter(([, v]) => v != null),
+  ) as Pick<typeof filter, (typeof CAR_FILTER_KEYS)[number]>;
+  const chips = filterChips(carFilter);
+  const [own, external, liveCounts, makes] = await Promise.all([
     showOwn
       ? listActiveListings(session?.user?.id ?? null, filter)
       : Promise.resolve({ rows: [], nextCursor: null }),
     showExternal
       ? listExternalListings({
           source: source === "all" ? undefined : source,
-          make: filter.make,
+          ...carFilter,
           cursor: xcursor,
           includeSettled: past,
           settledOnly: past,
@@ -56,18 +71,19 @@ export default async function ListingsPage({
         })
       : Promise.resolve({ rows: [], nextCursor: null }),
     countLiveBySource().catch(() => ({}) as Record<string, number>),
+    listSellMakes().catch(() => []),
   ]);
   const liveTotal = Object.values(liveCounts).reduce((a, b) => a + b, 0);
   const platformsWithLive = PLATFORM_KEYS.filter((k) => (liveCounts[k] ?? 0) > 0);
 
   const qs = (patch: Record<string, string | undefined>) => {
     const p = new URLSearchParams();
-    const merged = {
+    const merged: Record<string, string | undefined> = {
       when: past ? "past" : undefined,
       result,
       type: filter.type,
-      make: filter.make,
       source: source === "all" ? undefined : source,
+      ...Object.fromEntries(Object.entries(carFilter).map(([k, v]) => [k, String(v)])),
       ...patch,
     };
     for (const [k, v] of Object.entries(merged)) if (v) p.set(k, v);
@@ -198,19 +214,46 @@ export default async function ListingsPage({
         {source !== "all" ? <input type="hidden" name="source" value={source} /> : null}
         {past ? <input type="hidden" name="when" value="past" /> : null}
         {result ? <input type="hidden" name="result" value={result} /> : null}
-        <div className="fld" style={{ flexDirection: "row", gap: 6 }}>
-          <input
-            name="make"
-            placeholder="Make"
-            defaultValue={filter.make ?? ""}
-            maxLength={60}
-            aria-label="Filter by make"
-          />
-          <button type="submit" className="btn">
-            Filter
-          </button>
-        </div>
+        <FilterDrawer
+          makes={makes}
+          current={carFilter}
+          keep={{
+            when: past ? "past" : undefined,
+            result,
+            type: filter.type,
+            source: source === "all" ? undefined : source,
+          }}
+        />
       </form>
+      {chips.length ? (
+        <div className="active-chips" style={{ paddingBottom: 14 }}>
+          <span className="lab">Filters</span>
+          {chips.map((c) => (
+            <Link
+              key={c.key}
+              href={qs({
+                ...Object.fromEntries(keysForChip(c.key).map((k) => [k, undefined])),
+                cursor: undefined,
+                xcursor: undefined,
+              })}
+              className="chip"
+              aria-label={`Remove filter ${c.label}`}
+            >
+              {c.label} <span className="x">×</span>
+            </Link>
+          ))}
+          <Link
+            href={qs({
+              ...Object.fromEntries(CAR_FILTER_KEYS.map((k) => [k, undefined])),
+              cursor: undefined,
+              xcursor: undefined,
+            })}
+            className="chip"
+          >
+            Clear all
+          </Link>
+        </div>
+      ) : null}
 
       <section className="shelf" aria-labelledby="all-h">
         <div className="feed-head">
@@ -254,27 +297,45 @@ export default async function ListingsPage({
               : null}
           </p>
         </div>
+        {!past && showExternal && external.rows.length === 0 ? (
+          <div className="panel empty-shelf" style={{ marginBottom: 16 }}>
+            <b className="display">No live platform auctions right now.</b>
+            <p className="note" style={{ margin: "4px 0 10px" }}>
+              {liveTotal === 0
+                ? "Auctions that have ended move to Past as soon as they close. The platform feed refreshes hourly while its data budget allows."
+                : "Nothing live matches this filter."}
+            </p>
+            <Link
+              href={qs({ when: "past", cursor: undefined, xcursor: undefined })}
+              className="btn"
+            >
+              See recently ended and past results
+            </Link>
+          </div>
+        ) : null}
         {own.rows.length === 0 && external.rows.length === 0 ? (
-          <p className="note" style={{ padding: "24px 0" }}>
-            {past
-              ? "No finished auctions match this filter yet."
-              : showExternal && liveTotal === 0 && !showOwn
-                ? "No platform auctions synced yet."
-                : "Nothing matches this filter yet."}
-          </p>
+          past ? (
+            <p className="note" style={{ padding: "24px 0" }}>
+              No finished auctions match this filter yet.
+            </p>
+          ) : showExternal ? null : (
+            <p className="note" style={{ padding: "24px 0" }}>
+              Nothing matches this filter yet.
+            </p>
+          )
         ) : (
           <ListingsFeed
-            key={`${source}|${filter.when ?? ""}|${result ?? ""}|${filter.type ?? ""}|${filter.make ?? ""}|${filter.cursor ?? ""}|${xcursor ?? ""}`}
+            key={`${source}|${filter.when ?? ""}|${result ?? ""}|${filter.type ?? ""}|${JSON.stringify(carFilter)}|${filter.cursor ?? ""}|${xcursor ?? ""}`}
             own={own}
             external={external}
             ownFilter={
-              showOwn ? { type: filter.type, make: filter.make, when: filter.when, result } : null
+              showOwn ? { type: filter.type, ...carFilter, when: filter.when, result } : null
             }
             externalFilter={
               showExternal
                 ? {
                     source: source === "all" ? undefined : source,
-                    make: filter.make,
+                    ...carFilter,
                     limit: source === "all" ? 12 : 24,
                     when: filter.when,
                     result,
