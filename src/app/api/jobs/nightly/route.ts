@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { env } from "@/env/server";
 import { runNightly } from "@/jobs/nightly";
+import { rebuildAllSnapshots } from "@/lib/market/store";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -26,10 +27,15 @@ async function handle(req: Request) {
   const url = new URL(req.url);
   const dryRun = url.searchParams.get("live") === "1" ? false : env.jobsDryRun;
   const summary = await runNightly({ dryRun });
+  // Precompute every model's market report once, so pages read stored JSON.
+  const snapshots = await rebuildAllSnapshots(undefined, (m) => console.log(`[nightly] ${m}`));
   // Model pages are statically cached for an hour; fresh data must invalidate them.
   revalidatePath("/[make]/[model]", "page");
   revalidatePath("/markets");
-  return NextResponse.json(summary, { status: summary.errors.length ? 500 : 200 });
+  return NextResponse.json(
+    { ...summary, snapshots },
+    { status: summary.errors.length ? 500 : 200 },
+  );
 }
 
 export async function GET(req: Request) {

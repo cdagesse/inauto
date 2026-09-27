@@ -1,8 +1,8 @@
 import "server-only";
 import { cache } from "react";
 import type { MarketSnapshot } from "./types";
-import { buildSnapshot } from "./build";
-import { listModelsWithData, loadSnapshotInput } from "./queries";
+import { listModelsWithData } from "./queries";
+import { loadStoredSnapshot, rebuildSnapshot } from "./store";
 import gt3rs from "@/data/fixtures/porsche-911-gt3-rs.json";
 
 /**
@@ -16,10 +16,16 @@ const FIXTURES: Record<string, MarketSnapshot> = {
   "porsche/911-gt3-rs": gt3rs as unknown as MarketSnapshot,
 };
 
+/**
+ * Stored snapshot first (built nightly, or when a report first becomes ready);
+ * on a miss, build it now from the raw rows and store it so the next reader is
+ * cheap. Pages therefore never aggregate tens of thousands of rows per request.
+ */
 async function fromDb(makeSlug: string, modelSlug: string): Promise<MarketSnapshot | null> {
   try {
-    const input = await loadSnapshotInput(makeSlug, modelSlug);
-    return input ? buildSnapshot(input) : null;
+    const stored = await loadStoredSnapshot(makeSlug, modelSlug);
+    if (stored) return stored;
+    return await rebuildSnapshot(makeSlug, modelSlug);
   } catch (err) {
     console.warn(
       `market snapshot: database unavailable for ${makeSlug}/${modelSlug}`,
