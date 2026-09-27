@@ -15,17 +15,6 @@ const liveNow = and(
   eq(externalListings.status, "live"),
   or(sql`${externalListings.endsAt} is null`, sql`${externalListings.endsAt} >= now()`),
 )!;
-/**
- * Ended in the last 7 days with no result yet ("Result pending"). Shown after
- * the live rows so the Buy page never goes empty when the sync is paused (for
- * example when the Old Cars Data monthly budget is spent).
- */
-const PENDING_DAYS = 7;
-const pending = and(
-  inArray(externalListings.status, ["live", "ended"]),
-  sql`${externalListings.endsAt} < now()`,
-  sql`${externalListings.endsAt} >= now() - make_interval(days => ${PENDING_DAYS})`,
-)!;
 const settled = or(
   inArray(externalListings.status, ["sold", "rnm", "ended", "withdrawn"]),
   sql`${externalListings.endsAt} < now()`,
@@ -79,12 +68,11 @@ function asCard(
 /** Cursor for the external feed: "<endsAtISO|null>|<id>". Live rows sort by endsAt asc, then settled rows by endsAt desc. */
 function decodeCursor(
   c?: string,
-): { endsAt: Date | null; id: string; phase: "live" | "pend" | "done" } | null {
+): { endsAt: Date | null; id: string; phase: "live" | "done" } | null {
   if (!c) return null;
   try {
     const [phase, ts, id] = Buffer.from(c, "base64url").toString("utf8").split("|");
-    if ((phase !== "live" && phase !== "pend" && phase !== "done") || !/^[0-9a-f-]{36}$/.test(id))
-      return null;
+    if ((phase !== "live" && phase !== "done") || !/^[0-9a-f-]{36}$/.test(id)) return null;
     const d = ts === "null" ? null : new Date(ts);
     if (d && Number.isNaN(d.getTime())) return null;
     return { endsAt: d, id, phase };
@@ -92,10 +80,7 @@ function decodeCursor(
     return null;
   }
 }
-function encodeCursor(
-  phase: "live" | "pend" | "done",
-  row: { endsAt: Date | null; id: string },
-): string {
+function encodeCursor(phase: "live" | "done", row: { endsAt: Date | null; id: string }): string {
   return Buffer.from(
     `${phase}|${row.endsAt ? row.endsAt.toISOString() : "null"}|${row.id}`,
   ).toString("base64url");
@@ -186,45 +171,6 @@ export async function listExternalListings(filter: ExternalFilter = {}) {
       return { rows: out, nextCursor: encodeCursor("live", page[page.length - 1]) };
     }
     out.push(...rows.map(asCard));
-  }
-
-  // Phase 2: recently ended, result pending, newest first. Only in the live feed.
-  if (!filter.settledOnly && (!cur || cur.phase === "live" || cur.phase === "pend")) {
-    const room = limit - out.length;
-    if (room > 0) {
-      const conds = [...base, pending];
-      if (cur?.phase === "pend")
-        conds.push(
-          or(
-            cur.endsAt ? lt(externalListings.endsAt, cur.endsAt) : sql`false`,
-            and(
-              cur.endsAt
-                ? eq(externalListings.endsAt, cur.endsAt)
-                : sql`${externalListings.endsAt} is null`,
-              lt(externalListings.id, cur.id),
-            ),
-          )!,
-        );
-      const rows = await db
-        .select(cardColumns)
-        .from(externalListings)
-        .where(and(...conds))
-        .orderBy(desc(externalListings.endsAt), desc(externalListings.id))
-        .limit(room + 1);
-      const page = rows.slice(0, room);
-      out.push(...page.map(asCard));
-      if (rows.length > room)
-        return { rows: out, nextCursor: encodeCursor("pend", page[page.length - 1]!) };
-    } else if (!filter.includeSettled) {
-      // Live rows filled the page; come back for the pending ones.
-      return {
-        rows: out,
-        nextCursor: encodeCursor("pend", {
-          endsAt: null,
-          id: "ffffffff-ffff-ffff-ffff-ffffffffffff",
-        }),
-      };
-    }
     if (!filter.includeSettled) return { rows: out, nextCursor: null };
   }
 

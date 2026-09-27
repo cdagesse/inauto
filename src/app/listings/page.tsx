@@ -297,14 +297,32 @@ export default async function ListingsPage({
               : null}
           </p>
         </div>
+        {!past && showExternal && external.rows.length === 0 ? (
+          <div className="panel empty-shelf" style={{ marginBottom: 16 }}>
+            <b className="display">No live platform auctions right now.</b>
+            <p className="note" style={{ margin: "4px 0 10px" }}>
+              {liveTotal === 0
+                ? "Auctions that have ended move to Past as soon as they close. The platform feed refreshes hourly while its data budget allows."
+                : "Nothing live matches this filter."}
+            </p>
+            <Link
+              href={qs({ when: "past", cursor: undefined, xcursor: undefined })}
+              className="btn"
+            >
+              See recently ended and past results
+            </Link>
+          </div>
+        ) : null}
         {own.rows.length === 0 && external.rows.length === 0 ? (
-          <p className="note" style={{ padding: "24px 0" }}>
-            {past
-              ? "No finished auctions match this filter yet."
-              : showExternal && liveTotal === 0 && !showOwn
-                ? "No platform auctions synced yet."
-                : "Nothing matches this filter yet."}
-          </p>
+          past ? (
+            <p className="note" style={{ padding: "24px 0" }}>
+              No finished auctions match this filter yet.
+            </p>
+          ) : showExternal ? null : (
+            <p className="note" style={{ padding: "24px 0" }}>
+              Nothing matches this filter yet.
+            </p>
+          )
         ) : (
           <ListingsFeed
             key={`${source}|${filter.when ?? ""}|${result ?? ""}|${filter.type ?? ""}|${JSON.stringify(carFilter)}|${filter.cursor ?? ""}|${xcursor ?? ""}`}
