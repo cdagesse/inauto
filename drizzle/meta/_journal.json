@@ -64,6 +64,13 @@
       "when": 1790550007534,
       "tag": "0008_lethal_mister_sinister",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790550672610,
+      "tag": "0009_dashing_sabra",
+      "breakpoints": true
     }
   ]
 }

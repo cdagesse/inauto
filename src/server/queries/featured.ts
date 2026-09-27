@@ -21,6 +21,8 @@ export interface FeaturedCar {
   badge: string;
   endsAt: Date | null;
   featured: boolean;
+  /** Set for trending cars: views in the last 7 days. */
+  views?: number;
 }
 
 export async function isFeatured(kind: FeaturedKind, refId: string): Promise<boolean> {
@@ -39,6 +41,15 @@ export async function listFeatured(showExternalPhotos: boolean): Promise<Feature
     .from(featuredCars)
     .orderBy(asc(featuredCars.sortOrder), desc(featuredCars.createdAt))
     .limit(12);
+  return resolveCars(picks, showExternalPhotos, true);
+}
+
+/** Loads showable cards for (kind, refId) pairs, keeping the given order. */
+export async function resolveCars(
+  picks: { kind: string; refId: string }[],
+  showExternalPhotos: boolean,
+  featured: boolean,
+): Promise<FeaturedCar[]> {
   if (picks.length === 0) return [];
   const listingIds = picks.filter((p) => p.kind === "listing").map((p) => p.refId);
   const externalIds = picks.filter((p) => p.kind === "external").map((p) => p.refId);
@@ -99,7 +110,7 @@ export async function listFeatured(showExternalPhotos: boolean): Promise<Feature
       photo: l.photos[0] ?? null,
       badge: "On InAuto",
       endsAt: l.type === "auction" ? l.auctionEndsAt : null,
-      featured: true,
+      featured,
     });
   for (const e of ext) {
     if (effectiveStatus(e.status, e.endsAt) !== "live") continue;
@@ -118,7 +129,7 @@ export async function listFeatured(showExternalPhotos: boolean): Promise<Feature
       photo: showExternalPhotos ? (e.photoUrls[0] ?? null) : null,
       badge: `Live on ${e.sourceName}`,
       endsAt: e.endsAt,
-      featured: true,
+      featured,
     });
   }
   return picks.map((p) => byKey.get(`${p.kind}:${p.refId}`)).filter((c): c is FeaturedCar => !!c);

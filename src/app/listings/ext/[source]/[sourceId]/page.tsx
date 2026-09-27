@@ -14,6 +14,8 @@ import { isPlatformKey } from "@/lib/sources/platforms";
 import { valuate } from "@/lib/valuation/engine";
 import { getExternalListing } from "@/server/queries/external";
 import { getVinTimeline } from "@/server/queries/vin";
+import { after } from "next/server";
+import { recordCarView } from "@/server/views";
 import { maskVin } from "@/lib/sources/live";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +50,7 @@ function generationFor(
 export default async function ExternalListingPage({ params }: { params: Params }) {
   const l = await load(params);
   if (!l) notFound();
+  after(() => recordCarView("external", l.id));
   const session = await auth();
   const isAdmin = session?.user?.role === "admin";
   const featured = isAdmin ? await isFeatured("external", l.id) : false;
