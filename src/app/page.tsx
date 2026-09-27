@@ -4,6 +4,8 @@ import { ListingCard } from "@/components/listings/listing-card";
 import { usd } from "@/components/market/format";
 import { BrandLogo } from "@/components/site/brand-logo";
 import { SearchBox } from "@/components/site/search";
+import { FeaturedHero } from "@/components/home/featured-hero";
+import { autoFeatured, listFeatured } from "@/server/queries/featured";
 import { env } from "@/env/server";
 import { listMarketModels } from "@/lib/market/source";
 import { listExternalListings } from "@/server/queries/external";
@@ -21,30 +23,35 @@ const OWN_LIMIT = 8;
 const EXTERNAL_LIMIT = 4;
 
 export default async function HomePage() {
-  const [models, own, external] = await Promise.all([
+  const [models, own, external, picked] = await Promise.all([
     listMarketModels(),
     listActiveListings(null, {}, OWN_LIMIT).catch(() => ({ rows: [], nextCursor: null })),
     listExternalListings({ limit: EXTERNAL_LIMIT }).catch(() => ({ rows: [], nextCursor: null })),
+    listFeatured(env.externalPhotos).catch(() => []),
   ]);
+  const heroCars = picked.length ? picked : await autoFeatured(5).catch(() => []);
   const featured = models[0];
   const live = external.rows.filter((l) => l.status === "live");
   return (
     <>
-      <section className="home-hero">
-        <div className="eyebrow">Collector car market data, pricing and buyer protection</div>
-        <h1>Know what it&apos;s worth before you buy or sell.</h1>
-        <p className="lead">
-          Real dealer sales and auction hammer prices, by generation. A pricing tool that tells
-          sellers whether to auction, sell to a dealer, or list it themselves. And the tools buyers
-          need to not get scammed: title vetting, condition reports, and escrow.
-        </p>
-        <div className="search" role="search">
-          <SearchBox size="hero" placeholder="Search a make or model, e.g. Mercedes S63" />
+      <section className={`home-hero${heroCars.length ? " with-featured" : ""}`}>
+        <div className="home-hero-copy">
+          <div className="eyebrow">Collector car market data, pricing and buyer protection</div>
+          <h1>Know what it&apos;s worth before you buy or sell.</h1>
+          <p className="lead">
+            Real dealer sales and auction hammer prices, by generation. A pricing tool that tells
+            sellers whether to auction, sell to a dealer, or list it themselves. And the tools
+            buyers need to not get scammed: title vetting, condition reports, and escrow.
+          </p>
+          <div className="search" role="search">
+            <SearchBox size="hero" placeholder="Search a make or model, e.g. Mercedes S63" />
+          </div>
+          <p className="note" style={{ marginTop: 8 }}>
+            Start with the make. Pick a model and we build its market report from dealer sales and
+            auction results.
+          </p>
         </div>
-        <p className="note" style={{ marginTop: 8 }}>
-          Start with the make. Pick a model and we build its market report from dealer sales and
-          auction results.
-        </p>
+        {heroCars.length ? <FeaturedHero cars={heroCars} /> : null}
       </section>
 
       <section className="shelf home-listings" aria-labelledby="latest-h">

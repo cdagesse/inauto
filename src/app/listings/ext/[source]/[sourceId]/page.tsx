@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { ExternalDetail, type InAutoRead } from "@/components/listings/external-detail";
 import { ExpandedRegion } from "@/components/listings/expandable";
+import { ExternalAdminBar } from "@/components/listings/external-admin-bar";
+import { isFeatured } from "@/server/queries/featured";
 import { MarketBlock } from "@/components/listings/market-block";
 import { VinTimeline } from "@/components/listings/vin-timeline";
 import { packagesFromText } from "@/components/market/market-summary-lib";
@@ -47,6 +49,8 @@ export default async function ExternalListingPage({ params }: { params: Params }
   const l = await load(params);
   if (!l) notFound();
   const session = await auth();
+  const isAdmin = session?.user?.role === "admin";
+  const featured = isAdmin ? await isFeatured("external", l.id) : false;
   const history = await getVinTimeline(l.vin, {
     kind: "external",
     id: `${l.source}:${l.sourceId}`,
@@ -103,13 +107,23 @@ export default async function ExternalListingPage({ params }: { params: Params }
   );
 
   return (
-    <ExternalDetail
-      l={l}
-      read={read}
-      showPhotos={env.externalPhotos}
-      signedIn={!!session?.user}
-      market={market}
-      expandId={expandId}
-    />
+    <div className={isAdmin ? "has-owner-bar" : undefined}>
+      <ExternalDetail
+        l={l}
+        read={read}
+        showPhotos={env.externalPhotos}
+        signedIn={!!session?.user}
+        market={market}
+        expandId={expandId}
+      />
+      {isAdmin ? (
+        <ExternalAdminBar
+          refId={l.id}
+          back={`/listings/ext/${l.source}/${encodeURIComponent(l.sourceId)}`}
+          featured={featured}
+          live={live}
+        />
+      ) : null}
+    </div>
   );
 }

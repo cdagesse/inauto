@@ -296,6 +296,20 @@ export const rawFetches = pgTable(
  * tens of thousands of rows per request. `summary` is the slim subset the
  * Markets drill-down needs; `snapshot` is the full MarketSnapshot.
  */
+/** Admin-picked cars that rotate in the home page hero. kind: "listing" (InAuto) | "external" (platform auction). */
+export const featuredCars = pgTable(
+  "featured_car",
+  {
+    id: id(),
+    kind: text("kind").notNull(),
+    refId: text("ref_id").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("featured_car_ref_idx").on(t.kind, t.refId)],
+);
+
 export const marketSnapshots = pgTable("market_snapshot", {
   modelId: text("model_id")
     .primaryKey()

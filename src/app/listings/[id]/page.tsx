@@ -26,6 +26,8 @@ import {
   withdrawListingForm,
 } from "@/server/forms";
 import { OwnerBar } from "@/components/listings/owner-bar";
+import { toggleFeaturedForm } from "@/server/admin/featured";
+import { isFeatured } from "@/server/queries/featured";
 import { minimumIncrement } from "@/server/listings-schema";
 import { getListingForViewer, getTitleCheckForViewer } from "@/server/queries/listings";
 import { TitleReportCard } from "@/components/listings/title-report-card";
@@ -59,6 +61,7 @@ export default async function ListingPage({
   const viewerId = session?.user?.id ?? null;
   const l = await getListingForViewer(id, viewerId);
   if (!l) notFound();
+  const featured = session?.user?.role === "admin" ? await isFeatured("listing", l.id) : false;
   const [history, titleCheck] = await Promise.all([
     getVinTimeline(l.historyVin, { kind: "inauto", id: l.id }),
     getTitleCheckForViewer(l.id, viewerId),
@@ -341,7 +344,11 @@ export default async function ListingPage({
           isOwner={l.isOwner}
           admin={
             session?.user?.role === "admin"
-              ? { remove: adminDeleteListingForm, back: "/listings" }
+              ? {
+                  remove: adminDeleteListingForm,
+                  back: "/listings",
+                  feature: { action: toggleFeaturedForm, featured },
+                }
               : undefined
           }
           actions={{
