@@ -4,7 +4,7 @@ import { BrandLogo } from "@/components/site/brand-logo";
 import { effectiveStatus, outcomeLabel, priceLabel } from "@/lib/sources/status";
 import type { ExternalCardData } from "@/server/queries/external";
 import { PlatformMark, SourceBadge } from "./source-badge";
-import { timeLeft } from "./listing-card";
+import { Countdown } from "./countdown";
 
 export function ExternalCard({ l, showPhotos }: { l: ExternalCardData; showPhotos: boolean }) {
   const photo = showPhotos ? l.photoUrls[0] : undefined;
@@ -26,7 +26,10 @@ export function ExternalCard({ l, showPhotos }: { l: ExternalCardData; showPhoto
       <div className="lab">
         <SourceBadge source={l.source} sourceName={l.sourceName} status={status} />
         {live && l.endsAt ? (
-          <span suppressHydrationWarning> · {timeLeft(l.endsAt)}</span>
+          <>
+            {" "}
+            · <Countdown endsAt={l.endsAt} />
+          </>
         ) : status === "ended" ? (
           <span> · {outcomeLabel(status)}</span>
         ) : null}

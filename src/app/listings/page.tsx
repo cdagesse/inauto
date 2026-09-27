@@ -24,8 +24,16 @@ export default async function ListingsPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const sp = await searchParams;
-  const parsed = listingFilterSchema.safeParse({ type: sp.type, make: sp.make, cursor: sp.cursor });
+  const parsed = listingFilterSchema.safeParse({
+    type: sp.type,
+    make: sp.make,
+    cursor: sp.cursor,
+    when: sp.when,
+    result: sp.result,
+  });
   const filter = parsed.success ? parsed.data : {};
+  const past = filter.when === "past";
+  const result = past ? filter.result : undefined;
   const source = sourceSchema.safeParse(sp.source).data ?? "all";
   const xcursor = xcursorSchema.safeParse(sp.xcursor).data;
   const session = await auth();
@@ -41,7 +49,9 @@ export default async function ListingsPage({
           source: source === "all" ? undefined : source,
           make: filter.make,
           cursor: xcursor,
-          includeSettled: true,
+          includeSettled: past,
+          settledOnly: past,
+          result,
           limit: source === "all" ? 12 : 24,
         })
       : Promise.resolve({ rows: [], nextCursor: null }),
@@ -53,6 +63,8 @@ export default async function ListingsPage({
   const qs = (patch: Record<string, string | undefined>) => {
     const p = new URLSearchParams();
     const merged = {
+      when: past ? "past" : undefined,
+      result,
       type: filter.type,
       make: filter.make,
       source: source === "all" ? undefined : source,
@@ -81,6 +93,47 @@ export default async function ListingsPage({
         </Link>
       </div>
       <form className="filters" method="get" action="/listings">
+        <div className="seg" role="group" aria-label="Live or past">
+          <Link
+            href={qs({ when: undefined, result: undefined, cursor: undefined, xcursor: undefined })}
+            className="seg-link"
+            aria-pressed={!past}
+          >
+            Live
+          </Link>
+          <Link
+            href={qs({ when: "past", result: undefined, cursor: undefined, xcursor: undefined })}
+            className="seg-link"
+            aria-pressed={past}
+          >
+            Past
+          </Link>
+        </div>
+        {past ? (
+          <div className="seg" role="group" aria-label="Result">
+            <Link
+              href={qs({ result: undefined, cursor: undefined, xcursor: undefined })}
+              className="seg-link"
+              aria-pressed={!result}
+            >
+              All results
+            </Link>
+            <Link
+              href={qs({ result: "sold", cursor: undefined, xcursor: undefined })}
+              className="seg-link"
+              aria-pressed={result === "sold"}
+            >
+              Sold
+            </Link>
+            <Link
+              href={qs({ result: "unsold", cursor: undefined, xcursor: undefined })}
+              className="seg-link"
+              aria-pressed={result === "unsold"}
+            >
+              Not sold
+            </Link>
+          </div>
+        ) : null}
         <div className="seg" role="group" aria-label="Listing type">
           <Link
             href={qs({ type: undefined, cursor: undefined, xcursor: undefined })}
@@ -143,6 +196,8 @@ export default async function ListingsPage({
         </div>
         {filter.type ? <input type="hidden" name="type" value={filter.type} /> : null}
         {source !== "all" ? <input type="hidden" name="source" value={source} /> : null}
+        {past ? <input type="hidden" name="when" value="past" /> : null}
+        {result ? <input type="hidden" name="result" value={result} /> : null}
         <div className="fld" style={{ flexDirection: "row", gap: 6 }}>
           <input
             name="make"
@@ -160,14 +215,31 @@ export default async function ListingsPage({
       <section className="shelf" aria-labelledby="all-h">
         <div className="feed-head">
           <h2 id="all-h" className="sec">
-            {source === "inauto"
-              ? "On InAuto"
-              : source === "all"
-                ? "All cars"
-                : `On ${PLATFORMS[source as (typeof PLATFORM_KEYS)[number]].name}`}
+            {past
+              ? result === "sold"
+                ? "Sold"
+                : result === "unsold"
+                  ? "Not sold"
+                  : "Past auctions and sales"
+              : source === "inauto"
+                ? "On InAuto"
+                : source === "all"
+                  ? "All cars"
+                  : `On ${PLATFORMS[source as (typeof PLATFORM_KEYS)[number]].name}`}
+            {past && source !== "all"
+              ? ` · ${source === "inauto" ? "InAuto" : PLATFORMS[source as (typeof PLATFORM_KEYS)[number]].name}`
+              : ""}
           </h2>
           <p className="sub" style={{ margin: "4px 0 0" }}>
-            {showOwn && own.rows.length > 0 ? (
+            {past ? (
+              result === "sold" ? (
+                "Cars that found a buyer, newest first, with the price they went for."
+              ) : result === "unsold" ? (
+                "Auctions that ended without a sale (reserve not met or withdrawn), newest first, with the high bid."
+              ) : (
+                "Every finished auction and sale, newest first. Filter to what sold or what did not."
+              )
+            ) : showOwn && own.rows.length > 0 ? (
               <>
                 <span className="pill accent inauto-pill">On InAuto</span> cars are listed by their
                 owners here and can be title-vetted and inspected before you commit.{" "}
@@ -177,29 +249,35 @@ export default async function ListingsPage({
                 No InAuto listings match yet. <Link href="/sell">Be the first to list.</Link>{" "}
               </>
             ) : null}
-            {showExternal && liveTotal > 0
+            {!past && showExternal && liveTotal > 0
               ? `${liveTotal} auctions are live on Bring a Trailer, Cars & Bids and others; we show the numbers and our read on the price, bidding happens on the platform.`
               : null}
           </p>
         </div>
         {own.rows.length === 0 && external.rows.length === 0 ? (
           <p className="note" style={{ padding: "24px 0" }}>
-            {showExternal && liveTotal === 0 && !showOwn
-              ? "No platform auctions synced yet."
-              : "Nothing matches this filter yet."}
+            {past
+              ? "No finished auctions match this filter yet."
+              : showExternal && liveTotal === 0 && !showOwn
+                ? "No platform auctions synced yet."
+                : "Nothing matches this filter yet."}
           </p>
         ) : (
           <ListingsFeed
-            key={`${source}|${filter.type ?? ""}|${filter.make ?? ""}|${filter.cursor ?? ""}|${xcursor ?? ""}`}
+            key={`${source}|${filter.when ?? ""}|${result ?? ""}|${filter.type ?? ""}|${filter.make ?? ""}|${filter.cursor ?? ""}|${xcursor ?? ""}`}
             own={own}
             external={external}
-            ownFilter={showOwn ? { type: filter.type, make: filter.make } : null}
+            ownFilter={
+              showOwn ? { type: filter.type, make: filter.make, when: filter.when, result } : null
+            }
             externalFilter={
               showExternal
                 ? {
                     source: source === "all" ? undefined : source,
                     make: filter.make,
                     limit: source === "all" ? 12 : 24,
+                    when: filter.when,
+                    result,
                   }
                 : null
             }

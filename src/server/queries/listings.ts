@@ -109,7 +109,15 @@ export async function listActiveListings(
 ) {
   const size = Math.max(1, Math.min(limit, PAGE_SIZE));
   const cur = decodeCursor(filter.cursor);
-  const conds = [eq(listings.status, "active"), visibleTo(viewerId)];
+  const past = filter.when === "past";
+  const statusCond = !past
+    ? eq(listings.status, "active")
+    : filter.result === "sold"
+      ? eq(listings.status, "sold")
+      : filter.result === "unsold"
+        ? inArray(listings.status, ["ended", "withdrawn"])
+        : inArray(listings.status, ["sold", "ended", "withdrawn"]);
+  const conds = [statusCond, visibleTo(viewerId)];
   if (filter.type) conds.push(eq(listings.type, filter.type));
   if (filter.make) conds.push(sql`lower(${listings.make}) = ${filter.make.toLowerCase()}`);
   if (cur)
@@ -134,6 +142,8 @@ export async function listActiveListings(
       auctionEndsAt: listings.auctionEndsAt,
       createdAt: listings.createdAt,
       titleVetted: listings.titleVetted,
+      status: listings.status,
+      soldPrice: listings.soldPrice,
       highBid: sql<
         number | null
       >`(select max(${bids.amount}) from ${bids} where ${bids.listingId} = ${listings.id})`,
