@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { UserButton, useUser } from "@clerk/nextjs";
+import { useEffect } from "react";
+import { ensureUser } from "@/server/clerk-users";
 
 /**
  * Header account control. Reads only Clerk client state, so the root layout
@@ -10,6 +12,20 @@ import { UserButton, useUser } from "@clerk/nextjs";
  */
 export function UserMenu() {
   const { user, isLoaded, isSignedIn } = useUser();
+  // Once per browser session: make sure this Clerk account has an InAuto row.
+  useEffect(() => {
+    if (!isSignedIn || !user) return;
+    const key = `inauto-user:${user.id}`;
+    try {
+      if (sessionStorage.getItem(key)) return;
+    } catch {}
+    ensureUser().then((r) => {
+      if (!r.ok) return;
+      try {
+        sessionStorage.setItem(key, "1");
+      } catch {}
+    });
+  }, [isSignedIn, user]);
   if (!isLoaded) {
     return (
       <span className="btn sm" style={{ visibility: "hidden" }} aria-hidden="true">
