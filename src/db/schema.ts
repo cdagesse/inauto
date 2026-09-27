@@ -306,6 +306,94 @@ export const marketSnapshots = pgTable("market_snapshot", {
   snapshot: jsonb("snapshot").notNull(),
 });
 
+export const purchaseMode = pgEnum("purchase_mode", ["in_person", "online"]);
+export const purchaseStatus = pgEnum("purchase_status", [
+  "submitted",
+  "accepted",
+  "declined",
+  "cancelled",
+  "completed",
+]);
+
+/**
+ * A buyer's purchase request for a listing: how they are buying, who they
+ * are, which safety add-ons they chose, what they uploaded, and the cart.
+ * The bill of sale PDF is generated from this row on demand.
+ */
+export const purchases = pgTable(
+  "purchase",
+  {
+    id: id(),
+    listingId: text("listing_id")
+      .notNull()
+      .references(() => listings.id, { onDelete: "cascade" }),
+    buyerId: text("buyer_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    sellerId: text("seller_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    mode: purchaseMode("mode").notNull(),
+    status: purchaseStatus("status").notNull().default("submitted"),
+    /** Agreed vehicle price at the time of the request. */
+    price: integer("price").notNull(),
+    buyer: jsonb("buyer")
+      .$type<{ legalName: string; email: string; phone: string; address: string }>()
+      .notNull(),
+    options: jsonb("options")
+      .$type<{
+        inspection: boolean;
+        titleVetting: boolean;
+        escrow: boolean;
+        shipping: boolean;
+        shippingTo?: string;
+      }>()
+      .notNull(),
+    uploads: jsonb("uploads")
+      .$type<{ titleFront?: string; titleBack?: string; ownershipVideo?: string }>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    /** Line items and total as shown in the cart when submitted. */
+    cart: jsonb("cart")
+      .$type<{ items: { key: string; label: string; amount: number }[]; total: number }>()
+      .notNull(),
+    note: text("note"),
+    sellerNote: text("seller_note"),
+    respondedAt: timestamp("responded_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("purchase_listing_idx").on(t.listingId, t.createdAt),
+    index("purchase_buyer_idx").on(t.buyerId, t.createdAt),
+    index("purchase_seller_idx").on(t.sellerId, t.status, t.createdAt),
+  ],
+);
+
+/** A buyer's question to a seller about a listing. */
+export const inquiries = pgTable(
+  "inquiry",
+  {
+    id: id(),
+    listingId: text("listing_id")
+      .notNull()
+      .references(() => listings.id, { onDelete: "cascade" }),
+    buyerId: text("buyer_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    sellerId: text("seller_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    message: text("message").notNull(),
+    contact: text("contact"),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("inquiry_seller_idx").on(t.sellerId, t.createdAt),
+    index("inquiry_listing_idx").on(t.listingId, t.createdAt),
+  ],
+);
+
 export const apiBudgets = pgTable(
   "api_budget",
   {
@@ -449,6 +537,12 @@ export const listings = pgTable(
     soldPrice: integer("sold_price"),
     /** Snapshot of the pricing guidance shown at listing time (market value, verdict, comps). */
     priceGuidance: jsonb("price_guidance"),
+    /** Legal name, address and phone the owner wants on a bill of sale. */
+    sellerDetails: jsonb("seller_details").$type<{
+      legalName?: string;
+      address?: string;
+      phone?: string;
+    }>(),
     titleVetted: boolean("title_vetted").notNull().default(false),
     conditionReportId: text("condition_report_id"),
     createdAt: createdAt(),
