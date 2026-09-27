@@ -7,6 +7,8 @@ import { TrendChart } from "./trend-chart";
 import { ScatterChart } from "./scatter-chart";
 import { mi, usd, usdK } from "./format";
 import { AuctionTables, ByYearTable, RecentSalesTable } from "./tables";
+import { VenueTable } from "./venue-table";
+import { compareVenues } from "@/lib/market/venues";
 
 /** Everything on the model page that reacts to the selected generation. */
 export function ModelMarket({ snapshot }: { snapshot: MarketSnapshot }) {
@@ -192,6 +194,16 @@ export function ModelMarket({ snapshot }: { snapshot: MarketSnapshot }) {
           Hammer prices are what the car actually sold for; reserve-not-met rows show the high bid.
         </p>
         <AuctionTables snapshot={snapshot} selected={sel} />
+      </section>
+
+      <section id="venues">
+        <h2 className="sec">Where the {g.name} sells best</h2>
+        <p className="sub">
+          The same generation, venue by venue: how many came to auction, how many actually sold, and
+          the median hammer. Enter your mileage in the value tool above and the sell page narrows
+          this to cars like yours.
+        </p>
+        <VenueTable comparison={compareVenues(snapshot, { generation: sel })} short={short} />
       </section>
 
       <section>

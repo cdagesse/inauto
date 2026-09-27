@@ -2260,6 +2260,96 @@ svg .lbl {
   white-space: nowrap;
 }
 
+/* auction venue comparison */
+.venues {
+  display: grid;
+  gap: 12px;
+}
+.venue-rec {
+  margin: 0;
+}
+.venue-table tr.sel td {
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+}
+.venue-fit {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+}
+.chan .venue-hint {
+  margin-top: 8px;
+  color: var(--ink-2);
+}
+
+/* VIN timeline */
+.vin-timeline {
+  padding-block: 28px 8px;
+  border-top: 1px solid var(--rule);
+  margin-top: 24px;
+}
+.timeline {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0 0 0 14px;
+  border-left: 2px solid var(--rule);
+  display: grid;
+  gap: 14px;
+}
+.tl-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+.tl-dot {
+  position: absolute;
+  left: -21px;
+  top: 5px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ink-3);
+  border: 2px solid var(--paper);
+}
+.tl-item.up .tl-dot {
+  background: var(--up);
+}
+.tl-item.down .tl-dot {
+  background: var(--down);
+}
+.tl-item.accent .tl-dot {
+  background: var(--accent);
+}
+.tl-item.current .tl-title {
+  color: var(--accent);
+}
+.tl-date {
+  font-size: 12px;
+  color: var(--ink-3);
+  line-height: 1.5;
+}
+.tl-title {
+  font-weight: 600;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.tl-title a {
+  color: inherit;
+  text-decoration: none;
+}
+.tl-title a:hover {
+  color: var(--accent);
+}
+@media (max-width: 520px) {
+  .tl-item {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}
+
 /* Markets drill-down: segments → makes → models */
 .markets-search {
   padding-block: 4px 20px;
