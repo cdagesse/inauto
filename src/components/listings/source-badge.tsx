@@ -6,11 +6,14 @@ export function SourceBadge({
   sourceName,
   status,
   size = "sm",
+  compact = false,
 }: {
   source: PlatformKey;
   sourceName?: string;
   status: "live" | "sold" | "rnm" | "withdrawn" | "ended";
   size?: "sm" | "lg";
+  /** Cards: platform name only; the card's meta row carries the state (time left, Sold…). */
+  compact?: boolean;
 }) {
   const p = PLATFORMS[source] ?? PLATFORMS.other;
   const name = source === "other" && sourceName ? sourceName : p.name;
@@ -30,7 +33,7 @@ export function SourceBadge({
       style={{ ["--badge" as string]: `var(--${p.colorToken})` }}
     >
       <i aria-hidden="true" />
-      {verb} {name}
+      {compact ? name : `${verb} ${name}`}
     </span>
   );
 }

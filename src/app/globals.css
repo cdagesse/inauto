@@ -2214,3 +2214,48 @@ svg .lbl {
   margin-right: 6px;
   vertical-align: middle;
 }
+
+/* card meta row: badge on the left, time left or outcome pinned right, never wrapping */
+.card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 24px;
+}
+.card-meta .meta-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.card-meta .meta-main .source-badge {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.card-meta .meta-side {
+  flex: none;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.listing-card > .price {
+  margin-top: auto;
+  padding-top: 6px;
+}
+.card-meta .meta-side.up,
+.card-meta .meta-side .up {
+  color: var(--up);
+}
+.card-meta .meta-side.down,
+.card-meta .meta-side .down {
+  color: var(--down);
+}
+.listing-card > .price .hint {
+  white-space: nowrap;
+}
