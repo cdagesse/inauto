@@ -1,8 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useState } from "react";
-import { isBlobUrl } from "@/server/listings-schema";
+import { Pic } from "./card-photo";
 
 /** Cover image plus thumbnails; click opens a keyboard-navigable viewer. */
 export function PhotoGallery({ photos, title }: { photos: string[]; title: string }) {
@@ -96,34 +95,5 @@ export function PhotoGallery({ photos, title }: { photos: string[]; title: strin
         </div>
       ) : null}
     </>
-  );
-}
-
-function Pic({
-  src,
-  alt,
-  priority,
-  sizes,
-  contain,
-}: {
-  src: string;
-  alt: string;
-  priority?: boolean;
-  sizes: string;
-  contain?: boolean;
-}) {
-  const style = { objectFit: contain ? ("contain" as const) : ("cover" as const) };
-  if (isBlobUrl(src)) {
-    return <Image src={src} alt={alt} fill sizes={sizes} priority={priority} style={style} />;
-  }
-  // External links (paste-a-URL fallback) bypass the optimizer on purpose.
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={src}
-      alt={alt}
-      loading={priority ? "eager" : "lazy"}
-      style={{ ...style, position: "absolute", inset: 0, width: "100%", height: "100%" }}
-    />
   );
 }
