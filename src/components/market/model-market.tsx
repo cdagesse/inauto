@@ -9,7 +9,7 @@ import { mi, usd, usdK } from "@/lib/format/money";
 import { AuctionTables, ByYearTable, RecentSalesTable } from "./tables";
 import { VenueTable } from "./venue-table";
 import { compareVenues } from "@/lib/market/venues";
-import { AUCTION_THIN } from "@/lib/market/build";
+import { headlineFigures } from "@/lib/market/figures";
 import { monthYear } from "./format";
 
 /** Everything on the model page that reacts to the selected generation. */
@@ -17,35 +17,11 @@ export function ModelMarket({ snapshot }: { snapshot: MarketSnapshot }) {
   const [sel, select] = useGeneration(snapshot.model.slug, snapshot.order, snapshot.order[0]);
   const g = snapshot.generations[sel];
   // A generation with no dealer sales yet reads from its sold auctions instead of showing zeros.
-  const viaAuctions = g.sold === 0 && (g.auctionSold ?? 0) > 0;
-  const price = viaAuctions
-    ? {
-        median: g.auctionMedian ?? 0,
-        lo: g.auctionLo ?? 0,
-        hi: g.auctionHi ?? 0,
-        thin: (g.auctionSold ?? 0) < AUCTION_THIN,
-        miles: g.auctionMedianMiles ?? 0,
-        last90: g.auctionLast90 ?? 0,
-        prior90: g.auctionPrior90 ?? 0,
-        n90: g.auctionN90 ?? 0,
-      }
-    : {
-        median: g.median,
-        lo: g.lo,
-        hi: g.hi,
-        thin: g.thin,
-        miles: g.medianMiles,
-        last90: g.last90,
-        prior90: g.prior90,
-        n90: g.n90,
-      };
-  const ch = price.prior90 > 0 ? (price.last90 - price.prior90) / price.prior90 : null;
+  const price = headlineFigures(g);
+  const viaAuctions = price.viaAuctions;
+  const ch = price.change;
   const up = ch != null && ch >= 0;
-  const multiple = viaAuctions
-    ? g.msrp && price.median
-      ? Math.round((price.median / g.msrp) * 100) / 100
-      : 0
-    : g.multiple;
+  const multiple = price.multiple;
   const offered = g.auctionOffered ?? 0;
   const short = snapshot.model.shortName;
   // "the S30" reads fine; "the All years" does not, so a single catch-all generation goes by
@@ -106,7 +82,9 @@ export function ModelMarket({ snapshot }: { snapshot: MarketSnapshot }) {
           )}
           <div className="s">
             {ch == null
-              ? "Not enough sales in the prior 90 days"
+              ? price.n90 === 0
+                ? `No ${viaAuctions ? "auction " : ""}sales in the last 90 days`
+                : "Not enough sales in the prior 90 days"
               : `${usdK(price.prior90)} to ${usdK(price.last90)} median, ${price.n90} ${
                   viaAuctions ? "auction " : ""
                 }sales in last 90 days`}
@@ -201,7 +179,7 @@ export function ModelMarket({ snapshot }: { snapshot: MarketSnapshot }) {
                   ? "Delivery-mile cars carry the biggest premium; the curve flattens after about 2,500 miles."
                   : `Miles matter less than on the ${snapshot.order[0]}; condition, color and spec explain most of the spread.`
               }`
-            : `No ${genRef} dealer sales on file yet; each diamond is one auction sale.`}
+            : `No ${genRef} dealer sales on file yet, so there is no mileage curve. Hammer price and miles for each auction sale are in the Auction results table below.`}
         </p>
         <div className="grid2">
           <div className="panel">
@@ -258,7 +236,9 @@ export function ModelMarket({ snapshot }: { snapshot: MarketSnapshot }) {
         <p className="sub">
           {snapshot.byYearBasis === "auction"
             ? "Auction hammer prices by model year; no dealer sales have been pulled yet."
-            : "Dealer sold results by model year."}
+            : viaAuctions
+              ? `Dealer sold results by model year. The ${genRef} has no dealer sales yet, so it has no rows here; its hammer results are in the Auction results table.`
+              : "Dealer sold results by model year."}
           {snapshot.model.slug === "911-gt3-rs"
             ? " The 2011 figures include the RS 4.0, a 600-car run that sells at a large premium to the standard 997.2."
             : ""}

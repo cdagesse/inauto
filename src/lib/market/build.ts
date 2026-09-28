@@ -5,6 +5,7 @@ import type {
   MarketSnapshot,
   MonthlyPoint,
 } from "./types";
+import { AUCTION_THIN } from "./figures";
 
 /**
  * Pure builder: plain rows (as loaded from Postgres) in, a MarketSnapshot out.
@@ -114,9 +115,6 @@ function yearsLabel(a: number, b: number): string {
 }
 
 /** Trailing-window counts and medians for the 90-day change KPI. */
-/** Below this many sold auctions the hammer range shows min to max instead of quartiles. */
-export const AUCTION_THIN = 10;
-
 function window90(rows: { price: number; date: Date }[], now: Date) {
   const t90 = now.getTime() - 90 * DAY;
   const t180 = now.getTime() - 180 * DAY;

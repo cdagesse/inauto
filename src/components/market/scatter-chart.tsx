@@ -32,8 +32,9 @@ export function ScatterChart({
   if (!pts) {
     return (
       <p className="note" style={{ padding: "40px 8px" }}>
-        Only {g.sold} {g.name} sales in the window, too few for a mileage curve. Individual results
-        are in the model-year and recent-sales tables.
+        {g.sold === 0
+          ? `No ${g.name} dealer sales on file yet, so there is no mileage curve. Hammer price and miles for each auction sale are in the Auction results table.`
+          : `Only ${g.sold} ${g.name} sales in the window, too few for a mileage curve. Individual results are in the model-year and recent-sales tables.`}
       </p>
     );
   }

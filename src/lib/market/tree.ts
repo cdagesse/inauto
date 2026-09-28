@@ -185,6 +185,10 @@ function byVolume<T extends { stats: NodeStats | null; name?: string }>(a: T, b:
   const va = a.stats?.dealerSales ?? -1;
   const vb = b.stats?.dealerSales ?? -1;
   if (vb !== va) return vb - va;
+  // Dealer sales tie (both 0 for auction-only nodes): rank by sold auctions.
+  const aa = a.stats?.auctionSales ?? -1;
+  const ab = b.stats?.auctionSales ?? -1;
+  if (ab !== aa) return ab - aa;
   return (a.name ?? "").localeCompare(b.name ?? "");
 }
 
