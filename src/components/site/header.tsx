@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { HeaderHeight } from "./header-height";
+import { MobileMenu } from "./mobile-menu";
 import { ThemeToggle } from "./theme-toggle";
 import { UserMenu } from "./user-menu";
 import { SearchBox } from "./search";
@@ -31,6 +32,7 @@ export function SiteHeader() {
           <SearchBox size="compact" placeholder="Search e.g. Mercedes S63" />
           <ThemeToggle />
           <UserMenu />
+          <MobileMenu />
         </div>
       </div>
     </header>

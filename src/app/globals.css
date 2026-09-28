@@ -3482,3 +3482,49 @@ header.site-head {
     height: 28px;
   }
 }
+
+/* mobile menu */
+.menu-btn {
+  display: none;
+}
+.mobile-menu {
+  display: none;
+}
+@media (max-width: 760px) {
+  .menu-btn {
+    display: inline-flex;
+  }
+  header.site-head {
+    position: sticky;
+  }
+  .mobile-menu.open {
+    display: grid;
+    gap: 14px;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    padding: 14px 16px 18px;
+    background: var(--paper);
+    border-bottom: 1px solid var(--rule);
+    box-shadow: 0 16px 30px -16px rgb(0 0 0 / 0.5);
+    z-index: 60;
+  }
+  .mobile-menu-search .sbox.hero input {
+    width: 100%;
+  }
+  .mobile-nav {
+    display: grid;
+  }
+  .mobile-nav a {
+    padding: 12px 4px;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--ink);
+    text-decoration: none;
+    border-top: 1px solid var(--rule-2);
+  }
+  .mobile-nav a.on {
+    color: var(--accent);
+  }
+}
