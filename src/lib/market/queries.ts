@@ -17,7 +17,7 @@ const MAX_AUCTION_ROWS = 1000;
  * listed date plus days on market, never after the fetch. Mirrors
  * scripts/backfill-sold-date.sql and deriveSoldDate() in the Visor normalizer.
  */
-const effectiveSoldDate = sql<string | null>`coalesce(
+export const effectiveSoldDate = sql<string | null>`coalesce(
   ${dealerSales.soldDate},
   least(
     ((${dealerSales.rawJson}->>'listed_at')::timestamp

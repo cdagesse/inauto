@@ -31,7 +31,7 @@ export function SiteFooter() {
       <nav aria-label="Footer">
         <Link href="/listings">Buy</Link>
         <Link href="/sell">Sell a car</Link>
-        <Link href="/markets">Market reports</Link>
+        <Link href="/markets">Markets</Link>
         <Link href="/tools">Buyer tools</Link>
         <Link href="/networks">Private networks</Link>
       </nav>

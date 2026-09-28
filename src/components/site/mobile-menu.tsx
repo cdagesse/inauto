@@ -10,7 +10,7 @@ import { ThemeToggle } from "./theme-toggle";
 const LINKS = [
   ["/listings", "Buy"],
   ["/sell", "Sell"],
-  ["/markets", "Market reports"],
+  ["/markets", "Markets"],
   ["/tools", "Buyer tools"],
   ["/garage", "Garage"],
 ] as const;

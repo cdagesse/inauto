@@ -68,7 +68,7 @@ export async function MarketBlock({
             <h2 className="sec">No market report for this model yet</h2>
           </div>
           <Link href="/markets" className="btn sm">
-            Browse market reports →
+            Browse markets →
           </Link>
         </div>
       </section>

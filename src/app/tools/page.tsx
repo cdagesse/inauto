@@ -102,7 +102,7 @@ export default async function ToolsPage({
             asking price is high or low.
           </p>
           <Link href="/markets" className="btn">
-            Browse market reports
+            Browse markets
           </Link>
         </section>
       </div>

@@ -25,7 +25,7 @@ export function SiteHeader() {
         <nav className="nav" aria-label="Primary">
           <Link href="/listings">Buy</Link>
           <Link href="/sell">Sell</Link>
-          <Link href="/markets">Market reports</Link>
+          <Link href="/markets">Markets</Link>
           <Link href="/tools">Buyer tools</Link>
         </nav>
         <div className="bar-right">

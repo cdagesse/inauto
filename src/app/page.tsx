@@ -174,7 +174,7 @@ export default async function HomePage() {
             }}
           >
             <div>
-              <div className="eyebrow">Market reports</div>
+              <div className="eyebrow">Markets</div>
               <h2 id="seg-h" className="sec" style={{ marginTop: 4 }}>
                 Segments at a glance
               </h2>
@@ -184,7 +184,7 @@ export default async function HomePage() {
               </p>
             </div>
             <Link href="/markets" className="btn">
-              All market reports
+              All markets
             </Link>
           </div>
           <SegmentsTable segments={segments} />
