@@ -1,5 +1,6 @@
 import "server-only";
 import { and, asc, desc, eq, gt, gte, ilike, inArray, lt, lte, or, sql } from "drizzle-orm";
+import { cache } from "react";
 import { db } from "@/db";
 import { externalListings, generations, makes, models } from "@/db/schema";
 import { isPlatformKey, type PlatformKey } from "@/lib/sources/platforms";
@@ -235,64 +236,65 @@ export interface ExternalDetail extends ExternalCardData {
   } | null;
 }
 
-export async function getExternalListing(
-  source: PlatformKey,
-  sourceId: string,
-): Promise<ExternalDetail | null> {
-  const [r] = await db
-    .select({
-      ...cardColumns,
-      url: externalListings.url,
-      trim: externalListings.trim,
-      vin: externalListings.vin,
-      color: externalListings.color,
-      description: externalListings.description,
-      reserveMet: externalListings.reserveMet,
-      startedAt: externalListings.startedAt,
-      fetchedAt: externalListings.fetchedAt,
-      rawJson: externalListings.rawJson,
-      makeSlug: makes.slug,
-      modelSlug: models.slug,
-      modelName: models.name,
-      generationCode: generations.code,
-      reportStatus: models.reportStatus,
-      reportError: models.reportError,
-    })
-    .from(externalListings)
-    .leftJoin(models, eq(models.id, externalListings.modelId))
-    .leftJoin(makes, eq(makes.id, models.makeId))
-    .leftJoin(generations, eq(generations.id, externalListings.generationId))
-    .where(and(eq(externalListings.source, source), eq(externalListings.sourceId, sourceId)))
-    .limit(1);
-  if (!r) return null;
-  const { makeSlug, modelSlug, modelName, generationCode, reportStatus, reportError, ...rest } = r;
-  return {
-    ...asCard(rest),
-    url: rest.url,
-    trim: rest.trim,
-    vin: rest.vin,
-    color: rest.color,
-    description: rest.description,
-    reserveMet: rest.reserveMet,
-    startedAt: rest.startedAt,
-    fetchedAt: rest.fetchedAt,
-    raw:
-      rest.rawJson && typeof rest.rawJson === "object" && !Array.isArray(rest.rawJson)
-        ? (rest.rawJson as Record<string, unknown>)
-        : null,
-    market:
-      makeSlug && modelSlug && modelName && reportStatus
-        ? {
-            makeSlug,
-            modelSlug,
-            modelName,
-            generationCode: generationCode ?? null,
-            reportStatus,
-            reportError: reportError ?? null,
-          }
-        : null,
-  };
-}
+/** One external listing with its catalog match. Request-cached: generateMetadata and the page share one read. */
+export const getExternalListing = cache(
+  async (source: PlatformKey, sourceId: string): Promise<ExternalDetail | null> => {
+    const [r] = await db
+      .select({
+        ...cardColumns,
+        url: externalListings.url,
+        trim: externalListings.trim,
+        vin: externalListings.vin,
+        color: externalListings.color,
+        description: externalListings.description,
+        reserveMet: externalListings.reserveMet,
+        startedAt: externalListings.startedAt,
+        fetchedAt: externalListings.fetchedAt,
+        rawJson: externalListings.rawJson,
+        makeSlug: makes.slug,
+        modelSlug: models.slug,
+        modelName: models.name,
+        generationCode: generations.code,
+        reportStatus: models.reportStatus,
+        reportError: models.reportError,
+      })
+      .from(externalListings)
+      .leftJoin(models, eq(models.id, externalListings.modelId))
+      .leftJoin(makes, eq(makes.id, models.makeId))
+      .leftJoin(generations, eq(generations.id, externalListings.generationId))
+      .where(and(eq(externalListings.source, source), eq(externalListings.sourceId, sourceId)))
+      .limit(1);
+    if (!r) return null;
+    const { makeSlug, modelSlug, modelName, generationCode, reportStatus, reportError, ...rest } =
+      r;
+    return {
+      ...asCard(rest),
+      url: rest.url,
+      trim: rest.trim,
+      vin: rest.vin,
+      color: rest.color,
+      description: rest.description,
+      reserveMet: rest.reserveMet,
+      startedAt: rest.startedAt,
+      fetchedAt: rest.fetchedAt,
+      raw:
+        rest.rawJson && typeof rest.rawJson === "object" && !Array.isArray(rest.rawJson)
+          ? (rest.rawJson as Record<string, unknown>)
+          : null,
+      market:
+        makeSlug && modelSlug && modelName && reportStatus
+          ? {
+              makeSlug,
+              modelSlug,
+              modelName,
+              generationCode: generationCode ?? null,
+              reportStatus,
+              reportError: reportError ?? null,
+            }
+          : null,
+    };
+  },
+);
 
 /** For the outbound redirect: the id and destination only. */
 export async function getExternalTarget(id: string): Promise<{ id: string; url: string } | null> {

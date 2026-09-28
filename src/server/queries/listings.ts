@@ -1,6 +1,7 @@
 import "server-only";
 import { and, desc, eq, gte, ilike, inArray, lt, lte, ne, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { cache } from "react";
 import { z } from "zod";
 import { db } from "@/db";
 import {
@@ -180,7 +181,11 @@ export async function listActiveListings(
 }
 
 /** Full listing for a viewer, or null when it does not exist or is not visible to them. */
-export async function getListingForViewer(id: string, viewerId: string | null) {
+/**
+ * One listing as the viewer may see it. Request-cached so generateMetadata and the
+ * page share one read (both take primitive args, so the cache key is stable).
+ */
+export const getListingForViewer = cache(async (id: string, viewerId: string | null) => {
   if (!/^[0-9a-f-]{36}$/.test(id)) return null;
   const [row] = await db
     .select({
@@ -245,7 +250,7 @@ export async function getListingForViewer(id: string, viewerId: string | null) {
     })),
     highBid: bidRows[0]?.amount ?? null,
   };
-}
+});
 
 export async function listMyListings(userId: string) {
   const rows = await db
