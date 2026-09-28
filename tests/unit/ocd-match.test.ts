@@ -416,6 +416,39 @@ describe("keyword alternatives", () => {
     expect(keywordAlternatives("R|SVR|R75")).toEqual(["R", "SVR", "R75"]);
     expect(keywordAlternatives(null)).toEqual([]);
   });
+  it("reads exclude alternatives, so a GT3 RS Tribute to Carrera RS is not a Carrera", () => {
+    const rules = [
+      {
+        modelId: "carrera",
+        source: "ocd",
+        rawMake: "Porsche",
+        rawModel: "911",
+        rawTrimPattern: "Carrera !~ GTS|GT3|GT2",
+      },
+      {
+        modelId: "rs",
+        source: "ocd",
+        rawMake: "Porsche",
+        rawModel: "911",
+        rawTrimPattern: "GT3 RS",
+      },
+    ];
+    expect(
+      matchOcdRules(rules, {
+        rawMake: "Porsche",
+        rawModel: "911",
+        title: "2023 Porsche 911 GT3 RS Tribute to Carrera RS Package",
+      }),
+    ).toBe("rs");
+    expect(
+      matchOcdRules(rules, {
+        rawMake: "Porsche",
+        rawModel: "911",
+        title: "2019 Porsche 911 Carrera T",
+      }),
+    ).toBe("carrera");
+  });
+
   it("lets a 360 CS reach the Challenge Stradale and keeps GP cars off the plain JCW", () => {
     const cs = [
       {
