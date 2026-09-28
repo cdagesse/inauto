@@ -6,6 +6,7 @@ Features and fixes as they ship, newest first. One line per change, with the pul
 
 ### Features
 
+- Link previews: a listing link shared in iMessage, Slack or social apps shows the car's photo and a one-line summary (year, make, model, miles, place, price and outcome); pages without a car photo show a UrCar preview card instead of nothing (#80)
 - Markets by region: the market section is now called Markets everywhere, and the Markets page opens with six US regions (Northeast, Southeast, South Central, Midwest, Mountain West, West Coast) showing dealer sales in the last 90 days, whether prices and volume are rising or falling against the 90 days before, days to sell, and which types of car are strongest and softest in each; every region has its own page with its types ranked, top makes, auction sales and states (#77)
 - Market reports without dealer data yet read from auction results instead of showing zeros: the model page's KPI strip shows the median hammer price, range, 90-day change, sell-through and miles from sold auctions, the by-year table switches to hammer prices, dealer-only sections say so instead of rendering empty, the value tool prices the car from hammer prices lifted by the usual auction gap instead of showing $0 and NaN, and make and segment cards and tables show the median hammer, auction sales and an auction price trend for those models, labelled as such (#76)
 
