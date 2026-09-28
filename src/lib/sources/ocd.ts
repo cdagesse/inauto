@@ -417,9 +417,11 @@ export function createOcdClient(o: OcdClientOptions) {
   }
 
   /**
-   * Cursor-paged walk over /auctions. `since` (ISO) stops the walk once a page's newest row is
-   * older than it, which only works when the API honours newest-first sorting; otherwise the
-   * walk relies on the page cap.
+   * Cursor-paged walk over /auctions. `since` (ISO) stops the walk once a page is entirely
+   * older than it. The API rejects an explicit sort, but its default order is newest ended
+   * first (checked against stored pages on 2026-09-27: every page and every page boundary
+   * was in descending auction_end_at order), so an unsorted walk still stops at `since`;
+   * the page cap remains the backstop.
    */
   async function walkAuctions(
     baseParams: Params,
@@ -448,17 +450,27 @@ export function createOcdClient(o: OcdClientOptions) {
         throw e;
       }
       let oldest: number | null = null;
+      let newest: number | null = null;
       for (const r of result.rs) {
         const n = normalizeOcdRow(r);
         if (!n || seen.has(n.sourceId)) continue;
         seen.add(n.sourceId);
         const t = n.endedAt ? new Date(n.endedAt).getTime() : null;
-        if (t != null) oldest = oldest == null ? t : Math.min(oldest, t);
+        if (t != null) {
+          oldest = oldest == null ? t : Math.min(oldest, t);
+          newest = newest == null ? t : Math.max(newest, t);
+        }
         if (since && t != null && t < new Date(since).getTime()) continue;
         out.push(n);
       }
       const m = meta(result.res.body);
-      if (sorted && since && oldest != null && oldest < new Date(since).getTime()) break;
+      const sinceMs = since ? new Date(since).getTime() : null;
+      if (sinceMs != null) {
+        // Sorted: the tail of this page is the newest of the next. Unsorted: only trust a
+        // page that is older from top to bottom, which costs at most one extra page.
+        if (sorted && oldest != null && oldest < sinceMs) break;
+        if (!sorted && newest != null && newest < sinceMs) break;
+      }
       if (m.hasMore !== true || !m.nextCursor) break;
       cursor = m.nextCursor;
     }

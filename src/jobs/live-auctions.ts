@@ -20,6 +20,8 @@ import {
   type NormalizedLiveRow,
 } from "@/lib/sources/ocd";
 import { chunk, UPSERT_CHUNK } from "./lib/batch";
+import { lastGoodRun } from "./lib/run";
+import { liveUpdatedSince } from "./lib/schedule";
 import { assignGeneration, type AliasRule, type GenerationRange } from "./lib/normalize";
 
 /**
@@ -232,9 +234,10 @@ async function pull(
       async (record) => {
         const client = createOcdClient({ apiKey: env.OCD_API_KEY!, record, fetchImpl });
         if (scope === "all") {
-          // One sweep of everything that changed since the last run (default: 36 hours back).
-          const updatedSince = new Date(now.getTime() - 36 * 3_600_000).toISOString();
-          rows.push(...(await client.live({ updatedSince }, now)));
+          // Everything that changed since the last good sweep (2 to 36 hours back, see schedule.ts).
+          const updatedSince = liveUpdatedSince(await lastGoodRun(db, "live-auctions"), now);
+          log(`live: updated since ${updatedSince.toISOString()}`);
+          rows.push(...(await client.live({ updatedSince: updatedSince.toISOString() }, now)));
           return;
         }
         // Catalog scope: one query per distinct make + line (keywords are applied client-side).

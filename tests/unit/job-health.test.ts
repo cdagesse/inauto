@@ -233,6 +233,61 @@ describe("describeRun", () => {
     );
   });
 
+  it("describes the ended-results sweep and a nightly rotation", () => {
+    expect(
+      describeRun(
+        "ended-auctions",
+        {
+          since: "2026-09-28T02:05:00Z",
+          pulled: 61,
+          upserted: 61,
+          matchedToCatalog: 14,
+          auctionResultsInserted: 14,
+          budgetStopped: null,
+          skipped: null,
+          errors: [],
+        },
+        null,
+      ),
+    ).toEqual({
+      headline:
+        "pulled 61 closed auctions · 61 added or updated · 14 matched to catalog · 14 results stored",
+      changed: 75,
+    });
+    expect(describeRun("ended-auctions", { skipped: "dry run", errors: [] }, null).headline).toBe(
+      "skipped: dry run",
+    );
+    const d = describeRun(
+      "nightly",
+      {
+        models: [
+          {
+            model: "bmw/m3",
+            visorSold: 4,
+            visorActive: 120,
+            ocdAuctions: 0,
+            inserted: { sold: 2, active: 120, auctions: 0 },
+          },
+        ],
+        errors: [],
+        rotation: {
+          refreshDays: 14,
+          eligible: 156,
+          due: 12,
+          pulled: 1,
+          remaining: 11,
+          overdue: 3,
+          cleaned: 5,
+        },
+      },
+      null,
+    );
+    expect(d.headline).toBe(
+      "1 model · Visor 4 sold, 120 active · 122 new rows written · 1 of 156 models refreshed · time cap hit with 11 models left · 5 re-cleaned",
+    );
+    expect(d.changed).toBe(122);
+  });
+
   it("describes report passes, title vetting, snapshots and the evidence sweep", () => {
     expect(
       describeRun(

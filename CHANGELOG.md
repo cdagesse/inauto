@@ -6,6 +6,8 @@ Features and fixes as they ship, newest first. One line per change, with the pul
 
 ### Features
 
+- Old Cars Data refresh: live auctions sweep every 15 minutes (bids, end times, new listings), a new ended-results sweep every 6 hours for final prices on every platform, and the nightly no longer pulls auction results per model; Visor dealer data refreshes each model about every 14 days on a rotation with a time cap, so the nightly finishes inside the 5-minute limit (#69)
+
 - Admin Health page: every job's status (healthy, overdue, failed, did not finish), what its last run added or updated, Visor and Old Cars Data monthly budget use and recent errors, data on hand, and a filterable run history with a detail page per run; close-auctions, report requests, title vetting, snapshots and the evidence sweep now record their runs (#68)
 
 - Phones: home page opens straight on the search box and featured car; the headline and eyebrow are hidden (#55)

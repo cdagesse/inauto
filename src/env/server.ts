@@ -28,6 +28,8 @@ const schema = z.object({
   JOBS_DRY_RUN: optionalString,
   VISOR_API_KEY: optionalString,
   VISOR_MONTHLY_BUDGET: z.coerce.number().int().positive().default(2000),
+  /** Every catalog model gets a Visor refresh about this often; the nightly pulls 1/N of them. */
+  VISOR_REFRESH_DAYS: z.coerce.number().int().min(1).max(90).default(14),
   OCD_API_KEY: optionalString,
   OCD_MONTHLY_BUDGET: z.coerce.number().int().positive().default(10),
   BLOB_READ_WRITE_TOKEN: optionalString,

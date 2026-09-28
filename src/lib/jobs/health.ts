@@ -28,7 +28,7 @@ export const JOBS: readonly JobSpec[] = [
   {
     name: "nightly",
     label: "Nightly market pull",
-    what: "Visor dealer sales and active inventory plus Old Cars Data auction results, per catalog model",
+    what: "Visor dealer sales and inventory for the stalest slice of the catalog (every model about every 14 days), then cleaning, aggregates and retention",
     every: DAY,
     grace: 3 * HOUR,
     schedule: "Daily at 08:15 UTC",
@@ -52,10 +52,18 @@ export const JOBS: readonly JobSpec[] = [
   {
     name: "live-auctions",
     label: "Live auctions",
-    what: "Old Cars Data live auctions: new and updated listings, ended ones marked",
-    every: DAY,
-    grace: 3 * HOUR,
-    schedule: "Daily at 08:45 UTC",
+    what: "Old Cars Data auctions updated since the last sweep: new listings, bids, end times; past-end listings marked ended",
+    every: 15 * MIN,
+    grace: 30 * MIN,
+    schedule: "Every 15 minutes",
+  },
+  {
+    name: "ended-auctions",
+    label: "Ended auction results",
+    what: "Old Cars Data auctions that closed since the last sweep: final price and status, market data for catalog models",
+    every: 6 * HOUR,
+    grace: 2 * HOUR,
+    schedule: "Every 6 hours at :05",
   },
   {
     name: "close-auctions",
@@ -265,12 +273,20 @@ export function describeRun(name: string, summary: unknown, error: string | null
         const i = obj(m.inserted);
         return a + num(i, "sold") + num(i, "active") + num(i, "auctions");
       }, 0);
-      parts.push(
-        plural(models.length, "model"),
-        `Visor ${n(sold)} sold, ${n(active)} active`,
-        `Old Cars Data ${plural(auctions, "auction")}`,
-      );
+      const rotation = obj(s.rotation);
+      parts.push(plural(models.length, "model"), `Visor ${n(sold)} sold, ${n(active)} active`);
+      // Nightly rotations no longer pull auctions; report builds still do.
+      if (auctions || !Object.keys(rotation).length)
+        parts.push(`Old Cars Data ${plural(auctions, "auction")}`);
       if (hasInserted) parts.push(`${plural(inserted, "new row")} written`);
+      if (Object.keys(rotation).length) {
+        parts.push(
+          `${n(num(rotation, "pulled"))} of ${n(num(rotation, "eligible"))} models refreshed`,
+        );
+        if (num(rotation, "remaining"))
+          parts.push(`time cap hit with ${plural(num(rotation, "remaining"), "model")} left`);
+        if (num(rotation, "cleaned")) parts.push(`${n(num(rotation, "cleaned"))} re-cleaned`);
+      }
       if (unmatched) parts.push(`${n(unmatched)} unmatched`);
       if (review) parts.push(`${n(review)} to review`);
       if (stopped) parts.push(`budget stopped ${plural(stopped, "model")}`);
@@ -311,6 +327,24 @@ export function describeRun(name: string, summary: unknown, error: string | null
       const stop = str(s, "budgetStopped");
       if (stop) parts.push(`budget stopped: ${stop}`);
       changed = upserted + results;
+      break;
+    }
+    case "ended-auctions": {
+      const skipped = str(s, "skipped");
+      if (skipped) parts.push(`skipped: ${skipped}`);
+      else {
+        const upserted = num(s, "upserted");
+        const results = num(s, "auctionResultsInserted");
+        parts.push(
+          `pulled ${plural(num(s, "pulled"), "closed auction")}`,
+          `${n(upserted)} added or updated`,
+          `${n(num(s, "matchedToCatalog"))} matched to catalog`,
+        );
+        if (results) parts.push(`${plural(results, "result")} stored`);
+        const stop = str(s, "budgetStopped");
+        if (stop) parts.push(`budget stopped: ${stop}`);
+        changed = upserted + results;
+      }
       break;
     }
     case "close-auctions": {
