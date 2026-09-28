@@ -182,6 +182,10 @@ export const dealerSales = pgTable(
     uniqueIndex("dealer_sale_source_idx").on(t.sourceListingId),
     index("dealer_sale_gen_date_idx").on(t.generationId, t.soldDate),
     index("dealer_sale_model_idx").on(t.modelId),
+    // VIN timeline lookup; most sold rows carry a VIN but the null ones are never searched.
+    index("dealer_sale_vin_idx")
+      .on(t.vin)
+      .where(sql`vin is not null`),
   ],
 );
 
@@ -191,6 +195,10 @@ export const dealerActive = pgTable(
   (t) => [
     uniqueIndex("dealer_active_source_day_idx").on(t.sourceListingId, t.snapshotDate),
     index("dealer_active_gen_day_idx").on(t.generationId, t.snapshotDate),
+    // Snapshot rebuilds and the nightly cursor filter by model and read max(snapshot_date).
+    index("dealer_active_model_day_idx").on(t.modelId, t.snapshotDate),
+    // VIN timeline: `where vin = ? order by snapshot_date desc limit 400`.
+    index("dealer_active_vin_day_idx").on(t.vin, t.snapshotDate),
   ],
 );
 
@@ -223,6 +231,8 @@ export const auctionResults = pgTable(
   (t) => [
     uniqueIndex("auction_result_source_idx").on(t.source, t.sourceId),
     index("auction_result_gen_ended_idx").on(t.generationId, t.endedAt),
+    index("auction_result_model_ended_idx").on(t.modelId, t.endedAt),
+    index("auction_result_vin_idx").on(t.vin),
   ],
 );
 
@@ -319,7 +329,11 @@ export const carViews = pgTable(
     day: date("day").notNull(),
     views: integer("views").notNull().default(0),
   },
-  (t) => [primaryKey({ columns: [t.kind, t.refId, t.day] })],
+  (t) => [
+    primaryKey({ columns: [t.kind, t.refId, t.day] }),
+    // topViewed scans `day >= current_date - N`.
+    index("car_view_day_idx").on(t.day),
+  ],
 );
 
 export const marketSnapshots = pgTable("market_snapshot", {
@@ -578,6 +592,8 @@ export const listings = pgTable(
     index("listing_status_type_idx").on(t.status, t.type, t.createdAt),
     index("listing_seller_idx").on(t.sellerId),
     index("listing_network_idx").on(t.networkId),
+    // VIN timeline compares upper(vin): rows written before zod normalisation may be lowercase.
+    index("listing_vin_upper_idx").on(sql`upper(${t.vin})`),
   ],
 );
 
@@ -649,6 +665,7 @@ export const externalListings = pgTable(
     uniqueIndex("external_listing_source_idx").on(t.source, t.sourceId),
     index("external_listing_status_ends_idx").on(t.status, t.endsAt),
     index("external_listing_model_idx").on(t.modelId, t.status),
+    index("external_listing_vin_idx").on(t.vin),
   ],
 );
 
