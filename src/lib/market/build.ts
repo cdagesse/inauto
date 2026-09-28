@@ -185,7 +185,11 @@ export function buildSnapshot(input: SnapshotInput): MarketSnapshot {
 
   // Date bounds.
   const saleDates = sales.map((s) => s.date).filter((d): d is Date => d != null);
-  const endDates = auctionsAll.map((a) => a.ended).filter((d): d is Date => d != null);
+  // Auctions still running carry their scheduled end; they must not push "data through"
+  // into the future.
+  const endDates = auctionsAll
+    .map((a) => a.ended)
+    .filter((d): d is Date => d != null && d.getTime() <= input.now.getTime());
   const maxSale = saleDates.length
     ? new Date(Math.max(...saleDates.map((d) => d.getTime())))
     : null;

@@ -225,6 +225,17 @@ describe("buildSnapshot", () => {
     expect(s.monthly[0]!.partial).toBe(true);
   });
 
+  it("does not let a still-running auction push data-through into the future", () => {
+    const s = buildSnapshot(
+      datsun([
+        auction(1, 1971, 50_000, "sold", new Date("2026-09-20T00:00:00Z")),
+        auction(2, 1972, null, "rnm", new Date("2026-10-01T13:00:00Z")),
+      ]),
+    );
+    expect(s.dataThrough).toBe("2026-09-20");
+    expect(s.auctionSince).toBe("2026-09-01");
+  });
+
   it("marks the oldest trend month whole when auctions cover it", () => {
     const s = buildSnapshot(
       datsun(
