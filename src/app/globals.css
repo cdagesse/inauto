@@ -1019,146 +1019,6 @@ svg .lbl {
   }
 }
 
-/* valuation */
-.val {
-  display: grid;
-  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
-  gap: 28px;
-  align-items: start;
-}
-.val > * {
-  min-width: 0;
-}
-.est {
-  border-top: 2px solid var(--ink);
-  padding-top: 14px;
-}
-.est .l {
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-}
-.est .v {
-  font-family: var(--display);
-  font-stretch: 108%;
-  font-weight: 800;
-  font-size: clamp(34px, 5vw, 48px);
-  line-height: 1.05;
-  font-variant-numeric: tabular-nums;
-  margin-top: 4px;
-}
-.est .s {
-  font-size: 14px;
-  color: var(--ink-2);
-  margin-top: 4px;
-}
-.rec {
-  margin: 18px 0 14px;
-  padding: 14px 16px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--accent) 9%, var(--card));
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
-}
-.rec b {
-  font-family: var(--display);
-  font-stretch: 108%;
-  font-weight: 800;
-  font-size: 18px;
-  display: block;
-  margin-bottom: 2px;
-}
-.rec p {
-  margin: 0;
-  font-size: 14px;
-  color: var(--ink-2);
-}
-.chans {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-.chan {
-  background: var(--card);
-  border: 1px solid var(--rule-2);
-  border-radius: 10px;
-  padding: 14px 14px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-.chan.best {
-  border-color: var(--accent);
-  box-shadow: inset 0 3px 0 var(--accent);
-}
-.chan h3 {
-  margin: 0;
-  font-family: var(--display);
-  font-stretch: 108%;
-  font-weight: 800;
-  font-size: 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8px;
-}
-.chan h3 .pill {
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-  color: var(--accent);
-}
-.chan .big {
-  font-family: var(--display);
-  font-weight: 700;
-  font-size: 24px;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.1;
-}
-.chan .cap {
-  font-size: 12.5px;
-  color: var(--ink-3);
-}
-.chan dl {
-  margin: 6px 0 0;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 4px 10px;
-  font-size: 13px;
-}
-.chan dt {
-  color: var(--ink-2);
-}
-.chan dd {
-  margin: 0;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-.chan dd.tot,
-.chan dt.tot {
-  font-weight: 600;
-  color: var(--ink);
-}
-.chan .rule {
-  grid-column: 1 / -1;
-  border-top: 1px solid var(--rule-2);
-  margin: 2px 0;
-}
-.adj {
-  margin-top: 16px;
-}
-.adj table td:last-child {
-  white-space: nowrap;
-}
-@media (max-width: 900px) {
-  .val {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .chans {
-    grid-template-columns: 1fr;
-  }
-}
-
 /* account + marketplace */
 .page-head {
   display: flex;
@@ -1273,7 +1133,7 @@ svg .lbl {
   gap: 14px;
   align-items: center;
   flex-wrap: wrap;
-  padding-bottom: 18px;
+  padding-bottom: 12px;
 }
 .seg-link {
   font-size: 13px;
@@ -1431,12 +1291,6 @@ svg .lbl {
   border-color: var(--accent);
   box-shadow: inset 0 3px 0 var(--accent);
 }
-.val {
-  display: grid;
-  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
-  gap: 28px;
-  align-items: start;
-}
 .meter {
   position: relative;
   height: 18px;
@@ -1474,8 +1328,7 @@ svg .lbl {
   font-size: 14px;
 }
 @media (max-width: 900px) {
-  .grid-2,
-  .val {
+  .grid-2 {
     grid-template-columns: minmax(0, 1fr);
   }
   .grid-3 {
@@ -2343,6 +2196,7 @@ svg .lbl {
   flex-wrap: wrap;
   gap: 6px;
   align-items: center;
+  padding-bottom: 14px;
 }
 .chip {
   display: inline-flex;
@@ -2967,6 +2821,7 @@ table.compare td.down {
   align-items: center;
 }
 .page-head.compact .head-main {
+  flex: 1 1 auto;
   min-width: 0;
 }
 .head-title {
@@ -2998,9 +2853,6 @@ table.compare td.down {
   color: var(--down);
   vertical-align: middle;
   margin-left: 4px;
-}
-.filters {
-  padding-bottom: 12px;
 }
 .src-menu {
   position: relative;
@@ -3095,7 +2947,7 @@ table.compare td.down {
 }
 .sticky-head {
   position: sticky;
-  top: 0;
+  top: var(--site-head-h);
   z-index: 30;
   background: var(--paper);
   border-bottom: 1px solid transparent;
@@ -3109,23 +2961,30 @@ table.compare td.down {
   border-bottom-color: var(--rule-2);
   box-shadow: 0 8px 24px -16px rgb(0 0 0 / 0.45);
 }
+/* the thumb holds no width before it appears; flex-basis/max-width govern the reveal */
 .sticky-thumb {
-  flex: 0 0 auto;
+  flex: 0 0 0px;
+  min-width: 0;
+  max-width: 0;
   width: 0;
   height: 48px;
+  margin-right: -20px;
+  opacity: 0;
   border-radius: 6px;
   object-fit: cover;
-  opacity: 0;
-  margin-right: -14px;
   transition:
+    flex-basis 0.25s ease,
+    max-width 0.25s ease,
     width 0.25s ease,
-    opacity 0.2s ease,
-    margin 0.25s ease;
+    margin 0.25s ease,
+    opacity 0.2s ease;
 }
 .sticky-head.stuck .sticky-thumb {
+  flex-basis: 72px;
+  max-width: 72px;
   width: 72px;
-  opacity: 1;
   margin-right: 0;
+  opacity: 1;
 }
 .sticky-head.stuck .eyebrow {
   display: none;
@@ -3265,21 +3124,8 @@ header.site-head {
   z-index: 50;
   background: var(--paper);
 }
-.sticky-head {
-  top: var(--site-head-h);
-}
-/* the sticky-thumb must not hold its intrinsic width before it appears */
-.sticky-thumb {
-  flex: 0 0 0px;
-  min-width: 0;
-  max-width: 0;
-}
-.sticky-head.stuck .sticky-thumb {
-  flex-basis: 72px;
-  max-width: 72px;
-}
 /* Buy page: the filter row stays reachable while scrolling */
-@media (min-width: 721px) {
+@media (min-width: 641px) {
   .filters {
     position: sticky;
     top: var(--site-head-h);
@@ -3288,16 +3134,6 @@ header.site-head {
     padding-top: 8px;
     margin-top: -8px;
   }
-}
-/* the title block takes the remaining width so it starts at the photo's left edge */
-.page-head.compact .head-main {
-  flex: 1 1 auto;
-}
-.sticky-thumb {
-  margin-right: -20px;
-}
-.sticky-head.stuck .sticky-thumb {
-  margin-right: 0;
 }
 
 .recent-views {
@@ -3374,15 +3210,6 @@ header.site-head {
   }
 }
 @media (max-width: 640px) {
-  /* source dropdown must not run past the right edge */
-  .src-list {
-    left: auto;
-    right: 0;
-    min-width: 200px;
-    max-width: calc(100vw - 32px);
-  }
-}
-@media (max-width: 640px) {
   /* car pages: stack the compact header; the thumbnail only exists once stuck */
   .page-head.compact {
     display: grid;
@@ -3426,18 +3253,6 @@ header.site-head {
   .sticky-head.stuck .price-block {
     text-align: right;
     flex: 0 0 auto;
-  }
-  /* source dropdown opens in place instead of floating off-screen */
-  .src-list {
-    position: static;
-    left: auto;
-    right: auto;
-    max-width: none;
-    margin-top: 6px;
-    box-shadow: none;
-  }
-  .src-menu {
-    flex-basis: 100%;
   }
 }
 @media (max-width: 640px) {
@@ -3587,14 +3402,24 @@ header.site-head {
   }
 }
 
-/* Buy page filters on phones: two tight rows, compact pills, Filter on the right */
+/* Buy page filters on phones: the Filter button becomes a bar pinned to the bottom of the screen */
 @media (max-width: 640px) {
   .filters {
     display: flex;
     flex-wrap: wrap;
     gap: 8px 6px;
     align-items: center;
-    padding-bottom: 10px;
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    margin: 0;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    /* no backdrop-filter: it would become the containing block for the fixed drawer */
+    background: var(--card);
+    border-top: 1px solid var(--rule);
   }
   .filters .seg {
     gap: 4px;
@@ -3605,9 +3430,11 @@ header.site-head {
   }
   .filters > .btn {
     order: 1;
-    margin-left: auto;
-    padding: 6px 12px;
-    font-size: 13.5px;
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+    padding: 11px 14px;
+    font-size: 15px;
   }
   .filters .seg[aria-label="Result"] {
     order: 2;
@@ -3616,26 +3443,8 @@ header.site-head {
   .filters .seg[aria-label="Listing type"] {
     order: 3;
   }
-  .filters .src-menu {
-    order: 4;
-    flex-basis: auto;
-  }
-  .filters .seg-link,
-  .filters .src-menu > summary {
-    font-size: 12.5px;
-    padding: 5px 10px;
-  }
-  .filters .src-list {
-    position: absolute;
-    left: auto;
-    right: 0;
-    min-width: 220px;
-    max-width: calc(100vw - 32px);
-    margin-top: 6px;
-    box-shadow: 0 10px 30px rgb(0 0 0 / 0.35);
-  }
   .active-chips {
-    padding-bottom: 8px !important;
+    padding-bottom: 8px;
     gap: 4px;
   }
   .active-chips .lab {
@@ -3661,27 +3470,6 @@ header.site-head {
   .filters > .seg,
   .filters > .src-menu {
     display: none;
-  }
-  /* the Filter button becomes a bar pinned to the bottom of the screen */
-  .filters {
-    position: fixed;
-    top: auto;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 30;
-    margin: 0;
-    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
-    /* no backdrop-filter: it would become the containing block for the fixed drawer */
-    background: var(--card);
-    border-top: 1px solid var(--rule);
-  }
-  .filters > .btn {
-    margin-left: 0;
-    width: 100%;
-    justify-content: center;
-    padding: 11px 14px;
-    font-size: 15px;
   }
   .buy-page {
     padding-bottom: 84px;

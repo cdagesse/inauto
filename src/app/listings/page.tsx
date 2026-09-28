@@ -221,7 +221,7 @@ export default async function ListingsPage({
         />
       </div>
       {chips.length ? (
-        <div className="active-chips" style={{ paddingBottom: 14 }}>
+        <div className="active-chips">
           <span className="lab">Filters</span>
           {chips.map((c) => (
             <Link
