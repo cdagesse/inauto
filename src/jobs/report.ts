@@ -1,9 +1,9 @@
 import "server-only";
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { db as defaultDb, type Db } from "@/db";
-import { auctionResults, dealerSales, makes, models } from "@/db/schema";
+import { makes, models } from "@/db/schema";
 import { env } from "@/env/server";
-import { runNightly, type NightlySummary } from "./nightly";
+import { modelHasData, runNightly, type NightlySummary } from "./nightly";
 import { rebuildSnapshot } from "@/lib/market/store";
 
 export interface ReportJobOptions {
@@ -19,19 +19,6 @@ export interface ReportJobResult {
 }
 
 const NO_DATA = "No data returned from sources (keys missing or dry run)";
-
-async function hasData(db: Db, modelId: string): Promise<boolean> {
-  const [d] = await db
-    .select({ n: sql<number>`count(*)::int` })
-    .from(dealerSales)
-    .where(and(eq(dealerSales.modelId, modelId), isNull(dealerSales.excludedReason)));
-  if ((d?.n ?? 0) > 0) return true;
-  const [a] = await db
-    .select({ n: sql<number>`count(*)::int` })
-    .from(auctionResults)
-    .where(and(eq(auctionResults.modelId, modelId), isNull(auctionResults.excludedReason)));
-  return (a?.n ?? 0) > 0;
-}
 
 /**
  * Builds market reports for models a visitor asked for. Picks the oldest
@@ -76,7 +63,7 @@ export async function processReportRequests(opts: ReportJobOptions = {}): Promis
       error = e instanceof Error ? e.message : String(e);
     }
 
-    const ready = await hasData(db, m.id);
+    const ready = await modelHasData(db, m.id);
     if (ready) {
       try {
         await rebuildSnapshot(m.makeSlug, m.slug, db);
