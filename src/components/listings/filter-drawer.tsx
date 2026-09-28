@@ -111,10 +111,15 @@ export function FilterDrawer({
   useEffect(() => {
     if (!open || !makeSlug || makeSlug in modelsBySlug || inflight.current.has(makeSlug)) return;
     inflight.current.add(makeSlug);
-    getSellModels({ makeSlug }).then((r) => {
-      inflight.current.delete(makeSlug);
-      setModelsBySlug((m) => ({ ...m, [makeSlug]: r.ok ? r.data : [] }));
-    });
+    // A failed call (network, deploy skew) caches an empty list rather than
+    // leaving the field on "Loading models…" for the session; free text still works.
+    getSellModels({ makeSlug })
+      .then(
+        (r) => (r.ok ? r.data : []),
+        () => [] as SellModel[],
+      )
+      .then((list) => setModelsBySlug((m) => ({ ...m, [makeSlug]: list })))
+      .finally(() => inflight.current.delete(makeSlug));
   }, [open, makeSlug, modelsBySlug]);
 
   // Escape closes; focus moves into the panel when it opens.

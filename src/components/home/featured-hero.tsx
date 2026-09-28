@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { money } from "@/components/account/money";
 import { CardPhoto } from "@/components/listings/card-photo";
+import { prefetchPhoto } from "@/lib/listings/photo-request";
 import type { FeaturedCar } from "@/server/queries/featured";
 
 /** The hero card is a full column on phones and roughly half the row above 900px. */
@@ -22,17 +23,21 @@ export function FeaturedHero({
   const n = cars.length;
   const rotating = n > 1 && !paused;
 
-  // Warm the upcoming slide's photo so the swap never blanks the card, then
-  // advance. A timeout (not an interval) restarts the clock after manual
-  // navigation, so a chosen car gets its full turn.
+  // Warm the upcoming slide's photo so the swap never blanks the card. Keyed
+  // on the URL, not the cars array, so a parent re-render (router.refresh,
+  // revalidation) that reserializes props does not re-issue the fetch.
+  const next = n > 1 ? cars[(i + 1) % n]?.photo : undefined;
   useEffect(() => {
-    if (n < 2) return;
-    const next = cars[(i + 1) % n]?.photo;
-    if (next) new window.Image().src = next;
-    if (paused) return;
+    if (next) prefetchPhoto(next, HERO_SIZES);
+  }, [next]);
+
+  // Advance on a timeout (not an interval) so the clock restarts after manual
+  // navigation and a chosen car gets its full turn.
+  useEffect(() => {
+    if (!rotating) return;
     const t = setTimeout(() => setI((x) => (x + 1) % n), interval);
     return () => clearTimeout(t);
-  }, [cars, i, n, paused, interval]);
+  }, [rotating, i, n, interval]);
 
   if (n === 0) return null;
   const car = cars[i % n]!;
