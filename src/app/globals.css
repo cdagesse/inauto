@@ -3470,6 +3470,18 @@ header.site-head {
 .bar {
   padding-block: 10px;
 }
+
+/* phones: skip the hero paragraph and hint so the search and cars come sooner */
+@media (max-width: 640px) {
+  .home-hero p.lead,
+  .home-hero .hero-hint {
+    display: none;
+  }
+  .home-hero {
+    padding-block: 24px 20px;
+  }
+}
+
 /* wide wordmark logos */
 .brand-img {
   height: 34px;
