@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MarketSnapshot } from "@/lib/market/types";
-import { priceGuidance, valuate, verdictFor } from "@/lib/valuation";
+import { isPriceGuidance, priceGuidance, valuate, verdictFor } from "@/lib/valuation";
 import fixture from "@/data/fixtures/porsche-911-gt3-rs.json";
 
 const snapshot = fixture as unknown as MarketSnapshot;
@@ -68,5 +68,38 @@ describe("priceGuidance", () => {
   it("carries the same comps as the valuation", () => {
     const g = priceGuidance(snapshot, { ...base, askingPrice: mv });
     expect(g.comps).toEqual(valuate(snapshot, base).comps);
+  });
+});
+
+describe("isPriceGuidance", () => {
+  it("accepts what priceGuidance produces", () => {
+    const g = priceGuidance(snapshot, { ...base, askingPrice: 300_000 });
+    expect(isPriceGuidance(g)).toBe(true);
+    expect(isPriceGuidance(JSON.parse(JSON.stringify(g)))).toBe(true);
+  });
+  it("rejects malformed values read back from the row", () => {
+    expect(isPriceGuidance(null)).toBe(false);
+    expect(isPriceGuidance("x")).toBe(false);
+    expect(isPriceGuidance({ marketValue: "lots" })).toBe(false);
+    expect(
+      isPriceGuidance({ marketValue: 1, dealerAskingMedian: 1, verdict: "fair", message: "" }),
+    ).toBe(false);
+    expect(
+      isPriceGuidance({
+        marketValue: 1,
+        dealerAskingMedian: 1,
+        range: { lo: 1, hi: "2" },
+        verdict: "fair",
+        message: "",
+      }),
+    ).toBe(false);
+  });
+  it("rejects a partial row missing the fields the page does not read yet", () => {
+    const g: Record<string, unknown> = {
+      ...priceGuidance(snapshot, { ...base, askingPrice: 300_000 }),
+    };
+    expect(isPriceGuidance({ ...g, comps: undefined })).toBe(false);
+    expect(isPriceGuidance({ ...g, deltaPct: undefined })).toBe(false);
+    expect(isPriceGuidance({ ...g, thin: "no" })).toBe(false);
   });
 });

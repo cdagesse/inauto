@@ -23,7 +23,7 @@ import {
   VinTimelineSkeleton,
 } from "@/components/listings/vin-timeline-section";
 import { verdictClass, verdictLabel } from "@/components/listings/verdict";
-import type { PriceGuidance } from "@/lib/valuation/types";
+import { isPriceGuidance } from "@/lib/valuation/guidance";
 import { adminDeleteListingForm } from "@/server/admin/actions";
 import {
   deleteListingForm,
@@ -93,7 +93,7 @@ export default async function ListingPage({
       ? l.reservePrice == null || l.highBid >= l.reservePrice
       : null;
   const minBid = l.highBid ? l.highBid + minimumIncrement(l.highBid) : 100;
-  const guidance = l.priceGuidance as PriceGuidance | null;
+  const guidance = isPriceGuidance(l.priceGuidance) ? l.priceGuidance : null;
   const signinHref = signInHref(`/listings/${l.id}`);
   const marketPrice =
     l.status === "sold"

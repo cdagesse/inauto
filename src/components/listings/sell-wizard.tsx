@@ -182,7 +182,6 @@ export function SellWizard({
         askingPrice: sale.type === "auction" ? null : Math.round(Number(sale.asking)) || null,
         reservePrice: sale.type === "auction" ? Math.round(Number(sale.reserve)) || null : null,
         auctionDays: sale.type === "auction" ? sale.auctionDays : undefined,
-        priceGuidance: guidance ?? undefined,
         publish,
       });
       if (!r.ok) return setError(r.error);

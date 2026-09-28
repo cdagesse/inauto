@@ -48,7 +48,6 @@ export const createListingSchema = z.object({
   askingPrice: z.number().int().min(0).max(100_000_000).nullable().optional(),
   reservePrice: z.number().int().min(0).max(100_000_000).nullable().optional(),
   auctionDays: z.union([z.literal(7), z.literal(14)]).optional(),
-  priceGuidance: z.unknown().optional(),
   publish: z.boolean().default(false),
 });
 

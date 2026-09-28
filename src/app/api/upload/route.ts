@@ -24,6 +24,13 @@ const UPLOADS_PER_HOUR = 40;
  * short-lived token scoped to one pathname under listings/{clerkUserId}/, then
  * uploads straight to Blob storage, so the file never passes through a
  * function. Photos are attached to a listing at save time, not here.
+ * Purchase evidence under purchases/{clerkUserId}/ is uploaded with private
+ * access and read back only through /api/purchases/[id]/evidence/[slot].
+ * Privacy is client-chosen: onBeforeGenerateToken in @vercel/blob 2.8 cannot
+ * return `access`, so this broker cannot enforce it. A tampered client could
+ * upload under its own prefix as public, exposing only that buyer's own file;
+ * the purchase schema still accepts only the buyer's pathnames and the
+ * evidence route reads with access private regardless.
  */
 export async function POST(req: Request) {
   if (!env.BLOB_READ_WRITE_TOKEN)

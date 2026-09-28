@@ -75,3 +75,30 @@ export function priceGuidance(
     thin: v.thin,
   };
 }
+
+/**
+ * Shape check for guidance read back from the listing row. Rows written by
+ * createListing are always well-formed; this keeps a stray or older value from
+ * crashing the public listing page.
+ */
+export function isPriceGuidance(v: unknown): v is PriceGuidance {
+  if (!v || typeof v !== "object") return false;
+  const g = v as Record<string, unknown>;
+  const range = g.range;
+  if (!range || typeof range !== "object") return false;
+  const r = range as Record<string, unknown>;
+  return (
+    Number.isFinite(g.marketValue) &&
+    Number.isFinite(g.dealerAskingMedian) &&
+    Number.isFinite(r.lo) &&
+    Number.isFinite(r.hi) &&
+    (g.auctionMedian == null || Number.isFinite(g.auctionMedian)) &&
+    Number.isFinite(g.suggestedAsking) &&
+    Number.isFinite(g.askingPrice) &&
+    Number.isFinite(g.deltaPct) &&
+    typeof g.verdict === "string" &&
+    typeof g.message === "string" &&
+    Array.isArray(g.comps) &&
+    typeof g.thin === "boolean"
+  );
+}

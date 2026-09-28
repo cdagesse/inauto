@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { env } from "@/env/server";
+import { sweepPurchaseEvidence } from "@/jobs/evidence-sweep";
 import { requireCron } from "@/lib/cron-auth";
 import { runNightly } from "@/jobs/nightly";
 import { rebuildAllSnapshots } from "@/lib/market/store";
@@ -22,8 +23,16 @@ async function handle(req: Request) {
   revalidatePath("/[make]/[model]", "page");
   revalidatePath("/markets", "layout");
   revalidatePath("/");
+  // Evidence blobs upload before a purchase is submitted; drop the ones nothing references.
+  let evidence: Awaited<ReturnType<typeof sweepPurchaseEvidence>> | { error: string };
+  try {
+    evidence = await sweepPurchaseEvidence({ dryRun, log: (m) => console.log(`[nightly] ${m}`) });
+  } catch (e) {
+    evidence = { error: e instanceof Error ? e.message : String(e) };
+    console.error("[nightly] evidence sweep failed", e);
+  }
   return NextResponse.json(
-    { ...summary, snapshots },
+    { ...summary, snapshots, evidence },
     { status: summary.errors.length || snapshots.failed.length ? 500 : 200 },
   );
 }
