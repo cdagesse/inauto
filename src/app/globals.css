@@ -3586,3 +3586,69 @@ header.site-head {
     padding-inline: 12px;
   }
 }
+
+/* Buy page filters on phones: two tight rows, compact pills, Filter on the right */
+@media (max-width: 640px) {
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 6px;
+    align-items: center;
+    padding-bottom: 10px;
+  }
+  .filters .seg {
+    gap: 4px;
+  }
+  .filters .seg[aria-label="Live or past"] {
+    order: 0;
+    flex: 1 1 auto;
+  }
+  .filters > .btn {
+    order: 1;
+    margin-left: auto;
+    padding: 6px 12px;
+    font-size: 13.5px;
+  }
+  .filters .seg[aria-label="Result"] {
+    order: 2;
+    flex-basis: 100%;
+  }
+  .filters .seg[aria-label="Listing type"] {
+    order: 3;
+  }
+  .filters .src-menu {
+    order: 4;
+    flex-basis: auto;
+  }
+  .filters .seg-link,
+  .filters .src-menu > summary {
+    font-size: 12.5px;
+    padding: 5px 10px;
+  }
+  .filters .src-list {
+    position: absolute;
+    left: auto;
+    right: 0;
+    min-width: 220px;
+    max-width: calc(100vw - 32px);
+    margin-top: 6px;
+    box-shadow: 0 10px 30px rgb(0 0 0 / 0.35);
+  }
+  .active-chips {
+    padding-bottom: 8px !important;
+    gap: 4px;
+  }
+  .active-chips .lab {
+    display: none;
+  }
+  .active-chips .chip {
+    font-size: 12.5px;
+    padding: 4px 9px;
+  }
+  .feed-head {
+    padding-block: 2px 8px;
+  }
+  .feed-head .sec {
+    font-size: 22px;
+  }
+}
