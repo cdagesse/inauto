@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { longDate } from "@/components/market/format";
+import { headlineFigures } from "@/lib/market/figures";
 import { mi, usd, usdK } from "@/lib/format/money";
 import { BrandLogo } from "@/components/site/brand-logo";
 import { ValuationTool } from "@/components/valuation/tool";
@@ -126,8 +127,10 @@ export default async function SellModelPage({
   const gen = generationFor(s.years, s.order, q.year, q.gen);
   const g = s.generations[gen];
   const year = q.year && (s.years[gen] ?? []).includes(q.year) ? q.year : (s.years[gen] ?? [])[0];
-  const ch = g.prior90 ? (g.last90 - g.prior90) / g.prior90 : 0;
-  const up = ch >= 0;
+  // Dealer figures, or hammer figures for a generation with no dealer sales yet.
+  const f = headlineFigures(g);
+  const ch = f.change;
+  const up = ch != null && ch >= 0;
   const short = s.model.shortName;
   const listHref = listQs({
     make: s.make.name,
@@ -164,7 +167,7 @@ export default async function SellModelPage({
         <div className="asof">
           {g.name} · {g.years}
           <br />
-          {q.miles != null ? `${mi(q.miles)} miles` : `Typical ${mi(g.medianMiles)} miles`}
+          {q.miles != null ? `${mi(q.miles)} miles` : `Typical ${mi(f.miles)} miles`}
           <br />
           Data through {longDate(s.dataThrough)}
           <br />
@@ -176,41 +179,59 @@ export default async function SellModelPage({
         <div className="kpis">
           <div className="kpi">
             <div className="l">
-              Median sold price · {g.name}
-              {g.thin ? (
+              {f.viaAuctions ? "Median hammer price" : "Median sold price"} · {g.name}
+              {f.thin ? (
                 <>
                   {" "}
                   <span className="pill">Thin sample</span>
                 </>
               ) : null}
             </div>
-            <div className="v">{usd(g.median)}</div>
+            <div className="v">{usd(f.median)}</div>
             <div className="s">
-              Typical range {usd(g.lo)} to {usd(g.hi)}
+              Typical range {usd(f.lo)} to {usd(f.hi)}
             </div>
           </div>
           <div className="kpi">
             <div className="l">90-day change</div>
-            <div className={`v chg ${up ? "up" : "down"}`}>
-              {up ? "+" : ""}
-              {(ch * 100).toFixed(1)}%
+            {ch == null ? (
+              <div className="v">n/a</div>
+            ) : (
+              <div className={`v chg ${up ? "up" : "down"}`}>
+                {up ? "+" : ""}
+                {(ch * 100).toFixed(1)}%
+              </div>
+            )}
+            <div className="s">
+              {f.n90} {f.viaAuctions ? "auction " : ""}sales in the last 90 days
             </div>
-            <div className="s">{g.n90} sales in the last 90 days</div>
           </div>
-          <div className="kpi">
-            <div className="l">Days to sell</div>
-            <div className="v">{g.daysToSell}</div>
-            <div className="s">Median, dealer retail</div>
-          </div>
+          {f.viaAuctions ? (
+            <div className="kpi">
+              <div className="l">Auction sales</div>
+              <div className="v">{f.sold}</div>
+              <div className="s">No dealer sales pulled yet</div>
+            </div>
+          ) : (
+            <div className="kpi">
+              <div className="l">Days to sell</div>
+              <div className="v">{g.daysToSell}</div>
+              <div className="s">Median, dealer retail</div>
+            </div>
+          )}
           <div className="kpi">
             <div className="l">For sale now</div>
             <div className="v">{g.active}</div>
-            <div className="s">Asking {usdK(g.activeMedian)} median</div>
+            <div className="s">
+              {g.active > 0 ? `Asking ${usdK(g.activeMedian)} median` : "No dealer listings pulled"}
+            </div>
           </div>
           <div className="kpi">
             <div className="l">Median miles</div>
-            <div className="v">{mi(g.medianMiles)}</div>
-            <div className="s">Listed now {mi(g.activeMedianMiles)}</div>
+            <div className="v">{mi(f.miles)}</div>
+            <div className="s">
+              {f.viaAuctions ? "On sold auction cars" : `Listed now ${mi(g.activeMedianMiles)}`}
+            </div>
           </div>
           <div className="kpi kpi-cta">
             <div className="l">Ready to sell?</div>
