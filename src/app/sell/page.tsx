@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SellPicker } from "@/components/listings/sell-picker";
 import { listSellMakes } from "@/server/queries/sell-catalog";
+import { soft } from "@/server/result";
 
 export const metadata: Metadata = {
   title: "Sell your car",
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
 export const revalidate = 3600;
 
 export default async function SellPage() {
-  const makes = await listSellMakes().catch(() => []);
+  const makes = await listSellMakes().catch(soft("sell makes", []));
   return (
     <div>
       <div className="hero sell-hero">

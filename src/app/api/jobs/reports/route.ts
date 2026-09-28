@@ -26,7 +26,7 @@ async function handle(req: Request) {
   const result = await processReportRequests({ dryRun, limit });
   // Model pages are statically cached for an hour; fresh data must invalidate them.
   revalidatePath("/[make]/[model]", "page");
-  revalidatePath("/markets");
+  revalidatePath("/markets", "layout");
   revalidatePath("/");
   return NextResponse.json({ dryRun, ...result });
 }

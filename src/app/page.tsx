@@ -11,12 +11,17 @@ import { SegmentsTable } from "@/components/market/segments-table";
 import { getMarketTree } from "@/lib/market/tree-source";
 import { listExternalListings } from "@/server/queries/external";
 import { listActiveListings } from "@/server/queries/listings";
+import { soft } from "@/server/result";
 
 /**
  * The home page shows the newest active listings, so it is regenerated every
  * 10 minutes and whenever a listing is created, published, withdrawn or sold.
  * No session is read here on purpose: that keeps the page static at the CDN,
  * so only public (non private-network) listings appear.
+ *
+ * The latest-listings query is the page's core: if it fails the render throws
+ * and ISR keeps serving the last good page instead of a 200 that says there
+ * are no listings. The decorative loads degrade to empty but log through soft().
  */
 export const revalidate = 600;
 
@@ -25,23 +30,25 @@ const EXTERNAL_LIMIT = 4;
 
 export default async function HomePage() {
   const [tree, own, external, picked] = await Promise.all([
-    getMarketTree().catch(() => null),
-    listActiveListings(null, {}, OWN_LIMIT).catch(() => ({ rows: [], nextCursor: null })),
-    listExternalListings({ limit: EXTERNAL_LIMIT }).catch(() => ({ rows: [], nextCursor: null })),
-    listFeatured(env.externalPhotos).catch(() => []),
+    getMarketTree().catch(soft("home market tree", null)),
+    listActiveListings(null, {}, OWN_LIMIT),
+    listExternalListings({ limit: EXTERNAL_LIMIT }).catch(
+      soft("home external", { rows: [], nextCursor: null }),
+    ),
+    listFeatured(env.externalPhotos).catch(soft("home featured", [])),
   ]);
   // Hero rotation: admin picks first, then the most-viewed cars of the week, then newest with photos.
-  const trendingIds = await topViewed(7, 8).catch(() => []);
-  const trending = (await resolveCars(trendingIds, env.externalPhotos, false).catch(() => [])).map(
-    (c) => ({ ...c, views: trendingIds.find((t) => `${t.kind}:${t.refId}` === c.key)?.views }),
-  );
+  const trendingIds = await topViewed(7, 8).catch(soft("home trending ids", []));
+  const trending = (
+    await resolveCars(trendingIds, env.externalPhotos, false).catch(soft("home trending", []))
+  ).map((c) => ({ ...c, views: trendingIds.find((t) => `${t.kind}:${t.refId}` === c.key)?.views }));
   const seen = new Set(picked.map((c) => c.key));
   const heroCars = [
     ...picked,
     ...trending.filter((c) => c.photo && !seen.has(c.key) && seen.add(c.key)),
   ].slice(0, 8);
   if (heroCars.length < 3)
-    for (const c of await autoFeatured(5).catch(() => []))
+    for (const c of await autoFeatured(5).catch(soft("home auto featured", [])))
       if (!seen.has(c.key) && heroCars.length < 5) {
         seen.add(c.key);
         heroCars.push(c);

@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useState } from "react";
+import { Pic } from "./card-photo";
 
 /** Cover image plus thumbnails; click opens a keyboard-navigable viewer. */
 export function PhotoGallery({ photos, title }: { photos: string[]; title: string }) {
@@ -96,22 +96,4 @@ export function PhotoGallery({ photos, title }: { photos: string[]; title: strin
       ) : null}
     </>
   );
-}
-
-function Pic({
-  src,
-  alt,
-  priority,
-  sizes,
-  contain,
-}: {
-  src: string;
-  alt: string;
-  priority?: boolean;
-  sizes: string;
-  contain?: boolean;
-}) {
-  // Own-listing photos are always UrCar Blob uploads, so the optimizer serves them all.
-  const style = { objectFit: contain ? ("contain" as const) : ("cover" as const) };
-  return <Image src={src} alt={alt} fill sizes={sizes} priority={priority} style={style} />;
 }

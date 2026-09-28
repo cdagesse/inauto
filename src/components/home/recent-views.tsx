@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { money } from "@/components/account/money";
+import { CardPhoto } from "@/components/listings/card-photo";
 
 const KEY = "inauto-recent";
 const MAX = 12;
@@ -83,11 +84,7 @@ export function RecentlyViewed({ excludeHref }: { excludeHref?: string }) {
       <div className="car-grid">
         {items.map((it) => (
           <Link key={it.key} href={it.href} className="panel car-card link-card listing-card">
-            <div
-              className="photo"
-              style={it.photo ? { backgroundImage: `url("${it.photo}")` } : undefined}
-              aria-hidden="true"
-            />
+            <CardPhoto src={it.photo} />
             <div className="lab card-meta">
               <span className="meta-main">{it.badge}</span>
             </div>
