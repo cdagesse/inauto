@@ -13,6 +13,19 @@ export function toError(e: unknown): { ok: false; error: string } {
   return fail("Something went wrong. Please try again.");
 }
 
+/**
+ * A `.catch` handler for decorative page data (featured cars, trending, market
+ * tree, catalogs): logs the failure so an outage during ISR regeneration leaves
+ * a signal, then returns the fallback so the page still renders. Core queries
+ * must not use it: let them throw so ISR keeps serving the last good page.
+ */
+export function soft<T>(label: string, fallback: T): (err: unknown) => T {
+  return (err) => {
+    console.error(`[soft] ${label}`, err);
+    return fallback;
+  };
+}
+
 export function slugify(s: string): string {
   return s
     .toLowerCase()
