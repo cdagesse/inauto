@@ -6,6 +6,9 @@ Features and fixes as they ship, newest first. One line per change, with the pul
 
 ### Features
 
+- Phones: Live/Past, result, type and source move inside the filter drawer; the Filter button is a bar pinned to the bottom of the screen (#53)
+- New marbled UrCar logo, dark and light versions (#53)
+
 - Phones: Buy page filters in two tight rows with a compact Filter button and smaller pills; source menu opens as a dropdown (#52)
 
 - Phones: the light/dark toggle and Admin move into the menu panel; the bar keeps logo, garage, avatar and menu (#51)

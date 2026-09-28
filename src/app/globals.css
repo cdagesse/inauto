@@ -3652,3 +3652,54 @@ header.site-head {
     font-size: 22px;
   }
 }
+
+/* phones: live/past, type and source live inside the filter drawer */
+.drawer-scope {
+  display: none;
+}
+@media (max-width: 640px) {
+  .filters > .seg,
+  .filters > .src-menu {
+    display: none;
+  }
+  /* the Filter button becomes a bar pinned to the bottom of the screen */
+  .filters {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    margin: 0;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    /* no backdrop-filter: it would become the containing block for the fixed drawer */
+    background: var(--card);
+    border-top: 1px solid var(--rule);
+  }
+  .filters > .btn {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+    padding: 11px 14px;
+    font-size: 15px;
+  }
+  .buy-page {
+    padding-bottom: 84px;
+  }
+  .drawer-scope {
+    display: grid;
+    gap: 10px;
+    padding-bottom: 12px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--rule-2);
+  }
+  .scope-row {
+    display: grid;
+    gap: 6px;
+  }
+  .scope-row .seg button[aria-pressed="true"] {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+}

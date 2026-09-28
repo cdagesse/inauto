@@ -92,7 +92,7 @@ export default async function ListingsPage({
   };
 
   return (
-    <div>
+    <div className="buy-page">
       <div className="page-head compact buy-head">
         <div className="head-main">
           <div className="eyebrow">Buy</div>
