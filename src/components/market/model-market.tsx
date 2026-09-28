@@ -132,7 +132,10 @@ export function ModelMarket({ snapshot }: { snapshot: MarketSnapshot }) {
       {viaAuctions && (
         <p className="note">
           No dealer sales for the {genRef} have been pulled yet, so these figures come from{" "}
-          {g.auctionSold} auction results. Dealer figures replace them once sales are on file.
+          {g.auctionBasis && g.auctionBasis < (g.auctionSold ?? 0)
+            ? `the ${g.auctionBasis} most recent of ${g.auctionSold} auction results`
+            : `${g.auctionSold} auction results`}
+          . Dealer figures replace them once sales are on file.
         </p>
       )}
 
@@ -235,7 +238,7 @@ export function ModelMarket({ snapshot }: { snapshot: MarketSnapshot }) {
         <h2 className="sec">By model year</h2>
         <p className="sub">
           {snapshot.byYearBasis === "auction"
-            ? "Auction hammer prices by model year; no dealer sales have been pulled yet."
+            ? "Auction hammer prices by model year from the last 12 months of sales (or the latest few); no dealer sales have been pulled yet."
             : viaAuctions
               ? `Dealer sold results by model year. The ${genRef} has no dealer sales yet, so it has no rows here; its hammer results are in the Auction results table.`
               : "Dealer sold results by model year."}

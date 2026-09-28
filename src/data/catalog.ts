@@ -131,6 +131,8 @@ const OCD_MAP: Record<string, OcdOverride> = {
   "Ferrari|F8 Tributo": { line: "F8" },
   "Ferrari|488": { line: "488", not: "Pista" },
   "Ferrari|488 Pista": { line: "488", kw: "Pista" },
+  "Ferrari|360": { line: "360", not: "Stradale" },
+  "Ferrari|360 Challenge Stradale": { line: "360", kw: "Stradale" },
   "Ferrari|458": { line: "458", not: "Speciale" },
   "Ferrari|458 Speciale": { line: "458", kw: "Speciale" },
   "Ferrari|Enzo": { line: null, kw: "Enzo" },
@@ -747,7 +749,16 @@ export const CATALOG: CatalogEntry[] = [
       ["458", 2010, 2015, ["458 Italia", "458 Spider", "458 Speciale"], { model: "458 Italia" }],
       ["458 Speciale", 2014, 2015, ["Speciale", "Aperta"], { model: "458 Speciale" }],
       ["430", 2005, 2009, ["F430", "Scuderia", "16M"], { model: "F430" }],
-      ["360", 1999, 2005, ["360 Modena", "Challenge Stradale", "Spider"], { model: "360 Modena" }],
+      // Visor lists every 360 under model "360", trim "Base"; the Challenge Stradale is a
+      // separate model below and can only be told apart in auction titles.
+      ["360", 1999, 2005, ["360 Modena", "Modena", "Spider"], { model: "360" }],
+      [
+        "360 Challenge Stradale",
+        2003,
+        2004,
+        ["Challenge Stradale", "CS", "360 CS", "Stradale"],
+        { model: "360", trim: "Stradale" },
+      ],
       ["355", 1995, 1999, ["F355", "Berlinetta", "GTS", "Spider"], { model: "F355" }],
       ["348", 1989, 1995, ["348 TB", "348 TS"], { model: "348" }],
       ["328", 1986, 1989, ["328 GTB", "328 GTS"], { model: "328" }],

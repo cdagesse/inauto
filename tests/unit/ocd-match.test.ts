@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { matchOcdRules, ocdLinesFor } from "@/lib/sources/ocd";
+import {
+  encodeOcdKeyword,
+  matchOcdRules,
+  ocdLinesFor,
+  ocdRowMatches,
+  parseOcdAlias,
+} from "@/lib/sources/ocd";
 
 // Two catalog models share one Old Cars Data alias and differ only by years.
 const rules = [
@@ -161,5 +167,90 @@ describe("ocdLinesFor", () => {
     expect(ocdLinesFor({ make: "BMW", model: "M3", keyword: null, excludeKeyword: null })).toEqual([
       "M3",
     ]);
+  });
+});
+
+describe("parseOcdAlias exclude-only patterns", () => {
+  it("reads a stored exclude-only pattern as an exclusion, not a keyword", () => {
+    const enc = encodeOcdKeyword(undefined, "Pista");
+    expect(enc).toBe(" !~ Pista");
+    const a = parseOcdAlias({ rawMake: "Ferrari", rawModel: "488", rawTrimPattern: enc });
+    expect(a).toMatchObject({ keyword: null, excludeKeyword: "Pista" });
+    expect(
+      ocdRowMatches(a, { rawMake: "Ferrari", rawModel: "488", title: "2017 Ferrari 488 GTB" }),
+    ).toBe(true);
+    expect(
+      ocdRowMatches(a, { rawMake: "Ferrari", rawModel: "488", title: "2019 Ferrari 488 Pista" }),
+    ).toBe(false);
+    // A hand-trimmed pattern reads the same way.
+    expect(
+      parseOcdAlias({ rawMake: "Ferrari", rawModel: "488", rawTrimPattern: "!~ Pista" }),
+    ).toMatchObject({
+      keyword: null,
+      excludeKeyword: "Pista",
+    });
+    expect(
+      parseOcdAlias({ rawMake: "Porsche", rawModel: "911", rawTrimPattern: "Turbo !~ Turbo S" }),
+    ).toMatchObject({
+      keyword: "Turbo",
+      excludeKeyword: "Turbo S",
+    });
+  });
+});
+
+describe("one- and two-character keywords match as words", () => {
+  const rule = (modelId: string, kw: string) => ({
+    modelId,
+    source: "ocd",
+    rawMake: "Jaguar",
+    rawModel: "F-TYPE",
+    rawTrimPattern: kw,
+  });
+  it("does not find R inside Convertible, or S/T inside Amethyst", () => {
+    const rules = [rule("r", "R"), rule("base", "")];
+    expect(
+      matchOcdRules(rules, {
+        rawMake: "Jaguar",
+        rawModel: "F-TYPE",
+        title: "2016 Jaguar F-Type R Convertible",
+      }),
+    ).toBe("r");
+    expect(
+      matchOcdRules(rules, {
+        rawMake: "Jaguar",
+        rawModel: "F-TYPE",
+        title: "2014 Jaguar F-Type V8 S Convertible",
+      }),
+    ).toBe("base");
+    const st = [
+      { modelId: "st", source: "ocd", rawMake: "Porsche", rawModel: "911", rawTrimPattern: "S/T" },
+    ];
+    expect(
+      matchOcdRules(st, { rawMake: "Porsche", rawModel: "911", title: "2024 Porsche 911 S/T" }),
+    ).toBe("st");
+    expect(
+      matchOcdRules(st, {
+        rawMake: "Porsche",
+        rawModel: "911",
+        title: "Amethyst Metallic 2024 Porsche 911 Targa 4 GTS",
+      }),
+    ).toBeNull();
+    // Longer keywords stay spacing-insensitive.
+    const rs = [
+      {
+        modelId: "rs",
+        source: "ocd",
+        rawMake: "Porsche",
+        rawModel: "911",
+        rawTrimPattern: "GT3 RS",
+      },
+    ];
+    expect(
+      matchOcdRules(rs, {
+        rawMake: "Porsche",
+        rawModel: "911",
+        title: "2025 Porsche 911 GT3RS Weissach",
+      }),
+    ).toBe("rs");
   });
 });

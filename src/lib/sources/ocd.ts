@@ -117,10 +117,22 @@ export function parseOcdAlias(a: {
   rawModel: string | null;
   rawTrimPattern: string | null;
 }): OcdAlias {
-  const raw = (a.rawTrimPattern ?? "").trim();
+  // Look for the separator before trimming: an exclude-only pattern is stored as
+  // " !~ Pista", and trimming first turned it into the keyword "!~ Pista" (so the base
+  // 488 matched only Pistas). A pattern that starts with "!~" is exclude-only either way.
+  const raw = a.rawTrimPattern ?? "";
   const i = raw.indexOf(OCD_EXCLUDE_SEP);
-  const keyword = (i >= 0 ? raw.slice(0, i) : raw).trim() || null;
-  const excludeKeyword = (i >= 0 ? raw.slice(i + OCD_EXCLUDE_SEP.length) : "").trim() || null;
+  let keyword: string | null;
+  let excludeKeyword: string | null;
+  if (i >= 0) {
+    keyword = raw.slice(0, i).trim() || null;
+    excludeKeyword = raw.slice(i + OCD_EXCLUDE_SEP.length).trim() || null;
+  } else {
+    const t = raw.trim();
+    const bare = t.match(/^!~\s*(.+)$/);
+    keyword = bare ? null : t || null;
+    excludeKeyword = bare ? bare[1]!.trim() || null : null;
+  }
   return { make: a.rawMake, model: (a.rawModel ?? "").trim(), keyword, excludeKeyword };
 }
 
@@ -144,7 +156,12 @@ export function ocdRowMatches(
   if (squash(alias.make) !== squash(row.rawMake)) return false;
   if (alias.model && squash(alias.model) !== squash(row.rawModel)) return false;
   const title = row.title ?? "";
-  if (alias.keyword && !squash(title).includes(squash(alias.keyword))) return false;
+  // A keyword of one or two characters ("R", "GP", "S/T") must stand as a word; longer
+  // ones match spacing-insensitively ("GT3RS" is a GT3 RS, "S 63" an S63).
+  if (alias.keyword) {
+    const k = squash(alias.keyword);
+    if (k.length <= 2 ? !hasWord(title, alias.keyword) : !squash(title).includes(k)) return false;
+  }
   if (alias.excludeKeyword && hasWord(title, alias.excludeKeyword)) return false;
   if (years && row.year != null) {
     if (years.start != null && row.year < years.start) return false;

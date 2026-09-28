@@ -2,6 +2,11 @@ import type { GenerationStats } from "./types";
 
 /** Below this many sold auctions the hammer range shows min to max instead of quartiles. */
 export const AUCTION_THIN = 10;
+/** Hammer figures rest on the last year of sales when at least this many exist… */
+export const AUCTION_RECENT_MIN = 3;
+export const AUCTION_RECENT_DAYS = 365;
+/** …otherwise on the latest few, so an appreciating car never reads at an old median. */
+export const AUCTION_RECENT_FALLBACK = 5;
 
 export interface HeadlineFigures {
   /** True when the generation has no dealer sales and reads from its sold auctions. */

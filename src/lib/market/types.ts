@@ -42,6 +42,8 @@ export interface GenerationStats {
   auctionMedianMiles?: number;
   /** Cars that came to auction (sold or reserve not met). */
   auctionOffered?: number;
+  /** Sold auctions behind the hammer median and range: the last year's, or the latest few. */
+  auctionBasis?: number;
 }
 
 export interface MonthlyPoint {
