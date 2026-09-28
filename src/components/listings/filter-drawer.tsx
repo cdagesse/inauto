@@ -286,6 +286,7 @@ export function FilterDrawer({
               >
                 <option value="">All sources</option>
                 <option value="inauto">UrCar</option>
+                <option value="dealer">Dealers</option>
                 {PLATFORM_KEYS.map((k) => (
                   <option key={k} value={k}>
                     {PLATFORMS[k].name}

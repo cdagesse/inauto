@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { PLATFORM_KEYS } from "@/lib/sources/platforms";
 import { listingFilterSchema } from "./listings-schema";
 import { type ExternalCardData, listExternalListings } from "./queries/external";
+import { type DealerCardData, listDealerListings } from "./queries/dealers";
 import { listActiveListings } from "./queries/listings";
 import { type ActionResult, fail, toError } from "./result";
 
@@ -44,6 +45,27 @@ export async function loadMoreExternal(
       phase: when === "past" ? "past" : "live",
       result: when === "past" ? result : undefined,
     });
+    return { ok: true, data: page };
+  } catch (e) {
+    return toError(e);
+  }
+}
+
+const dealerSchema = listingFilterSchema
+  .omit({ type: true, cursor: true, when: true, result: true })
+  .extend({
+    cursor: z.string().max(160).optional(),
+    limit: z.number().int().min(1).max(48).optional(),
+  });
+
+/** Public, read-only. Next page of dealer inventory listings. */
+export async function loadMoreDealers(
+  raw: unknown,
+): Promise<ActionResult<{ rows: DealerCardData[]; nextCursor: string | null }>> {
+  try {
+    const parsed = dealerSchema.safeParse(raw);
+    if (!parsed.success) return fail("Invalid filter.");
+    const page = await listDealerListings(parsed.data);
     return { ok: true, data: page };
   } catch (e) {
     return toError(e);

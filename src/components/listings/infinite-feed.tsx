@@ -2,13 +2,23 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CarFilter } from "@/lib/listings/filters";
+import type { DealerCardData } from "@/server/queries/dealers";
 import type { ExternalCardData } from "@/server/queries/external";
-import { type ListingFeedRow, loadMoreExternal, loadMoreListings } from "@/server/listings-feed";
+import {
+  type ListingFeedRow,
+  loadMoreDealers,
+  loadMoreExternal,
+  loadMoreListings,
+} from "@/server/listings-feed";
+import { DealerCard } from "./dealer-card";
 import { ExternalCard } from "./external-card";
 import { ListingCard } from "./listing-card";
 
 type Page<T> = { rows: T[]; nextCursor: string | null };
-type Item = { kind: "own"; row: ListingFeedRow } | { kind: "ext"; row: ExternalCardData };
+type Item =
+  | { kind: "own"; row: ListingFeedRow }
+  | { kind: "ext"; row: ExternalCardData }
+  | { kind: "dealer"; row: DealerCardData };
 
 const itemId = (i: Item) => `${i.kind}:${i.row.id}`;
 
@@ -22,13 +32,17 @@ const itemId = (i: Item) => `${i.kind}:${i.row.id}`;
 export function ListingsFeed({
   own,
   external,
+  dealers = { rows: [], nextCursor: null },
   ownFilter,
   externalFilter,
+  dealerFilter = null,
   showPhotos,
   fallbackHref,
 }: {
   own: Page<ListingFeedRow>;
   external: Page<ExternalCardData>;
+  /** Dealer inventory, shown after the auctions. */
+  dealers?: Page<DealerCardData>;
   ownFilter:
     | (CarFilter & {
         type?: "classified" | "auction";
@@ -44,20 +58,23 @@ export function ListingsFeed({
         result?: "sold" | "unsold";
       })
     | null;
+  dealerFilter?: (CarFilter & { limit?: number }) | null;
   showPhotos: boolean;
   fallbackHref: string | null;
 }) {
   const [items, setItems] = useState<Item[]>(() => [
     ...own.rows.map((row): Item => ({ kind: "own", row })),
     ...external.rows.map((row): Item => ({ kind: "ext", row })),
+    ...dealers.rows.map((row): Item => ({ kind: "dealer", row })),
   ]);
   const [ownCursor, setOwnCursor] = useState(ownFilter ? own.nextCursor : null);
   const [extCursor, setExtCursor] = useState(externalFilter ? external.nextCursor : null);
+  const [dealerCursor, setDealerCursor] = useState(dealerFilter ? dealers.nextCursor : null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const sentinel = useRef<HTMLDivElement>(null);
   const inflight = useRef(false);
-  const hasMore = !!ownCursor || !!extCursor;
+  const hasMore = !!ownCursor || !!extCursor || !!dealerCursor;
 
   const append = useCallback((next: Item[]) => {
     setItems((prev) => {
@@ -83,10 +100,25 @@ export function ListingsFeed({
         append(r.data.rows.map((row) => ({ kind: "ext", row })));
         setExtCursor(r.data.nextCursor);
       } else setError(r.error);
+    } else if (dealerCursor && dealerFilter) {
+      const r = await loadMoreDealers({ ...dealerFilter, cursor: dealerCursor });
+      if (r.ok) {
+        append(r.data.rows.map((row) => ({ kind: "dealer", row })));
+        setDealerCursor(r.data.nextCursor);
+      } else setError(r.error);
     }
     setBusy(false);
     inflight.current = false;
-  }, [hasMore, ownCursor, ownFilter, extCursor, externalFilter, append]);
+  }, [
+    hasMore,
+    ownCursor,
+    ownFilter,
+    extCursor,
+    externalFilter,
+    dealerCursor,
+    dealerFilter,
+    append,
+  ]);
 
   useEffect(() => {
     const el = sentinel.current;
@@ -107,8 +139,10 @@ export function ListingsFeed({
         {items.map((i) =>
           i.kind === "own" ? (
             <ListingCard key={itemId(i)} l={i.row} highlight />
-          ) : (
+          ) : i.kind === "ext" ? (
             <ExternalCard key={itemId(i)} l={i.row} showPhotos={showPhotos} />
+          ) : (
+            <DealerCard key={itemId(i)} l={i.row} />
           ),
         )}
       </div>
