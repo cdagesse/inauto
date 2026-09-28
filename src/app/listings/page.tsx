@@ -96,10 +96,10 @@ export default async function ListingsPage({
           ...carFilter,
           cursor: dcursor,
           limit: filter.q ? 36 : source === "dealer" ? 24 : 12,
-        }).catch(soft("listings dealers", { rows: [], nextCursor: null }))
-      : Promise.resolve({ rows: [], nextCursor: null }),
+        }).catch(soft("listings dealers", { rows: [], nextCursor: null, truncated: false }))
+      : Promise.resolve({ rows: [], nextCursor: null, truncated: false }),
     countLiveBySource().catch(soft("listings live counts", {} as Record<string, number>)),
-    countDealerListings().catch(soft("listings dealer count", 0)),
+    past ? Promise.resolve(0) : countDealerListings().catch(soft("listings dealer count", 0)),
     listSellMakes().catch(soft("listings makes", [])),
   ]);
   const liveTotal = Object.values(liveCounts).reduce((a, b) => a + b, 0);
@@ -327,9 +327,13 @@ export default async function ListingsPage({
                   ? "Ended without a sale, newest first, with the high bid."
                   : "Finished auctions and sales, newest first."
               : source === "dealer"
-                ? `${dealerTotal.toLocaleString("en-US")} listed at dealers · asking prices, buy from the dealer`
+                ? `${chips.length ? "Dealer listings matching your filters" : `${dealerTotal.toLocaleString("en-US")} listed at dealers`} · asking prices, buy from the dealer`
                 : liveTotal > 0
-                  ? `${liveTotal} live on the platforms · bidding happens there${showDealers && dealers.rows.length ? " · dealer listings follow" : ""}`
+                  ? showExternal
+                    ? `${liveTotal} live on the platforms · bidding happens there${showDealers && dealers.rows.length && external.rows.length ? " · dealer listings follow" : ""}`
+                    : showDealers && dealers.rows.length
+                      ? `${dealers.rows.length}${dealers.nextCursor ? "+" : ""} at dealers · asking prices`
+                      : `${liveTotal} live on the platforms · bidding happens there`
                   : showOwn && own.rows.length === 0
                     ? "No UrCar listings match yet."
                     : null}
@@ -364,7 +368,24 @@ export default async function ListingsPage({
           </div>
         ) : null}
         {own.rows.length === 0 && external.rows.length === 0 && dealers.rows.length === 0 ? (
-          past ? (
+          source === "dealer" && (past || filter.type === "auction") ? (
+            <p className="note" style={{ padding: "24px 0" }}>
+              Dealer listings are asking-price sales, so there are no dealer auctions or past dealer
+              results.{" "}
+              <Link
+                href={qs({
+                  type: undefined,
+                  when: undefined,
+                  result: undefined,
+                  cursor: undefined,
+                  xcursor: undefined,
+                })}
+              >
+                Show live dealer listings
+              </Link>
+              .
+            </p>
+          ) : past ? (
             <p className="note" style={{ padding: "24px 0" }}>
               No finished auctions match this filter yet.
             </p>
@@ -386,7 +407,7 @@ export default async function ListingsPage({
                 ? { ...carFilter, limit: filter.q ? 36 : source === "dealer" ? 24 : 12 }
                 : null
             }
-            searchTruncated={own.truncated || external.truncated}
+            searchTruncated={own.truncated || external.truncated || dealers.truncated}
             ownFilter={
               showOwn ? { type: filter.type, ...carFilter, when: filter.when, result } : null
             }

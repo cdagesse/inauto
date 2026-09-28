@@ -377,6 +377,9 @@ async function pull(
             fetchImpl,
             // A routine refresh wants recent sold rows and a sample of inventory, not every page.
             maxPages: po.maxPages ?? (po.initial ? 50 : 10),
+            // Inventory is read to the end (up to 5,000 cars) so the snapshot means "listed
+            // now"; sold walks keep the smaller cap.
+            activeMaxPages: 50,
             deadline: po.deadline,
           });
           const days = po.initial ? po.initialSoldDays : po.soldWindowDays;
@@ -889,7 +892,9 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<NightlySumm
               .returning({ id: dealerSales.id });
             s.inserted.sold += res.length;
           }
-          for (const rows of chunk(p.active, UPSERT_CHUNK)) {
+          // A walk cut by the deadline or allowance is partial; storing it would make a
+          // short list the model's newest snapshot and hide cars that are still for sale.
+          for (const rows of p.stopped ? [] : chunk(p.active, UPSERT_CHUNK)) {
             const res = await db
               .insert(dealerActive)
               .values(rows.map((r) => ({ ...toDealerInsert(m, r), snapshotDate: dateOnly(now) })))

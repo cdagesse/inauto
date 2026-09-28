@@ -1,0 +1,2 @@
+-- Trigram index for the dealer inventory search (`<<%` on the same immutable expression the query uses).
+CREATE INDEX IF NOT EXISTS "dealer_active_search_trgm_idx" ON "dealer_active" USING gin (lower(coalesce("year"::text, '') || ' ' || coalesce("raw_json"->>'make', '') || ' ' || coalesce("raw_json"->>'model', '') || ' ' || coalesce("raw_json"->>'trim', '') || ' ' || coalesce("dealer_name", '')) gin_trgm_ops);
