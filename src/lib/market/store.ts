@@ -132,7 +132,16 @@ export async function rebuildAllSnapshots(
   now = new Date(),
   opts: { deadline?: number } = {},
 ): Promise<{ built: number; failed: string[]; skipped: number }> {
+  // Stalest first, so a capped run covers a different set of models each night.
   const keys = await listModelsWithData();
+  const builtAt = new Map(
+    (
+      await db
+        .select({ modelId: marketSnapshots.modelId, builtAt: marketSnapshots.builtAt })
+        .from(marketSnapshots)
+    ).map((r) => [r.modelId, r.builtAt.getTime()]),
+  );
+  keys.sort((a, b) => (builtAt.get(a.id) ?? 0) - (builtAt.get(b.id) ?? 0));
   let built = 0;
   let skipped = 0;
   const failed: string[] = [];

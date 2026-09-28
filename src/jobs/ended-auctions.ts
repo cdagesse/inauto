@@ -103,7 +103,13 @@ export async function sweepEndedAuctions(opts: EndedSweepOptions = {}): Promise<
       if (e instanceof BudgetExceeded) {
         out.budgetStopped = e.message;
         log(`stop: ${e.message}`);
-      } else throw e;
+      } else {
+        // Pages already fetched were paid for and stored; ingest them and record the failure
+        // (the run is not ok, so the next window still covers this one).
+        const msg = (e instanceof Error ? e.message : String(e)).replace(/\s+/g, " ").slice(0, 300);
+        out.errors.push(msg);
+        log(`error: ${msg}; keeping ${rows.length} rows already pulled`);
+      }
     }
     out.pulled = rows.length;
     const ing = await ingestEndedAuctions(db, rows, rules, byId, now);

@@ -416,7 +416,7 @@ export function createOcdClient(o: OcdClientOptions) {
       body: res.body,
     });
     if (!res.ok) throw new OcdApiError(path, res.status, errorDetail(res.body));
-    // OCD's own quota (1,000 calls per plan month, resetting on their cycle, not the
+    // OCD's own quota (per plan month, 10,000 on the current plan, resetting on their cycle, not the
     // calendar month) is the real limit: stop the run when it reports nothing left.
     const remaining = Number(res.rateLimit?.["x-ratelimit-remaining"] ?? NaN);
     if (Number.isFinite(remaining) && remaining <= 0) {

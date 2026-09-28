@@ -57,6 +57,8 @@ export interface LiveAuctionsSummary {
   pages: number;
   truncated: boolean;
   budgetStopped: string | null;
+  /** Why no API walk happened (no key, or a catalog-scoped hand run). */
+  skipped: string | null;
   errors: string[];
 }
 
@@ -114,7 +116,8 @@ export async function loadCatalog(
       years: {
         start:
           m.yearStart ?? (allGens.length ? Math.min(...allGens.map((g) => g.yearStart)) : null),
-        end: m.yearEnd ?? (allGens.length ? Math.max(...allGens.map((g) => g.yearEnd)) : null),
+        // The seeded catch-all generation ends at the seed year, so an open-ended model stays open.
+        end: m.yearEnd ?? (curated.length ? Math.max(...curated.map((g) => g.yearEnd)) : null),
       },
       reportStatus: m.reportStatus,
     });
@@ -260,6 +263,10 @@ async function pull(
 ): Promise<{
   rows: NormalizedLiveRow[];
   budgetStopped: string | null;
+  /** Why no walk happened (no key); the run must not anchor the next window. */
+  skipped: string | null;
+  /** A non-budget failure mid-walk; rows already pulled are still returned. */
+  error: string | null;
   pages: number;
   truncated: boolean;
 }> {
@@ -267,7 +274,7 @@ async function pull(
   let walk = { pages: 0, truncated: false };
   if (!env.OCD_API_KEY) {
     log("ocd: skipped (no key)");
-    return { rows, budgetStopped: null, ...walk };
+    return { rows, budgetStopped: null, skipped: "OCD_API_KEY not set", error: null, ...walk };
   }
   try {
     // Sweeps stop at a share of the plan so on-demand report builds keep the rest.
@@ -308,13 +315,16 @@ async function pull(
       },
       log,
     );
-    return { rows, budgetStopped: null, ...walk };
+    return { rows, budgetStopped: null, skipped: null, error: null, ...walk };
   } catch (e) {
     if (e instanceof BudgetExceeded) {
       log(`stop: ${e.message}`);
-      return { rows, budgetStopped: e.message, ...walk };
+      return { rows, budgetStopped: e.message, skipped: null, error: null, ...walk };
     }
-    throw e;
+    // Pages already fetched were paid for and stored; hand them back with the failure.
+    const error = (e instanceof Error ? e.message : String(e)).replace(/\s+/g, " ").slice(0, 300);
+    log(`error: ${error}; keeping ${rows.length} rows already pulled`);
+    return { rows, budgetStopped: null, skipped: null, error, ...walk };
   }
 }
 
@@ -349,6 +359,7 @@ export async function syncLiveAuctions(
   let budgetStopped: string | null = null;
   let pages = 0;
   let truncated = false;
+  let skipped: string | null = null;
 
   try {
     const { rules, byId } = await loadCatalog(db);
@@ -356,9 +367,14 @@ export async function syncLiveAuctions(
     if (!dryRun) {
       const res = await pull(db, scope, rules, log, now, opts.fetchImpl);
       budgetStopped = res.budgetStopped;
+      skipped = res.skipped;
+      if (res.error) errors.push(`ocd: ${res.error}`);
       pages = res.pages;
       truncated = res.truncated;
-      if (truncated) log(`page cap hit after ${pages} pages; the next sweep continues`);
+      if (truncated)
+        log(
+          `page cap hit after ${pages} pages; rows beyond it are picked up when they next change or by the backfill job`,
+        );
       pulled = res.rows.length;
       // Dedupe within the pull (paging overlap) on source+sourceId, last one wins.
       const uniq = new Map<string, NormalizedLiveRow>();
@@ -435,6 +451,7 @@ export async function syncLiveAuctions(
     pages,
     truncated,
     budgetStopped,
+    skipped,
     errors,
   };
   if (jobRunId) {
@@ -443,10 +460,10 @@ export async function syncLiveAuctions(
         .update(jobRuns)
         .set({
           finishedAt: new Date(),
-          // A budget stop did not cover its window, so it must not anchor the next one.
-          ok: errors.length === 0 && budgetStopped == null,
+          // A budget stop or a skipped walk did not cover its window, so it must not anchor the next one.
+          ok: errors.length === 0 && budgetStopped == null && skipped == null,
           summary,
-          error: errors[0] ?? budgetStopped ?? null,
+          error: errors[0] ?? budgetStopped ?? skipped ?? null,
           changed: upserted + markedEnded + reconciled,
         })
         .where(eq(jobRuns.id, jobRunId));

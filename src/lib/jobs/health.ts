@@ -284,9 +284,16 @@ export function describeRun(name: string, summary: unknown, error: string | null
           `${n(num(rotation, "pulled"))} of ${n(num(rotation, "eligible"))} models refreshed (${plural(num(rotation, "visorCalls"), "Visor call")})`,
         );
         if (num(rotation, "failed")) parts.push(`${n(num(rotation, "failed"))} failed`);
-        if (rotation["budgetStopped"] === true) parts.push("Visor budget reached");
+        const stoppedBy = str(rotation, "stoppedBy");
+        const reason =
+          stoppedBy === "allowance"
+            ? "call allowance reached"
+            : stoppedBy === "budget"
+              ? "Visor budget reached"
+              : "time cap hit";
         if (num(rotation, "remaining"))
-          parts.push(`stopped early with ${plural(num(rotation, "remaining"), "model")} left`);
+          parts.push(`${reason}, ${plural(num(rotation, "remaining"), "model")} left`);
+        else if (rotation["budgetStopped"] === true) parts.push("Visor budget reached");
         if (num(rotation, "cleaned")) parts.push(`${n(num(rotation, "cleaned"))} re-cleaned`);
       }
       if (unmatched) parts.push(`${n(unmatched)} unmatched`);
@@ -309,6 +316,8 @@ export function describeRun(name: string, summary: unknown, error: string | null
         `${n(ended)} ended`,
       );
       if (reconciled) parts.push(`${n(reconciled)} reconciled`);
+      const liveSkipped = str(s, "skipped");
+      if (liveSkipped) parts.push(`skipped: ${liveSkipped}`);
       if (typeof s.pages === "number") parts.push(plural(num(s, "pages"), "page"));
       if (s.truncated === true) parts.push("page cap hit");
       const stop = str(s, "budgetStopped");

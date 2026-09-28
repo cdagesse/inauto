@@ -31,6 +31,10 @@ const schema = z.object({
   /** Every catalog model gets a Visor refresh about this often; the nightly pulls 1/N of them. */
   VISOR_REFRESH_DAYS: z.coerce.number().int().min(1).max(90).default(14),
   OCD_API_KEY: optionalString,
+  /**
+   * Old Cars Data calls per calendar month. The 15-minute live sweep plus the 6-hourly
+   * ended sweep need about 3,700 and stop at 80% of this; set it to the plan size (10,000).
+   */
   OCD_MONTHLY_BUDGET: z.coerce.number().int().positive().default(10),
   BLOB_READ_WRITE_TOKEN: optionalString,
   /** Claude API key for the listing description assistant; the feature hides without it. */

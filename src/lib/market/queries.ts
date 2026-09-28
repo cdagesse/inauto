@@ -137,9 +137,11 @@ export async function loadSnapshotInput(
 }
 
 /** Models that have a ready report or any market rows, for the index page. */
-export async function listModelsWithData(): Promise<{ makeSlug: string; modelSlug: string }[]> {
+export async function listModelsWithData(): Promise<
+  { id: string; makeSlug: string; modelSlug: string }[]
+> {
   const rows = await db
-    .select({ makeSlug: makes.slug, modelSlug: models.slug })
+    .select({ id: models.id, makeSlug: makes.slug, modelSlug: models.slug })
     .from(models)
     .innerJoin(makes, eq(models.makeId, makes.id))
     .where(
