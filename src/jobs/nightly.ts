@@ -64,6 +64,8 @@ export interface ModelSummary {
   budgetStopped: string[];
   /** Source failures for this model (status + short detail, never a key). The other source still runs. */
   errors: string[];
+  /** Rows actually written; duplicates skipped by ON CONFLICT DO NOTHING are not counted. 0 on dry runs. */
+  inserted: { sold: number; active: number; auctions: number };
 }
 
 /** Rows removed by the retention pass, per table. Absent on dry runs and on-demand report builds. */
@@ -611,7 +613,7 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<NightlySumm
 
   const [run] = await db
     .insert(jobRuns)
-    .values({ name: "nightly", dryRun, startedAt: now })
+    .values({ name: opts.modelSlugs?.length ? "report-build" : "nightly", dryRun, startedAt: now })
     .returning({ id: jobRuns.id });
   const jobRunId = run?.id ?? null;
   log(`start ${dryRun ? "(dry run)" : "(LIVE)"} job_run=${jobRunId}`);
@@ -642,6 +644,7 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<NightlySumm
         warnings: [],
         budgetStopped: [],
         errors: [],
+        inserted: { sold: 0, active: 0, auctions: 0 },
       };
       try {
         if (dryRun) {
@@ -658,26 +661,32 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<NightlySumm
 
           // Dedupe on the unique indexes: one row per source listing / per source+id.
           if (p.sold.length) {
-            await db
+            const res = await db
               .insert(dealerSales)
               .values(p.sold.map((r) => ({ ...toDealerInsert(m, r), soldDate: r.soldDate })))
-              .onConflictDoNothing({ target: dealerSales.sourceListingId });
+              .onConflictDoNothing({ target: dealerSales.sourceListingId })
+              .returning({ id: dealerSales.id });
+            s.inserted.sold = res.length;
           }
           if (p.active.length) {
-            await db
+            const res = await db
               .insert(dealerActive)
               .values(
                 p.active.map((r) => ({ ...toDealerInsert(m, r), snapshotDate: dateOnly(now) })),
               )
               .onConflictDoNothing({
                 target: [dealerActive.sourceListingId, dealerActive.snapshotDate],
-              });
+              })
+              .returning({ id: dealerActive.id });
+            s.inserted.active = res.length;
           }
           if (p.auctions.length) {
-            await db
+            const res = await db
               .insert(auctionResults)
               .values(p.auctions.map((r) => toAuctionInsert(m, r)))
-              .onConflictDoNothing({ target: [auctionResults.source, auctionResults.sourceId] });
+              .onConflictDoNothing({ target: [auctionResults.source, auctionResults.sourceId] })
+              .returning({ id: auctionResults.id });
+            s.inserted.auctions = res.length;
           }
         }
 
@@ -733,6 +742,10 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<NightlySumm
         ok: errors.length === 0,
         summary,
         error: errors.join("\n") || null,
+        changed: summaries.reduce(
+          (a, s) => a + s.inserted.sold + s.inserted.active + s.inserted.auctions,
+          0,
+        ),
       })
       .where(eq(jobRuns.id, jobRunId));
   }

@@ -78,6 +78,13 @@
       "when": 1790561901084,
       "tag": "0010_bent_skaar",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790564338009,
+      "tag": "0011_even_firelord",
+      "breakpoints": true
     }
   ]
 }

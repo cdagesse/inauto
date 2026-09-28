@@ -445,16 +445,22 @@ export const apiBudgets = pgTable(
   (t) => [primaryKey({ columns: [t.source, t.month] })],
 );
 
-export const jobRuns = pgTable("job_run", {
-  id: id(),
-  name: text("name").notNull(),
-  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
-  finishedAt: timestamp("finished_at", { withTimezone: true }),
-  ok: boolean("ok"),
-  dryRun: boolean("dry_run").notNull().default(true),
-  summary: jsonb("summary"),
-  error: text("error"),
-});
+export const jobRuns = pgTable(
+  "job_run",
+  {
+    id: id(),
+    name: text("name").notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    ok: boolean("ok"),
+    dryRun: boolean("dry_run").notNull().default(true),
+    summary: jsonb("summary"),
+    error: text("error"),
+    /** Rows written or items handled; 0 for a heartbeat that found nothing to do. */
+    changed: integer("changed"),
+  },
+  (t) => [index("job_run_name_started_idx").on(t.name, t.startedAt)],
+);
 
 /* ------------------------------------------------------------------ */
 /* Marketplace: listings, auctions, private networks                   */

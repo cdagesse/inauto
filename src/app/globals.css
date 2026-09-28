@@ -3506,3 +3506,125 @@ header.site-head {
     padding-top: 16px;
   }
 }
+
+/* admin health */
+.health-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  padding-top: 8px;
+}
+.health-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.health-card .head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.health-card .what {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.health-card .detail {
+  font-size: 14px;
+  color: var(--ink);
+}
+.health-card .links {
+  display: flex;
+  gap: 12px;
+  font-size: 13px;
+  margin-top: 2px;
+}
+.health-card .flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.health-warn {
+  border-color: color-mix(in srgb, var(--down) 60%, transparent);
+  color: var(--down);
+  font-size: 14px;
+  margin: 8px 0 4px;
+}
+.health-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.health-line {
+  font-size: 13px;
+  min-width: 280px;
+  max-width: 520px;
+}
+.health-errors {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+.budget-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--rule-2);
+  overflow: hidden;
+}
+.budget-bar > i {
+  display: block;
+  height: 100%;
+  background: var(--up);
+}
+.budget-bar.hot > i {
+  background: var(--down);
+}
+.kv {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 6px 14px;
+  margin: 0;
+  font-size: 13px;
+}
+.kv > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--rule-2);
+  padding: 4px 0;
+}
+.kv dt {
+  color: var(--ink-3);
+}
+.kv dd {
+  margin: 0;
+  word-break: break-word;
+  text-align: right;
+}
+.run-json {
+  margin-top: 10px;
+  font-size: 11.5px;
+  max-height: 520px;
+  overflow: auto;
+  background: var(--card);
+  border: 1px solid var(--rule-2);
+  border-radius: 8px;
+  padding: 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+@media (max-width: 900px) {
+  .health-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 520px) {
+  .health-grid {
+    grid-template-columns: 1fr;
+  }
+}

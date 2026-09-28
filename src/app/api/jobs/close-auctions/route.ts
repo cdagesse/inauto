@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { requireCron } from "@/lib/cron-auth";
 import { closeEndedAuctions } from "@/jobs/close-auctions";
+import { recordRun } from "@/jobs/lib/run";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -12,7 +13,13 @@ async function handle(req: Request) {
   const denied = requireCron(req);
   if (denied) return denied;
   try {
-    const summary = await closeEndedAuctions({ db });
+    const summary = await recordRun(
+      db,
+      "close-auctions",
+      { dryRun: false },
+      () => closeEndedAuctions({ db }),
+      (s) => ({ ok: true, changed: s.closed, summary: s }),
+    );
     if (summary.closed > 0) {
       revalidatePath("/listings");
       for (const { id } of summary.ids) revalidatePath(`/listings/${id}`);
