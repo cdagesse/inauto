@@ -21,6 +21,7 @@ import { createVisorClient, VisorDeadline } from "@/lib/sources/visor";
 import type { NormalizedAuctionRow, NormalizedDealerRow } from "@/lib/sources/types";
 import { classify, groupReclassified, type Reclassified } from "./lib/clean";
 import { runChecks, type CheckInput, type CheckWarning } from "./lib/check";
+import { chunk, UPSERT_CHUNK } from "./lib/batch";
 import { pruneInBatches, RETENTION_DAYS } from "./lib/retention";
 import {
   pickRotation,
@@ -85,6 +86,8 @@ export interface RotationSummary {
   budgetStopped: boolean;
   /** Why the night stopped before perNight pulls, if it did. */
   stoppedBy: "allowance" | "time" | "budget" | null;
+  /** Models that got their first report tonight. */
+  promoted: number;
 }
 
 export interface ModelSummary {
@@ -137,6 +140,7 @@ interface CatalogModel {
   makeSlug: string;
   name: string;
   reportStatus: string;
+  published: boolean;
   yearStart: number | null;
   yearEnd: number | null;
   dealerPulledAt: Date | null;
@@ -153,6 +157,7 @@ async function loadCatalog(db: Db): Promise<CatalogModel[]> {
       makeName: makes.name,
       makeSlug: makes.slug,
       reportStatus: models.reportStatus,
+      published: models.published,
       yearStart: models.yearStart,
       yearEnd: models.yearEnd,
       dealerPulledAt: models.dealerPulledAt,
@@ -268,6 +273,20 @@ function yearRange(m: CatalogModel) {
   return { start, end };
 }
 
+/** A model has something to report: at least one usable dealer sale or auction result. */
+export async function modelHasData(db: Db, modelId: string): Promise<boolean> {
+  const [d] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(dealerSales)
+    .where(and(eq(dealerSales.modelId, modelId), isNull(dealerSales.excludedReason)));
+  if ((d?.n ?? 0) > 0) return true;
+  const [a] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(auctionResults)
+    .where(and(eq(auctionResults.modelId, modelId), isNull(auctionResults.excludedReason)));
+  return (a?.n ?? 0) > 0;
+}
+
 /** Thrown from the budget recorder once a model would exceed the night's remaining Visor allowance. */
 class VisorAllowance extends Error {
   constructor(allowed: number) {
@@ -303,7 +322,12 @@ interface PullOptions {
   deadline?: number;
   /** Visor calls this model may still spend tonight; the walk stops at it (the model stays due). */
   maxCalls?: number;
+  /** Pages per Visor query; defaults to 50 on report builds and 10 on routine refreshes. */
+  maxPages?: number;
 }
+
+/** A model's first pull in the rotation: a year of sales, up to 2,000 rows per query. */
+const FIRST_PULL_PAGES = 20;
 
 /**
  * Pull from both sources for one model. Each source runs in its own try/catch: a Visor
@@ -352,7 +376,7 @@ async function pull(
             },
             fetchImpl,
             // A routine refresh wants recent sold rows and a sample of inventory, not every page.
-            maxPages: po.initial ? 50 : 10,
+            maxPages: po.maxPages ?? (po.initial ? 50 : 10),
             deadline: po.deadline,
           });
           const days = po.initial ? po.initialSoldDays : po.soldWindowDays;
@@ -716,7 +740,9 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<NightlySumm
   const perModel = (m: CatalogModel): PullOptions => {
     if (po.initial) return po;
     const days = soldWindowDays(m.dealerPulledAt, now, refreshDays);
-    return days ? { ...po, soldWindowDays: days, deadline } : { ...po, initial: true, deadline };
+    return days
+      ? { ...po, soldWindowDays: days, deadline }
+      : { ...po, initial: true, deadline, maxPages: FIRST_PULL_PAGES };
   };
 
   const [run] = await db
@@ -740,7 +766,9 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<NightlySumm
       cleanable = catalog.filter(
         (m) => m.reportStatus === "ready" || m.reportStatus === "building",
       );
-      eligible = cleanable.filter((m) => m.aliases.some((a) => a.source === "visor"));
+      // Every published model turns over, so the whole catalog gets a report and keeps it
+      // fresh; a model with no report yet gets one after its first successful pull.
+      eligible = catalog.filter((m) => m.published && m.aliases.some((a) => a.source === "visor"));
       const r = pickRotation(eligible, now, refreshDays);
       perNight = r.perNight;
       // The rotation keeps to its share of the month and a nightly allowance, so report
@@ -764,6 +792,7 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<NightlySumm
         allowance,
         budgetStopped: allowance === 0,
         stoppedBy: allowance === 0 ? "budget" : null,
+        promoted: 0,
       };
       catalog = env.VISOR_API_KEY && allowance > 0 ? r.queue : [];
       if (!env.VISOR_API_KEY) log("rotation: no Visor key; nothing to refresh");
@@ -850,40 +879,64 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<NightlySumm
           for (const err of p.errors) errors.push(`${s.model}: ${err}`);
 
           // Dedupe on the unique indexes: one row per source listing / per source+id.
-          if (p.sold.length) {
+          // Chunked: a first pull can be thousands of rows and Postgres caps one statement
+          // at 65,535 bind parameters.
+          for (const rows of chunk(p.sold, UPSERT_CHUNK)) {
             const res = await db
               .insert(dealerSales)
-              .values(p.sold.map((r) => ({ ...toDealerInsert(m, r), soldDate: r.soldDate })))
+              .values(rows.map((r) => ({ ...toDealerInsert(m, r), soldDate: r.soldDate })))
               .onConflictDoNothing({ target: dealerSales.sourceListingId })
               .returning({ id: dealerSales.id });
-            s.inserted.sold = res.length;
+            s.inserted.sold += res.length;
           }
-          if (p.active.length) {
+          for (const rows of chunk(p.active, UPSERT_CHUNK)) {
             const res = await db
               .insert(dealerActive)
-              .values(
-                p.active.map((r) => ({ ...toDealerInsert(m, r), snapshotDate: dateOnly(now) })),
-              )
+              .values(rows.map((r) => ({ ...toDealerInsert(m, r), snapshotDate: dateOnly(now) })))
               .onConflictDoNothing({
                 target: [dealerActive.sourceListingId, dealerActive.snapshotDate],
               })
               .returning({ id: dealerActive.id });
-            s.inserted.active = res.length;
+            s.inserted.active += res.length;
           }
-          if (p.auctions.length) {
+          for (const rows of chunk(p.auctions, UPSERT_CHUNK)) {
             const res = await db
               .insert(auctionResults)
-              .values(p.auctions.map((r) => toAuctionInsert(m, r)))
+              .values(rows.map((r) => toAuctionInsert(m, r)))
               .onConflictDoNothing({ target: [auctionResults.source, auctionResults.sourceId] })
               .returning({ id: auctionResults.id });
-            s.inserted.auctions = res.length;
+            s.inserted.auctions += res.length;
           }
         }
 
         // Stamp the pull so the rotation moves on; a Visor failure or budget stop leaves the model due.
         if (!dryRun && visorOk) {
           await db.update(models).set({ dealerPulledAt: now }).where(eq(models.id, m.id));
-          if (rotation) rotation.pulled++;
+          if (rotation) {
+            rotation.pulled++;
+            // First pull done and there is data to show: the report goes live tonight
+            // (the snapshot pass after the pull builds it).
+            if (
+              m.reportStatus !== "ready" &&
+              m.reportStatus !== "building" &&
+              (await modelHasData(db, m.id))
+            ) {
+              const promoted = await db
+                .update(models)
+                .set({ reportStatus: "ready", reportBuiltAt: now, reportError: null })
+                .where(
+                  and(
+                    eq(models.id, m.id),
+                    inArray(models.reportStatus, ["none", "failed", "requested"]),
+                  ),
+                )
+                .returning({ id: models.id });
+              if (promoted.length) {
+                rotation.promoted++;
+                log(`${s.model}: report ready`);
+              }
+            }
+          }
         }
 
         const c = await clean(db, m, now, dryRun);

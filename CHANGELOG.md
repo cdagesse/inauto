@@ -6,6 +6,8 @@ Features and fixes as they ship, newest first. One line per change, with the pul
 
 ### Features
 
+- Market reports for the whole catalog: the nightly Visor rotation now covers every published model, not only those with a report, and a model's report goes live after its first successful pull (a year of sales, capped at 2,000 rows per query); the Health headline counts new reports (#70)
+
 - Old Cars Data refresh: live auctions sweep every 15 minutes (bids, end times, new listings), a new ended-results sweep every 6 hours for final prices on every platform, and the nightly no longer pulls auction results per model; Visor dealer data refreshes each model about every 14 days on a rotation held to a time cap and a nightly call allowance, so the nightly finishes inside the 5-minute limit; sweeps keep 20% of each API plan for report builds (#69)
 - Auctions are matched to the catalog model whose years contain the car, so sibling models that share a name (Corvette C1 to C8, M3 and M3 E46, Supra generations) each get their own results; `scripts/repair-auction-models.sql` re-files the 649 rows written before and groups the 2,893 rows left without a generation (#69)
 
