@@ -1,4 +1,4 @@
-# InAuto changelog
+# UrCar changelog
 
 Features and fixes as they ship, newest first. One line per change, with the pull request.
 
@@ -47,8 +47,26 @@ Features and fixes as they ship, newest first. One line per change, with the pul
 - Title vetting through Vitu: NMVTIS vehicle history (brands, title history, junk/salvage) and MVR registered owner, lien and registration checks; buyer-facing title card (#23, #25–#33)
 - Deploys run database migrations before the new code goes live (#22)
 
+### Hardening and performance
+
+- Purchase proof uploads are private: files land in a private blob path owned by the buyer, the purchase page serves them through a signed-in route, and a nightly sweep deletes blobs no purchase references after 48 hours (#64)
+- Price guidance is computed on the server when a listing is created; the browser can no longer send its own guidance figures (#64)
+- Accepting or declining a purchase runs in one transaction with the purchase and listing rows locked, so two responses cannot both mark the car sold (#64)
+- Video previews in the purchase form show again (CSP now allows local media) (#64)
+- Jobs: external auctions upsert in batches of 200 instead of one row at a time; Vitu calls time out after 15 s and only reads are retried; title vetting locks each order so two runs never process the same one; all seven cron routes share one secret check; `/api/health` reports why the database check failed (#63)
+- One money formatter module for the whole app; dead exports, unused types and three unused packages removed; `pnpm lint:dead` (knip) finds dead code (#62)
+- Buy page paging cursor handles auctions with no end time and old cursors fall back to page one; sign-in and admin "back" links only accept same-site paths; listing photos must come from UrCar uploads; every admin query checks admin first (#61)
+- Cards and the home hero render real images through Next image optimisation; the first hero photo is marked high priority and the next slide is warmed before it shows; the filter drawer loads models only when opened; zod no longer ships to the browser (#60)
+- Nightly job reads only the columns it needs and updates reclassified rows in batches; raw fetches older than 30 days, views older than 90 days and job runs older than 90 days are pruned; a failed snapshot write fails the build; market report pages revalidate together (#59)
+- Branded error, not-found and last-resort error pages; a data outage during page regeneration is logged and keeps the last good page instead of a blank section (#58)
+- Car pages read the listing once for the page and its metadata; the VIN timeline and market blocks stream in after the main content (#57)
+- Database indexes for VIN lookups, model reports and the view counter (#56)
+- `globals.css` deduplicated: duplicate valuation and sticky-header blocks and unreachable phone rules removed; the Buy filter row is sticky from 641px up (#66)
+
 ### Fixes
 
+- Build broke after the dead-export prune removed a type the purchase guidance change still used (#65)
+- Outbound dealer link clicks were never recorded: the click logger called Clerk on a route outside its middleware (#57)
 - Filter drawer "Show cars" did nothing: its form was nested inside the page's filter form (#36)
 - Only 100 of ~1,600 live auctions were ever ingested: the client stopped after page one (#35)
 - Admin Remove bar on listings never reached production (#24)
