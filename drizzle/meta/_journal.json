@@ -71,6 +71,13 @@
       "when": 1790550672610,
       "tag": "0009_dashing_sabra",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790561901084,
+      "tag": "0010_bent_skaar",
+      "breakpoints": true
     }
   ]
 }
