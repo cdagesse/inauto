@@ -27,7 +27,6 @@ export interface BackfillOptions {
   part: "live" | "past";
   days?: number;
   maxPages?: number;
-  concurrency?: number;
   log?: (m: string) => void;
   now?: Date;
   fetchImpl?: typeof fetch;
@@ -87,7 +86,6 @@ export async function backfillAuctions(opts: BackfillOptions): Promise<BackfillS
   const now = opts.now ?? new Date();
   const log = opts.log ?? ((m: string) => console.log(`[backfill-auctions] ${m}`));
   const days = opts.part === "past" ? Math.max(1, Math.min(opts.days ?? 30, 90)) : null;
-  const concurrency = Math.max(1, Math.min(opts.concurrency ?? 8, 16));
   const out: BackfillSummary = {
     jobRunId: null,
     part: opts.part,
@@ -172,20 +170,15 @@ export async function backfillAuctions(opts: BackfillOptions): Promise<BackfillS
       }
     }
 
-    // Dedupe on source+id (paging overlap), then upsert with modest parallelism.
+    // Dedupe on source+id (paging overlap; also required by the multi-row upsert), then
+    // upsert the whole set in chunks.
     const uniq = new Map<string, NormalizedLiveRow>();
     for (const r of liveRows) uniq.set(`${r.source}|${r.sourceId}`, r);
     const rows = [...uniq.values()];
     out.pulled = rows.length;
-    for (let i = 0; i < rows.length; i += concurrency) {
-      const results = await Promise.all(
-        rows.slice(i, i + concurrency).map((r) => upsertExternalRows(db, [r], rules, byId)),
-      );
-      for (const u of results) {
-        out.upserted += u.upserted;
-        out.matchedToCatalog += u.matched;
-      }
-    }
+    const u = await upsertExternalRows(db, rows, rules, byId);
+    out.upserted = u.upserted;
+    out.matchedToCatalog = u.matched;
     log(
       `${opts.part}: pulled ${out.pulled}, upserted ${out.upserted}, matched ${out.matchedToCatalog}, auction_result +${out.auctionResultsInserted}`,
     );

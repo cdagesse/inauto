@@ -19,6 +19,7 @@ import {
   parseOcdAlias,
   type NormalizedLiveRow,
 } from "@/lib/sources/ocd";
+import { chunk, UPSERT_CHUNK } from "./lib/batch";
 import { assignGeneration, type AliasRule, type GenerationRange } from "./lib/normalize";
 
 /**
@@ -138,9 +139,15 @@ function toInsert(r: NormalizedLiveRow, modelId: string | null, generationId: st
   };
 }
 
+/** `excluded.<col>` for a multi-row upsert: each conflicting row takes its own incoming value. */
+const excluded = (col: { name: string }) => sql`excluded.${sql.identifier(col.name)}`;
+
 /**
  * Upsert normalized rows into external_listing, matching each to a catalog model and
  * generation when the alias rules allow. Shared by the live sync and the one-time backfill.
+ * Rows go in multi-row INSERT ... ON CONFLICT DO UPDATE statements of UPSERT_CHUNK each; the
+ * caller must dedupe on source + sourceId first, since one statement may not touch the same
+ * row twice.
  */
 export async function upsertExternalRows(
   db: Db,
@@ -148,8 +155,8 @@ export async function upsertExternalRows(
   rules: AliasRule[],
   byId: Map<string, CatalogModel>,
 ): Promise<{ upserted: number; matched: number }> {
-  let upserted = 0;
   let matched = 0;
+  const values: ReturnType<typeof toInsert>[] = [];
   for (const r of rows) {
     const modelId = matchOcdRules(rules, { rawMake: r.make, rawModel: r.model, title: r.title });
     let generationId: string | null = null;
@@ -159,40 +166,46 @@ export async function upsertExternalRows(
       if (m && m.gens.length > 0)
         generationId = assignGeneration(m.gens, r.year, r.title).generationId;
     }
-    const values = toInsert(r, modelId, generationId);
+    values.push(toInsert(r, modelId, generationId));
+  }
+  const e = externalListings;
+  let upserted = 0;
+  for (const slice of chunk(values, UPSERT_CHUNK)) {
     await db
       .insert(externalListings)
-      .values(values)
+      .values(slice)
       .onConflictDoUpdate({
-        target: [externalListings.source, externalListings.sourceId],
+        target: [e.source, e.sourceId],
+        // Every column reads from `excluded`: a JS value here would stamp one row's data onto
+        // every conflicting row in the slice.
         set: {
-          url: values.url,
-          status: values.status,
-          title: values.title,
-          make: sql`coalesce(excluded.make, ${externalListings.make})`,
-          model: sql`coalesce(excluded.model, ${externalListings.model})`,
-          year: values.year,
-          trim: values.trim,
-          vin: sql`coalesce(${externalListings.vin}, excluded.vin)`,
-          miles: values.miles,
-          color: values.color,
-          location: values.location,
-          currency: values.currency,
-          country: values.country,
-          description: values.description,
-          photoUrls: values.photoUrls,
-          currentBid: values.currentBid,
-          bidCount: values.bidCount,
-          reserveMet: values.reserveMet,
-          startedAt: values.startedAt,
-          endsAt: values.endsAt,
-          modelId: sql`coalesce(excluded.model_id, ${externalListings.modelId})`,
-          generationId: sql`coalesce(excluded.generation_id, ${externalListings.generationId})`,
-          rawJson: values.rawJson,
-          fetchedAt: values.fetchedAt,
+          url: excluded(e.url),
+          status: excluded(e.status),
+          title: excluded(e.title),
+          make: sql`coalesce(excluded.make, ${e.make})`,
+          model: sql`coalesce(excluded.model, ${e.model})`,
+          year: excluded(e.year),
+          trim: excluded(e.trim),
+          vin: sql`coalesce(${e.vin}, excluded.vin)`,
+          miles: excluded(e.miles),
+          color: excluded(e.color),
+          location: excluded(e.location),
+          currency: excluded(e.currency),
+          country: excluded(e.country),
+          description: excluded(e.description),
+          photoUrls: excluded(e.photoUrls),
+          currentBid: excluded(e.currentBid),
+          bidCount: excluded(e.bidCount),
+          reserveMet: excluded(e.reserveMet),
+          startedAt: excluded(e.startedAt),
+          endsAt: excluded(e.endsAt),
+          modelId: sql`coalesce(excluded.model_id, ${e.modelId})`,
+          generationId: sql`coalesce(excluded.generation_id, ${e.generationId})`,
+          rawJson: excluded(e.rawJson),
+          fetchedAt: excluded(e.fetchedAt),
         },
       });
-    upserted++;
+    upserted += slice.length;
   }
   return { upserted, matched };
 }
