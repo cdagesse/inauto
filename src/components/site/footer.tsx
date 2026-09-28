@@ -11,7 +11,7 @@ export function SiteFooter() {
           <img src="/brand/urcar-dark.png" alt="" className="brand-img dark" aria-hidden="true" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/urcar-light.png" alt="" className="brand-img light" aria-hidden="true" />
-          <span className="sr-only">InAuto</span>
+          <span className="sr-only">UrCar</span>
         </div>
         <p className="note">
           Market data from dealer listings (Visor) and auction results (Old Cars Data). Estimates

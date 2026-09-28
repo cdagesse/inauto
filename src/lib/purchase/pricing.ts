@@ -78,7 +78,7 @@ export function buildCart(
   if (o.shipping)
     items.push({ key: "shipping", label: `${ADDONS.shipping.label} (quoted later)`, amount: 0 });
   const total = items.reduce((a, i) => a + i.amount, 0);
-  // Services are paid to InAuto now; the vehicle is paid to the seller (or into escrow).
+  // Services are paid to UrCar now; the vehicle is paid to the seller (or into escrow).
   const dueNow = total - price;
   return { items, total, dueNow };
 }

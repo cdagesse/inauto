@@ -139,7 +139,7 @@ export function PurchaseForm({
               </ol>
               <label className="check" style={{ marginTop: 8 }}>
                 <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} /> I
-                have read these and understand that InAuto is not the seller.
+                have read these and understand that UrCar is not the seller.
               </label>
             </div>
           ) : null}
@@ -299,7 +299,7 @@ export function PurchaseForm({
             <dd className="num">{usd(cart.total)}</dd>
           </div>
           <div className="cart-line">
-            <dt>Due to InAuto now</dt>
+            <dt>Due to UrCar now</dt>
             <dd className="num">{usd(cart.dueNow)}</dd>
           </div>
           <div className="cart-line">

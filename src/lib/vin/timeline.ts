@@ -1,7 +1,7 @@
 /**
  * A car's history by VIN, stitched from every table that carries one:
  * dealer listings (active snapshots and sales), auction results, live
- * platform auctions, and InAuto listings. Pure: the query hands in rows,
+ * platform auctions, and UrCar listings. Pure: the query hands in rows,
  * this turns them into a timeline.
  */
 export type EventKind =
@@ -64,7 +64,7 @@ export interface ExternalRow {
   endsAt: string | null;
 }
 
-export interface InAutoRow {
+export interface UrCarRow {
   id: string;
   status: "draft" | "active" | "ended" | "sold" | "withdrawn";
   type: "classified" | "auction" | "private";
@@ -79,7 +79,7 @@ export interface VinRows {
   dealer: DealerRow[];
   auctions: AuctionResultRow[];
   external: ExternalRow[];
-  inauto: InAutoRow[];
+  inauto: UrCarRow[];
 }
 
 const day = (s: string | null | undefined) => (s ? s.slice(0, 10) : null);
@@ -214,7 +214,7 @@ export function buildVinTimeline(
     });
   }
 
-  // InAuto listings.
+  // UrCar listings.
   for (const l of rows.inauto) {
     if (l.status === "draft") continue;
     const isCurrent = current?.kind === "inauto" && current.id === l.id;
@@ -226,10 +226,10 @@ export function buildVinTimeline(
       kind: l.status === "sold" ? "inauto_sold" : closed ? "inauto_ended" : "inauto_listed",
       title:
         l.status === "sold"
-          ? "Sold on InAuto"
+          ? "Sold on UrCar"
           : closed
-            ? `${l.status === "withdrawn" ? "Withdrawn from" : "Ended on"} InAuto`
-            : `Listed on InAuto (${l.type})`,
+            ? `${l.status === "withdrawn" ? "Withdrawn from" : "Ended on"} UrCar`
+            : `Listed on UrCar (${l.type})`,
       detail: closed ? `Listed ${day(l.createdAt)}` : null,
       price: l.status === "sold" ? (l.soldPrice ?? l.askingPrice) : l.askingPrice,
       miles: l.miles,

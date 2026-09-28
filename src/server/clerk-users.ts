@@ -8,7 +8,7 @@ import { users } from "@/db/schema";
 import { type ActionResult, fail, toError } from "./result";
 
 /**
- * Makes sure the signed-in Clerk user has an InAuto row. The header calls
+ * Makes sure the signed-in Clerk user has an UrCar row. The header calls
  * this once per browser session, so an account exists as soon as someone
  * signs up, even before they open a page that reads the session and before
  * the Clerk webhook is configured.

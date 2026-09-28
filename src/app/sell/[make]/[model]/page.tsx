@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   const name = s ? `${s.make.name} ${s.model.name}` : c ? `${c.make} ${c.model}` : "your car";
   return {
     title: `Sell your ${name}`,
-    description: `What your ${name} is worth today from real dealer and auction sales, what you would keep at auction, from a dealer, or selling it yourself, and how to list it on InAuto.`,
+    description: `What your ${name} is worth today from real dealer and auction sales, what you would keep at auction, from a dealer, or selling it yourself, and how to list it on UrCar.`,
     robots: { index: false, follow: true },
   };
 }
@@ -105,13 +105,13 @@ export default async function SellModelPage({
         <div className="rec sell-pitch" style={{ marginTop: 0 }}>
           <b>You do not have to wait for the report to list.</b>
           <p>
-            List your {c.shortName ?? c.model} on InAuto now, free. We attach the market report to
+            List your {c.shortName ?? c.model} on UrCar now, free. We attach the market report to
             your listing as soon as it is built, and buyers can order title vetting and an
             inspection before they commit.
           </p>
           <div className="pitch-ctas">
             <Link href={listHref} className="btn primary">
-              List it on InAuto
+              List it on UrCar
             </Link>
             <Link href="/sell" className="btn">
               Pick a different car
@@ -214,7 +214,7 @@ export default async function SellModelPage({
           <div className="kpi kpi-cta">
             <div className="l">Ready to sell?</div>
             <Link href={listHref} className="btn primary">
-              List it on InAuto
+              List it on UrCar
             </Link>
             <div className="s">Free · title vetting · inspection</div>
           </div>
@@ -224,7 +224,7 @@ export default async function SellModelPage({
           <h2 className="sec">What is my {short} worth?</h2>
           <p className="sub">
             Adjust anything below. The estimate, the three ways to sell and what you would keep
-            update instantly, and every path can be listed on InAuto in one click.
+            update instantly, and every path can be listed on UrCar in one click.
           </p>
           <ValuationTool
             snapshot={s}
@@ -234,7 +234,7 @@ export default async function SellModelPage({
         </section>
 
         <section className="why-inauto">
-          <h2 className="sec">Why sellers list on InAuto</h2>
+          <h2 className="sec">Why sellers list on UrCar</h2>
           <div className="props" style={{ paddingTop: 12 }}>
             <div className="panel prop">
               <div className="eyebrow">Priced to sell</div>

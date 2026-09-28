@@ -25,7 +25,7 @@ export default async function MarketsPage() {
         <div>
           <div className="eyebrow">Market reports · United States</div>
           <h1 className="hero-title">
-            <span>InAuto</span>Markets
+            <span>UrCar</span>Markets
           </h1>
           <p className="sub" style={{ maxWidth: "60ch" }}>
             Start with a segment to see where volume and prices are moving, then drill into a make

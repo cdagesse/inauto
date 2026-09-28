@@ -108,7 +108,7 @@ export async function resolveCars(
       currency: "USD",
       priceLabel: l.type === "auction" ? "Current bid" : "Asking",
       photo: l.photos[0] ?? null,
-      badge: "On InAuto",
+      badge: "On UrCar",
       endsAt: l.type === "auction" ? l.auctionEndsAt : null,
       featured,
     });
@@ -135,7 +135,7 @@ export async function resolveCars(
   return picks.map((p) => byKey.get(`${p.kind}:${p.refId}`)).filter((c): c is FeaturedCar => !!c);
 }
 
-/** When nothing is featured: the newest active InAuto listings that have a photo. */
+/** When nothing is featured: the newest active UrCar listings that have a photo. */
 export async function autoFeatured(limit = 5): Promise<FeaturedCar[]> {
   const rows = await db
     .select({
@@ -169,7 +169,7 @@ export async function autoFeatured(limit = 5): Promise<FeaturedCar[]> {
       currency: "USD",
       priceLabel: l.type === "auction" ? "Current bid" : "Asking",
       photo: l.photos[0]!,
-      badge: "On InAuto",
+      badge: "On UrCar",
       endsAt: l.type === "auction" ? l.auctionEndsAt : null,
       featured: false,
     }));

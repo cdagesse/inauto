@@ -172,7 +172,7 @@ export default async function ListingsPage({
             {source === "all"
               ? "All sources"
               : source === "inauto"
-                ? "InAuto"
+                ? "UrCar"
                 : PLATFORMS[source as (typeof PLATFORM_KEYS)[number]].name}
             <span className="caret" aria-hidden="true">
               ▾
@@ -189,7 +189,7 @@ export default async function ListingsPage({
               href={qs({ source: "inauto", cursor: undefined, xcursor: undefined })}
               aria-pressed={source === "inauto"}
             >
-              InAuto
+              UrCar
             </Link>
             {platformsWithLive.map((k) => (
               <Link
@@ -260,12 +260,12 @@ export default async function ListingsPage({
                   ? "Not sold"
                   : "Past auctions and sales"
               : source === "inauto"
-                ? "On InAuto"
+                ? "On UrCar"
                 : source === "all"
                   ? "All cars"
                   : `On ${PLATFORMS[source as (typeof PLATFORM_KEYS)[number]].name}`}
             {past && source !== "all"
-              ? ` · ${source === "inauto" ? "InAuto" : PLATFORMS[source as (typeof PLATFORM_KEYS)[number]].name}`
+              ? ` · ${source === "inauto" ? "UrCar" : PLATFORMS[source as (typeof PLATFORM_KEYS)[number]].name}`
               : ""}
           </h2>
           <p className="hint feed-hint">
@@ -278,7 +278,7 @@ export default async function ListingsPage({
               : liveTotal > 0
                 ? `${liveTotal} live on the platforms · bidding happens there`
                 : showOwn && own.rows.length === 0
-                  ? "No InAuto listings match yet."
+                  ? "No UrCar listings match yet."
                   : null}
             {!past && showOwn && own.rows.length === 0 ? (
               <>

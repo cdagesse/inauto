@@ -21,7 +21,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <div>
           <div className="eyebrow">Admin console</div>
           <h1 className="display" style={{ fontSize: 32, margin: "6px 0 0" }}>
-            InAuto operations
+            UrCar operations
           </h1>
         </div>
         <AdminNav />

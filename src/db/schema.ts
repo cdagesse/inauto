@@ -296,7 +296,7 @@ export const rawFetches = pgTable(
  * tens of thousands of rows per request. `summary` is the slim subset the
  * Markets drill-down needs; `snapshot` is the full MarketSnapshot.
  */
-/** Admin-picked cars that rotate in the home page hero. kind: "listing" (InAuto) | "external" (platform auction). */
+/** Admin-picked cars that rotate in the home page hero. kind: "listing" (UrCar) | "external" (platform auction). */
 export const featuredCars = pgTable(
   "featured_car",
   {

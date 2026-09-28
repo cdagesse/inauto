@@ -55,7 +55,7 @@ export function carFacts(car: AssistantCar, snapshot: MarketSnapshot | null): Ca
   return { headline, lines };
 }
 
-export const ASSISTANT_SYSTEM = `You help a private seller write the description for a collector or enthusiast car they are listing on InAuto.
+export const ASSISTANT_SYSTEM = `You help a private seller write the description for a collector or enthusiast car they are listing on UrCar.
 
 How you work:
 - You already know the car from the facts provided. Do not ask for anything in the facts.

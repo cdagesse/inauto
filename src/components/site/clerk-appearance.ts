@@ -4,7 +4,7 @@ import type { ClerkProvider } from "@clerk/nextjs";
 
 type Appearance = NonNullable<ComponentProps<typeof ClerkProvider>["appearance"]>;
 
-/** Clerk components styled with InAuto's dark tokens (light theme inherits via CSS variables). */
+/** Clerk components styled with UrCar's dark tokens (light theme inherits via CSS variables). */
 export const clerkAppearance: Appearance = {
   theme: dark,
   variables: {

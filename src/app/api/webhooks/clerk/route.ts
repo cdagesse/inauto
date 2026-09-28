@@ -8,7 +8,7 @@ import { env } from "@/env/server";
 export const runtime = "nodejs";
 
 /**
- * Clerk → InAuto user sync. Signature-verified (Svix) with CLERK_WEBHOOK_SIGNING_SECRET.
+ * Clerk → UrCar user sync. Signature-verified (Svix) with CLERK_WEBHOOK_SIGNING_SECRET.
  * user.created / user.updated upsert identity fields by Clerk id (attaching to a
  * pre-existing row by email); user.deleted disables the account but keeps the row
  * so listings, bids and the audit log stay intact. Role and status are never

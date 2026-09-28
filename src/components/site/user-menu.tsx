@@ -12,7 +12,7 @@ import { ensureUser } from "@/server/clerk-users";
  */
 export function UserMenu() {
   const { user, isLoaded, isSignedIn } = useUser();
-  // Once per browser session: make sure this Clerk account has an InAuto row.
+  // Once per browser session: make sure this Clerk account has an UrCar row.
   useEffect(() => {
     if (!isSignedIn || !user) return;
     const key = `inauto-user:${user.id}`;

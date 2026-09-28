@@ -7,7 +7,7 @@ import { buildVinTimeline, type VinEvent, type VinRows } from "@/lib/vin/timelin
 
 const isVin = (v: string) => /^[A-HJ-NPR-Z0-9]{11,17}$/i.test(v);
 
-/** Every sighting of a VIN across dealer, auction, platform and InAuto data, newest first. */
+/** Every sighting of a VIN across dealer, auction, platform and UrCar data, newest first. */
 export const getVinTimeline = cache(
   async (
     vin: string | null | undefined,
