@@ -6,6 +6,8 @@ Features and fixes as they ship, newest first. One line per change, with the pul
 
 ### Features
 
+- Phones: Buy page filters in two tight rows with a compact Filter button and smaller pills; source menu opens as a dropdown (#52)
+
 - Phones: the light/dark toggle and Admin move into the menu panel; the bar keeps logo, garage, avatar and menu (#51)
 
 - Phones: header logo keeps its shape; Garage and Admin collapse to icons (#50)
