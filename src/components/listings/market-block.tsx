@@ -121,3 +121,17 @@ export async function MarketBlock({
     </section>
   );
 }
+
+/** Suspense fallback for the full block; mirrors the section header so the layout does not jump. */
+export function MarketBlockFallback() {
+  return (
+    <section className="market-summary" aria-busy="true">
+      <div className="ms-head">
+        <div>
+          <div className="eyebrow">Market data</div>
+          <h2 className="sec">Loading the market report…</h2>
+        </div>
+      </div>
+    </section>
+  );
+}

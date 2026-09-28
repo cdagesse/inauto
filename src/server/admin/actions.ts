@@ -229,7 +229,7 @@ export async function setModelPublished(fd: FormData): Promise<ActionResult> {
     });
     if (r.ok) {
       revalidatePath(`/admin/models/${p.data.id}`);
-      revalidatePath("/markets");
+      revalidatePath("/markets", "layout");
     }
     return r;
   } catch (e) {
