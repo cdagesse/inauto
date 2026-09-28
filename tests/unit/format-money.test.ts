@@ -23,8 +23,11 @@ describe("shared display formatters", () => {
   });
 
   it("formats dates from Date or ISO strings and blanks missing ones", () => {
-    expect(fmtDate(new Date(2026, 2, 4))).toBe("Mar 4, 2026");
-    expect(fmtDate("2026-03-04T12:00:00Z")).toMatch(/^Mar [34], 2026$/);
+    // Instants, not local-midnight dates: the formatter prints the New York day, so the
+    // expectation must not depend on the machine's zone (CI runs in UTC).
+    expect(fmtDate(new Date("2026-03-04T17:00:00Z"))).toBe("Mar 4, 2026");
+    expect(fmtDate("2026-03-04T17:00:00Z")).toBe("Mar 4, 2026");
+    expect(fmtDate("2026-03-05T02:30:00Z")).toBe("Mar 4, 2026");
     expect(fmtDate(null)).toBe("");
     expect(fmtDate(undefined)).toBe("");
   });
