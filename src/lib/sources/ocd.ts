@@ -159,6 +159,31 @@ export function ocdRowMatches(
  * models that share an alias and differ only by years (Corvette C1 to C8, M3 and M3 E46)
  * each get their own cars.
  */
+/**
+ * Model lines the feed names by chassis code where our aliases key on the family line.
+ * Old Cars Data tags a 2000 911 Carrera as make "Porsche", model "996"; the catalog's
+ * 911 aliases are "911" plus a keyword ("Carrera", "GT3", "Turbo"). A row that matches no
+ * rule as tagged is retried under the family line, so the keyword and year rules decide.
+ */
+export const OCD_LINE_FALLBACK: Record<string, Record<string, string>> = {
+  porsche: {
+    "930": "911",
+    "964": "911",
+    "996": "911",
+    "997": "911",
+    "991": "911",
+    "992": "911",
+  },
+};
+
+/** The alias's own line plus every chassis-coded line the feed uses for it ("911" → 911, 930, 964, 996 …). */
+export function ocdLinesFor(alias: OcdAlias): string[] {
+  const codes = Object.entries(OCD_LINE_FALLBACK[squash(alias.make)] ?? {})
+    .filter(([, family]) => squash(family) === squash(alias.model))
+    .map(([code]) => code);
+  return [alias.model, ...codes];
+}
+
 export function matchOcdRules(
   rules: {
     modelId: string;
@@ -178,6 +203,10 @@ export function matchOcdRules(
   for (const r of rules) {
     if (r.source !== "ocd") continue;
     if (ocdRowMatches(parseOcdAlias(r), row, yearsFor?.(r.modelId))) return r.modelId;
+  }
+  const family = OCD_LINE_FALLBACK[squash(row.rawMake)]?.[squash(row.rawModel)];
+  if (family && squash(family) !== squash(row.rawModel)) {
+    return matchOcdRules(rules, { ...row, rawModel: family }, yearsFor);
   }
   return null;
 }

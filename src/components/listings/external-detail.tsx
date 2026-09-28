@@ -19,6 +19,8 @@ export interface UrCarRead {
   modelName: string;
   /** True when the model exists in the catalog but has no report yet. */
   pending: boolean;
+  /** True when the model was found from the listing's text, not the platform's tag. */
+  byName?: boolean;
 }
 
 /**
@@ -255,6 +257,9 @@ export function ExternalDetail({
                   condition and a clean history.{" "}
                   <Link href={read.reportHref}>See the full report</Link>.{" "}
                   {read.valuation.disclaimer}
+                  {read.byName
+                    ? ` Matched to the ${read.modelName} by name from the listing's text; the platform's own tag did not link to our catalog.`
+                    : ""}
                 </p>
                 {expandId ? (
                   <div className="card-actions" style={{ marginTop: 8 }}>

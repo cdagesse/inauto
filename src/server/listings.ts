@@ -236,7 +236,7 @@ async function setStatus(fd: FormData, status: "withdrawn" | "sold"): Promise<Ac
     if (!parsed.success) return fail("Invalid request.");
     await db
       .update(listings)
-      .set({ status })
+      .set({ status, closedAt: new Date() })
       .where(
         and(
           eq(listings.id, parsed.data.id),

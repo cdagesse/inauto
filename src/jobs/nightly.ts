@@ -16,7 +16,7 @@ import {
 } from "@/db/schema";
 import { env } from "@/env/server";
 import { BudgetExceeded, callsUsed, withBudget } from "@/lib/sources/budget";
-import { createOcdClient, ocdRowMatches, parseOcdAlias } from "@/lib/sources/ocd";
+import { createOcdClient, ocdLinesFor, ocdRowMatches, parseOcdAlias } from "@/lib/sources/ocd";
 import { createVisorClient, VisorDeadline } from "@/lib/sources/visor";
 import type { NormalizedAuctionRow, NormalizedDealerRow } from "@/lib/sources/types";
 import { classify, groupReclassified, type Reclassified } from "./lib/clean";
@@ -445,19 +445,24 @@ async function pull(
           const client = createOcdClient({ apiKey: env.OCD_API_KEY!, record, fetchImpl });
           for (const a of ocdAliases) {
             const alias = parseOcdAlias(a);
-            const rows = await client.auctions(
-              {
-                make: alias.make,
-                model: alias.model || undefined,
-                keyword: alias.keyword,
-                yearMin: years.start,
-                yearMax: years.end,
-              },
-              since,
-            );
-            for (const r of rows) {
-              if (ocdRowMatches(alias, r, years)) auctions.push(r);
-              else unmatched++;
+            // The feed tags some cars by chassis code (a 2000 911 Carrera is line "996"), so
+            // an alias walks its own line and every code that maps to it.
+            for (const line of ocdLinesFor(alias)) {
+              const lineAlias = { ...alias, model: line };
+              const rows = await client.auctions(
+                {
+                  make: alias.make,
+                  model: line || undefined,
+                  keyword: alias.keyword,
+                  yearMin: years.start,
+                  yearMax: years.end,
+                },
+                since,
+              );
+              for (const r of rows) {
+                if (ocdRowMatches(lineAlias, r, years)) auctions.push(r);
+                else unmatched++;
+              }
             }
           }
         },

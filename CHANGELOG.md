@@ -6,6 +6,7 @@ Features and fixes as they ship, newest first. One line per change, with the pul
 
 ### Features
 
+- Past listings in Buy results show the date they sold or ended next to the outcome, without opening them (#79)
 - Markets by region: the market section is now called Markets everywhere, and the Markets page opens with six US regions (Northeast, Southeast, South Central, Midwest, Mountain West, West Coast) showing dealer sales in the last 90 days, whether prices and volume are rising or falling against the 90 days before, days to sell, and which types of car are strongest and softest in each; every region has its own page with its types ranked, top makes, auction sales and states (#77)
 - Market reports without dealer data yet read from auction results instead of showing zeros: the model page's KPI strip shows the median hammer price, range, 90-day change, sell-through and miles from sold auctions, the by-year table switches to hammer prices, dealer-only sections say so instead of rendering empty, the value tool prices the car from hammer prices lifted by the usual auction gap instead of showing $0 and NaN, and make and segment cards and tables show the median hammer, auction sales and an auction price trend for those models, labelled as such (#76)
 
@@ -78,6 +79,7 @@ Features and fixes as they ship, newest first. One line per change, with the pul
 
 ### Fixes
 
+- Platform listings the feed tags by Porsche chassis code (996, 997, 991, 992, 930) now link to the catalog model, so their pages get the UrCar read and market data; a by-hand `rematch-listings` job re-links older unmatched listings, a listing page falls back to a by-name match for its read when the platform's tag did not link, the plain 911 Carrera alias no longer swallows Carrera GTS cars, and report builds pull the chassis-coded lines too (#79)
 - Photos that will not load (a platform moved or removed the file after we stored its URL) no longer show a broken-image glyph: cards fall back to their placeholder or a "No photo" tile, galleries drop the dead photo and show the platform placeholder when none is left, and the sticky header hides its thumbnail (#78)
 - Dealer listings: "listed now" reads each model's newest snapshot in one pass, days listed are aged from the snapshot day and the feed sorts by listing date, dealer search is indexed and typo-tolerant the same way as auctions, an exact model name no longer pulls in sibling models, Dealers with Auctions or Past explains itself, and partial Visor inventory walks no longer replace a model's newest snapshot (#75)
 - Live auction sweeps were re-reading the same 500 most recently changed auctions every 15 minutes and never reaching new listings: the window is now one cron gap plus 5 minutes (was 45 minutes) with an 8-page cap, so each sweep finishes (#73)
