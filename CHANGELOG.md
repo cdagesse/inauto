@@ -6,6 +6,8 @@ Features and fixes as they ship, newest first. One line per change, with the pul
 
 ### Features
 
+- Phones: home page opens straight on the search box and featured car; the headline and eyebrow are hidden (#55)
+
 - The site is UrCar everywhere: titles, copy, sign-in, bill of sale, admin, crawler user agent; default site URL is ur.car (#54)
 
 - Phones: Live/Past, result, type and source move inside the filter drawer; the Filter button is a bar pinned to the bottom of the screen (#53)

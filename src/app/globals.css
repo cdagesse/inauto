@@ -3703,3 +3703,14 @@ header.site-head {
     border-color: var(--ink);
   }
 }
+
+/* phones: the home hero opens on the search box and the featured car */
+@media (max-width: 640px) {
+  .home-hero .home-hero-copy > .eyebrow,
+  .home-hero .home-hero-copy > h1 {
+    display: none;
+  }
+  .home-hero {
+    padding-top: 16px;
+  }
+}
