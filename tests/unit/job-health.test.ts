@@ -284,12 +284,13 @@ describe("describeRun", () => {
           visorCalls: 40,
           budgetStopped: false,
           stoppedBy: "time",
+          promoted: 3,
         },
       },
       null,
     );
     expect(d.headline).toBe(
-      "1 model · Visor 4 sold, 120 active · 122 new rows written · 1 of 156 models refreshed (40 Visor calls) · 2 failed · time cap hit, 9 models left · 5 re-cleaned",
+      "1 model · Visor 4 sold, 120 active · 122 new rows written · 1 of 156 models refreshed (40 Visor calls) · 3 new reports · 2 failed · time cap hit, 9 models left · 5 re-cleaned",
     );
     expect(d.changed).toBe(122);
   });

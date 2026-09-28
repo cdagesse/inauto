@@ -28,7 +28,7 @@ export const JOBS: readonly JobSpec[] = [
   {
     name: "nightly",
     label: "Nightly market pull",
-    what: "Visor dealer sales and inventory for the stalest slice of the catalog (every model about every 14 days), then cleaning, aggregates and retention",
+    what: "Visor dealer sales and inventory for the stalest slice of the whole catalog (every model about every 14 days; a model's first pull makes its report live), then cleaning, aggregates and retention",
     every: DAY,
     grace: 3 * HOUR,
     schedule: "Daily at 08:15 UTC",
@@ -283,6 +283,8 @@ export function describeRun(name: string, summary: unknown, error: string | null
         parts.push(
           `${n(num(rotation, "pulled"))} of ${n(num(rotation, "eligible"))} models refreshed (${plural(num(rotation, "visorCalls"), "Visor call")})`,
         );
+        if (num(rotation, "promoted"))
+          parts.push(`${plural(num(rotation, "promoted"), "new report")}`);
         if (num(rotation, "failed")) parts.push(`${n(num(rotation, "failed"))} failed`);
         const stoppedBy = str(rotation, "stoppedBy");
         const reason =
