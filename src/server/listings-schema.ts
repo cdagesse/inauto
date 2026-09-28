@@ -88,6 +88,8 @@ export const updateListingSchema = createListingSchema
 
 export const listingFilterSchema = z.object({
   type: z.enum(["classified", "auction"]).optional(),
+  /** Fuzzy search over year, make, model, trim and title. */
+  q: z.string().trim().min(1).max(80).optional(),
   make: z.string().trim().min(1).max(60).optional(),
   model: z.string().trim().min(1).max(80).optional(),
   trim: z.string().trim().min(1).max(80).optional(),

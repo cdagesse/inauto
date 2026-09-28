@@ -24,6 +24,7 @@ import {
   encodeExternalCursor,
   type ExternalPhase,
 } from "@/lib/listings/external-cursor";
+import { SEARCH_MIN_SIMILARITY, searchTokens } from "@/lib/listings/search";
 import { isPlatformKey, type PlatformKey } from "@/lib/sources/platforms";
 
 export const EXTERNAL_PAGE_SIZE = 24;
@@ -103,6 +104,8 @@ export interface ExternalFilter {
   milesMin?: number;
   milesMax?: number;
   cursor?: string;
+  /** Fuzzy search; results come best match first and are not paged. */
+  q?: string;
   /** Live auctions (default) or settled results. */
   phase?: ExternalPhase;
   /** Past phase only: only those that sold, or only those that did not. */
@@ -118,9 +121,26 @@ export interface ExternalFilter {
 export async function listExternalListings(filter: ExternalFilter = {}) {
   const limit = Math.min(filter.limit ?? EXTERNAL_PAGE_SIZE, 100);
   const phase: ExternalPhase = filter.phase ?? "live";
-  const decoded = decodeExternalCursor(filter.cursor);
+  const tokens = searchTokens(filter.q);
+  // Relevance ordering has no stable key to page on, so a search is a single page.
+  const decoded = tokens.length ? null : decodeExternalCursor(filter.cursor);
   const cur = decoded?.phase === phase ? decoded : null;
   const conds = [] as ReturnType<typeof eq>[];
+  const haystack = sql`lower(concat_ws(' ', ${externalListings.year}, ${externalListings.make}, ${externalListings.model}, ${externalListings.trim}, ${externalListings.title}))`;
+  const esc = (s: string) => s.replace(/[%_\\]/g, (c) => `\\${c}`);
+  for (const t of tokens)
+    conds.push(
+      or(
+        sql`${haystack} like ${`%${esc(t)}%`}`,
+        sql`word_similarity(${t}, ${haystack}) >= ${SEARCH_MIN_SIMILARITY}`,
+      )!,
+    );
+  const relevance = tokens.length
+    ? sql`(${sql.join(
+        tokens.map((t) => sql`word_similarity(${t}, ${haystack})`),
+        sql` + `,
+      )}) desc`
+    : null;
   if (filter.source) conds.push(eq(externalListings.source, filter.source));
   if (filter.make) conds.push(sql`lower(${externalListings.make}) = ${filter.make.toLowerCase()}`);
   const like = (s: string) => `%${s.replace(/[%_\\]/g, (c) => `\\${c}`)}%`;
@@ -184,12 +204,13 @@ export async function listExternalListings(filter: ExternalFilter = {}) {
     .select(cardColumns)
     .from(externalListings)
     .where(and(...conds))
-    .orderBy(...order)
+    .orderBy(...(relevance ? [relevance, ...order] : order))
     .limit(limit + 1);
   const page = rows.slice(0, limit);
   return {
     rows: page.map(asCard),
-    nextCursor: rows.length > limit ? encodeExternalCursor(phase, page[page.length - 1]) : null,
+    nextCursor:
+      rows.length > limit && !relevance ? encodeExternalCursor(phase, page[page.length - 1]) : null,
   };
 }
 

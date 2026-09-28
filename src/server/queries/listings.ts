@@ -15,6 +15,7 @@ import {
   serviceOrders,
   users,
 } from "@/db/schema";
+import { SEARCH_MIN_SIMILARITY, searchTokens } from "@/lib/listings/search";
 import { type ListingFilter, minimumIncrement, PAGE_SIZE } from "../listings-schema";
 import { type ActionResult, fail, toError } from "../result";
 
@@ -112,7 +113,9 @@ export async function listActiveListings(
   limit: number = PAGE_SIZE,
 ) {
   const size = Math.max(1, Math.min(limit, PAGE_SIZE));
-  const cur = decodeCursor(filter.cursor);
+  const tokens = searchTokens(filter.q);
+  // Relevance ordering has no stable key to page on, so a search is a single page.
+  const cur = tokens.length ? null : decodeCursor(filter.cursor);
   const past = filter.when === "past";
   const statusCond = !past
     ? eq(listings.status, "active")
@@ -142,6 +145,20 @@ export async function listActiveListings(
   >`coalesce(${listings.askingPrice}, (select max(${bids.amount}) from ${bids} where ${bids.listingId} = ${listings.id}))`;
   if (filter.priceMin != null) conds.push(sql`${priceExpr} >= ${filter.priceMin}`);
   if (filter.priceMax != null) conds.push(sql`${priceExpr} <= ${filter.priceMax}`);
+  const haystack = sql`lower(concat_ws(' ', ${listings.year}, ${listings.make}, ${listings.model}, ${listings.trim}, ${listings.title}))`;
+  for (const t of tokens)
+    conds.push(
+      or(
+        sql`${haystack} like ${`%${escapeLike(t)}%`}`,
+        sql`word_similarity(${t}, ${haystack}) >= ${SEARCH_MIN_SIMILARITY}`,
+      )!,
+    );
+  const relevance = tokens.length
+    ? sql`(${sql.join(
+        tokens.map((t) => sql`word_similarity(${t}, ${haystack})`),
+        sql` + `,
+      )}) desc`
+    : null;
   if (cur)
     conds.push(
       or(
@@ -172,9 +189,13 @@ export async function listActiveListings(
     })
     .from(listings)
     .where(and(...conds))
-    .orderBy(desc(listings.createdAt), desc(listings.id))
+    .orderBy(
+      ...(relevance
+        ? [relevance, desc(listings.createdAt), desc(listings.id)]
+        : [desc(listings.createdAt), desc(listings.id)]),
+    )
     .limit(size + 1);
-  const hasMore = rows.length > size;
+  const hasMore = rows.length > size && !relevance;
   const page = hasMore ? rows.slice(0, size) : rows;
   const last = page[page.length - 1];
   return { rows: page, nextCursor: hasMore && last ? encodeCursor(last) : null };

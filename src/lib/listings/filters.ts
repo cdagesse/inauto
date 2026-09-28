@@ -2,6 +2,8 @@
 import { mi, usd } from "@/lib/format/money";
 
 export interface CarFilter {
+  /** Free-text search: year, make, model, trim or keyword, typo-tolerant. */
+  q?: string;
   make?: string;
   model?: string;
   trim?: string;
@@ -14,6 +16,7 @@ export interface CarFilter {
 }
 
 export const CAR_FILTER_KEYS = [
+  "q",
   "make",
   "model",
   "trim",
@@ -28,6 +31,7 @@ export const CAR_FILTER_KEYS = [
 /** Human chips for the active filters, in display order. */
 export function filterChips(f: CarFilter): { key: string; label: string }[] {
   const out: { key: string; label: string }[] = [];
+  if (f.q) out.push({ key: "q", label: `“${f.q}”` });
   if (f.make) out.push({ key: "make", label: f.make });
   if (f.model) out.push({ key: "model", label: f.model });
   if (f.trim) out.push({ key: "trim", label: f.trim });
@@ -80,6 +84,7 @@ export function keysForChip(key: string): string[] {
   }
 }
 
+/** Filters set in the drawer; the search box is its own control and not counted. */
 export function countActive(f: CarFilter): number {
-  return filterChips(f).length;
+  return filterChips(f).filter((c) => c.key !== "q").length;
 }

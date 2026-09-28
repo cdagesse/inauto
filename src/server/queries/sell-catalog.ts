@@ -1,8 +1,8 @@
 import "server-only";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, count, eq, isNotNull, sql } from "drizzle-orm";
 import { cache } from "react";
 import { db } from "@/db";
-import { generations, makes, models } from "@/db/schema";
+import { externalListings, generations, listings, makes, models } from "@/db/schema";
 
 export interface SellMake {
   name: string;
@@ -85,4 +85,54 @@ export async function listSellModels(makeSlug: string): Promise<SellModel[]> {
     ready: r.reportStatus === "ready",
     generations: byModel.get(r.id) ?? [],
   }));
+}
+
+export interface TrimOption {
+  name: string;
+  count: number;
+}
+
+/**
+ * Trims seen on the market for a model, most common first: platform auctions matched
+ * to the model plus UrCar listings of the same make and model. Feeds the drawer's Trim
+ * select; the filter itself still matches the trim or the listing title.
+ */
+export async function listTrims(makeSlug: string, modelSlug: string): Promise<TrimOption[]> {
+  const [m] = await db
+    .select({ id: models.id, name: models.name, makeName: makes.name })
+    .from(models)
+    .innerJoin(makes, eq(makes.id, models.makeId))
+    .where(and(eq(makes.slug, makeSlug), eq(models.slug, modelSlug)))
+    .limit(1);
+  if (!m) return [];
+  const [ext, own] = await Promise.all([
+    db
+      .select({ name: externalListings.trim, n: count() })
+      .from(externalListings)
+      .where(and(eq(externalListings.modelId, m.id), isNotNull(externalListings.trim)))
+      .groupBy(externalListings.trim),
+    db
+      .select({ name: listings.trim, n: count() })
+      .from(listings)
+      .where(
+        and(
+          sql`lower(${listings.make}) = ${m.makeName.toLowerCase()}`,
+          sql`lower(${listings.model}) = ${m.name.toLowerCase()}`,
+          isNotNull(listings.trim),
+        ),
+      )
+      .groupBy(listings.trim),
+  ]);
+  const byKey = new Map<string, TrimOption>();
+  for (const r of [...ext, ...own]) {
+    const name = (r.name ?? "").trim();
+    if (!name) continue;
+    const key = name.toLowerCase();
+    const cur = byKey.get(key);
+    if (cur) cur.count += Number(r.n);
+    else byKey.set(key, { name, count: Number(r.n) });
+  }
+  return [...byKey.values()]
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+    .slice(0, 40);
 }

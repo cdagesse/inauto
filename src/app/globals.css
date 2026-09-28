@@ -3628,3 +3628,48 @@ header.site-head {
     grid-template-columns: 1fr;
   }
 }
+
+/* buy page search; the filter drawer starts under the sticky header instead of behind it */
+.drawer-scrim {
+  top: var(--site-head-h, 0px);
+  z-index: 60;
+}
+.drawer {
+  top: var(--site-head-h, 0px);
+  z-index: 61;
+}
+.buy-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 12px;
+}
+.buy-search input {
+  flex: 1 1 260px;
+  min-width: 0;
+  font: inherit;
+  font-size: 16px;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 10px 16px;
+}
+.buy-search input:focus {
+  outline: none;
+  border-color: var(--ink-3);
+}
+.buy-search input::-webkit-search-cancel-button {
+  appearance: none;
+}
+.buy-search .hint {
+  flex: 1 0 100%;
+  padding-left: 4px;
+}
+@media (min-width: 641px) {
+  .buy-search .hint {
+    flex: 0 0 auto;
+    padding-left: 0;
+  }
+}
