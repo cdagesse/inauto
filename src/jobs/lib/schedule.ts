@@ -18,14 +18,17 @@ export function visorNightAllowance(monthlyCap: number): number {
 }
 
 /**
- * Live sweep: auctions updated since the last good run minus 30 minutes of overlap.
- * Never narrower than 45 minutes (one 15-minute cron gap plus the overlap) and never wider
+ * Live sweep: auctions updated since the last good run minus 5 minutes of overlap.
+ * Never narrower than 20 minutes (one 15-minute cron gap plus the overlap) and never wider
  * than 36 hours (the walk is capped by pages; older gaps are for the backfill job).
+ * The feed is not ordered by update time, so the window has to be small enough for the
+ * walk to finish: at peak about 270 auctions change per 15 minutes (bids and re-checks),
+ * and a 45-minute window held 1,168, far past the page cap, which hid new listings.
  */
 export function liveUpdatedSince(lastOk: Date | null, now: Date): Date {
-  const narrowest = now.getTime() - 45 * MIN;
+  const narrowest = now.getTime() - 20 * MIN;
   const widest = now.getTime() - 36 * HOUR;
-  const wanted = lastOk ? lastOk.getTime() - 30 * MIN : widest;
+  const wanted = lastOk ? lastOk.getTime() - 5 * MIN : widest;
   return new Date(Math.max(widest, Math.min(narrowest, wanted)));
 }
 
