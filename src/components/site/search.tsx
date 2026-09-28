@@ -203,7 +203,7 @@ export function SearchBox({
               <li key={h.key}>
                 {prevGroup !== h.group && (
                   <div className="sbox-group" aria-hidden="true">
-                    {h.group === "listings" ? "Cars for sale" : "Market reports"}
+                    {h.group === "listings" ? "Cars for sale" : "Markets"}
                   </div>
                 )}
                 <button

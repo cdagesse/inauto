@@ -1,20 +1,22 @@
 import type { Metadata } from "next";
 import { longDate } from "@/components/market/format";
 import { NodeCard } from "@/components/market/market-nodes";
+import { RegionCard, RegionsTable } from "@/components/market/region-nodes";
 import { SegmentsTable } from "@/components/market/segments-table";
 import { SearchBox } from "@/components/site/search";
+import { getRegions } from "@/lib/market/region-source";
 import { getMarketTree } from "@/lib/market/tree-source";
 
 export const metadata: Metadata = {
   title: "Markets",
   description:
-    "Collector car market by segment: supercars, luxury, European performance, American, Japanese and British classics. Volume and price trends, then drill into each make and model.",
+    "Collector car market by US region and by segment: where sales are rising or falling, which types of car are strongest in each part of the country, then volume and price trends for supercars, luxury, European performance, American, Japanese and British classics down to each make and model.",
 };
 
 export const revalidate = 3600;
 
 export default async function MarketsPage() {
-  const tree = await getMarketTree();
+  const [tree, regions] = await Promise.all([getMarketTree(), getRegions()]);
   const withData = tree.segments.filter((s) => s.stats);
   const totalSales = withData.reduce((a, s) => a + (s.stats?.dealerSales ?? 0), 0);
   const totalModels = withData.reduce((a, s) => a + (s.stats?.models ?? 0), 0);
@@ -23,13 +25,14 @@ export default async function MarketsPage() {
     <>
       <div className="hero">
         <div>
-          <div className="eyebrow">Market reports · United States</div>
+          <div className="eyebrow">Markets · United States</div>
           <h1 className="hero-title">
             <span>UrCar</span>Markets
           </h1>
           <p className="sub" style={{ maxWidth: "60ch" }}>
-            Start with a segment to see where volume and prices are moving, then drill into a make
-            and its models. Every number comes from real dealer sales and auction results.
+            Start with a region to see where sales are rising or falling and which types of car are
+            strongest there, or with a segment to follow volume and prices down to each make and
+            model. Every number comes from real dealer sales and auction results.
           </p>
         </div>
         <div className="asof">
@@ -48,6 +51,21 @@ export default async function MarketsPage() {
       <div className="search markets-search" role="search">
         <SearchBox size="hero" placeholder="Jump to a make or model, e.g. Ferrari 812" />
       </div>
+
+      <section className="markets-compare">
+        <h2 className="sec">By region</h2>
+        <p className="sub">
+          Dealer sales in the last 90 days for each part of the country, whether prices and volume
+          are up or down against the 90 days before, and which types of car are strongest and
+          softest there. Open a region for its types, makes and states.
+        </p>
+        <RegionsTable regions={regions.regions} />
+        <div className="node-grid" style={{ marginTop: 18 }}>
+          {regions.regions.map((r) => (
+            <RegionCard key={r.key} region={r} />
+          ))}
+        </div>
+      </section>
 
       <section className="markets-compare">
         <h2 className="sec">Segments at a glance</h2>

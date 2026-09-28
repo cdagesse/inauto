@@ -35,7 +35,7 @@ export default function NotFound() {
             Cars for sale
           </Link>
           <Link href="/markets" className="btn">
-            Market reports
+            Markets
           </Link>
           <Link href="/sell" className="btn">
             Sell yours
