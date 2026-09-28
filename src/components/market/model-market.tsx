@@ -5,7 +5,7 @@ import { useGeneration } from "./use-generation";
 import { ValuationTool } from "@/components/valuation/tool";
 import { TrendChart } from "./trend-chart";
 import { ScatterChart } from "./scatter-chart";
-import { mi, usd, usdK } from "./format";
+import { mi, usd, usdK } from "@/lib/format/money";
 import { AuctionTables, ByYearTable, RecentSalesTable } from "./tables";
 import { VenueTable } from "./venue-table";
 import { compareVenues } from "@/lib/market/venues";

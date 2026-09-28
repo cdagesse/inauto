@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { fmtDate } from "@/components/account/money";
+import { fmtDate } from "@/lib/format/money";
 import { ClerkSyncButton } from "@/components/admin/clerk-sync-button";
 import { Pager } from "@/components/admin/pager";
 import { StatusPill } from "@/components/admin/status-pill";

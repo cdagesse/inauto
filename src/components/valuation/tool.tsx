@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { MarketSnapshot } from "@/lib/market/types";
 import { useGeneration } from "@/components/market/use-generation";
 import { yearOverride } from "@/lib/valuation/config";
-import { fmtMiles, usd, usdK, valuate } from "@/lib/valuation/engine";
+import { valuate } from "@/lib/valuation/engine";
+import { mi, usd, usdK } from "@/lib/format/money";
 import type { ColorClass, Condition, History, ValuationInputs } from "@/lib/valuation/types";
 import { compareVenues } from "@/lib/market/venues";
 import { VenueTable } from "@/components/market/venue-table";
@@ -63,7 +64,7 @@ export interface ValuationInitial {
 }
 
 /** Builds the /sell/list link that carries the car into the listing wizard. */
-export function listHrefFor(
+function listHrefFor(
   snapshot: MarketSnapshot,
   inputs: { year: number; miles: number; generation: string; packages: string[] },
   extra: Record<string, string | undefined> = {},
@@ -228,7 +229,7 @@ export function ValuationTool({
             onChange={(e) => setForm((f) => ({ ...f, miles: e.target.value }))}
           />
           <span className="hint">
-            Typical {G.name} sells with {fmtMiles(G.medianMiles)} miles.
+            Typical {G.name} sells with {mi(G.medianMiles)} miles.
             {override ? ` ${override.note}` : ""}
           </span>
         </div>
@@ -400,7 +401,7 @@ export function ValuationTool({
               Which auction house for your {form.year} {short}?
             </h3>
             <p className="sub" style={{ margin: "4px 0 10px" }}>
-              {G.name} results by venue, narrowed to cars near {fmtMiles(inputs.miles)} miles.
+              {G.name} results by venue, narrowed to cars near {mi(inputs.miles)} miles.
             </p>
             <VenueTable comparison={venues} short={short} compact />
           </div>
@@ -452,7 +453,7 @@ export function ValuationTool({
                         c.source
                       )}
                     </td>
-                    <td className="n">{fmtMiles(c.miles)}</td>
+                    <td className="n">{mi(c.miles)}</td>
                     <td className="n">
                       {usd(c.price)}
                       {c.rnm ? (

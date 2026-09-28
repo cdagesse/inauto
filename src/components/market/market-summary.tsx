@@ -7,7 +7,7 @@ import { useMemo, useState } from "react";
 import type { MarketSnapshot } from "@/lib/market/types";
 import { valuate } from "@/lib/valuation/engine";
 import type { ValuationResult } from "@/lib/valuation/types";
-import { mi, usd, usdK } from "./format";
+import { mi, usd, usdK } from "@/lib/format/money";
 import { priceDelta } from "./market-summary-lib";
 import { ScatterChart } from "./scatter-chart";
 import { TrendChart } from "./trend-chart";

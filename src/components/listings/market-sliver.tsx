@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ExpandToggle } from "./expandable";
 import { type MarketRef, resolveMarket } from "./market-block";
-import { usd } from "@/components/market/format";
+import { usd } from "@/lib/format/money";
 import type { SummaryCar } from "@/components/market/market-summary";
 import { priceDelta } from "@/components/market/market-summary-lib";
 import { compareVenues } from "@/lib/market/venues";

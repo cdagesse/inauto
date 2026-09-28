@@ -48,7 +48,7 @@ export interface BackfillSummary {
 }
 
 /** An ended /auctions row re-read as an external listing row, with the settled status and hammer. */
-export function endedToExternal(r: NormalizedAuctionRow, now: Date): NormalizedLiveRow | null {
+function endedToExternal(r: NormalizedAuctionRow, now: Date): NormalizedLiveRow | null {
   const live = normalizeLiveRow(r.raw, now);
   if (!live) return null;
   return {

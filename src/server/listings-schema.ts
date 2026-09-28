@@ -56,7 +56,6 @@ export const createListingSchema = z.object({
   priceGuidance: z.unknown().optional(),
   publish: z.boolean().default(false),
 });
-export type CreateListingInput = z.infer<typeof createListingSchema>;
 
 const money = z.coerce.number().int().min(0).max(100_000_000).optional();
 const year = z.coerce.number().int().min(1900).max(2100).optional();
@@ -92,7 +91,6 @@ export const updateListingSchema = createListingSchema
       })
       .optional(),
   });
-export type UpdateListingInput = z.infer<typeof updateListingSchema>;
 
 export const listingFilterSchema = z.object({
   type: z.enum(["classified", "auction"]).optional(),

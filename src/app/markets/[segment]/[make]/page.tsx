@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { longDate, usd } from "@/components/market/format";
+import { longDate } from "@/components/market/format";
+import { usd } from "@/lib/format/money";
 import { ChangePill, NodeKpis, TrendPair } from "@/components/market/market-nodes";
 import { Sparkline } from "@/components/market/sparkline";
 import { BrandLogo } from "@/components/site/brand-logo";

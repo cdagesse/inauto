@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSignedIn } from "@/components/account/require-signin";
-import { fmtDate, usd } from "@/components/account/money";
+import { fmtDate, usd } from "@/lib/format/money";
 import { InviteForm } from "@/components/networks/invite-form";
 import { revokeInviteForm } from "@/server/forms";
 import { getNetworkForMember } from "@/server/queries/networks";

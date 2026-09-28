@@ -1,5 +1,13 @@
+/**
+ * Shared display formatters for money, miles and dates. Pure, safe in client and
+ * server trees. Every UI and message string should format through these so the
+ * copies never drift.
+ */
+
+/** Whole US dollars: 20250 → "$20,250"; null → "n/a". */
 export const usd = (v: number | null | undefined) =>
   v == null ? "n/a" : "$" + Math.round(v).toLocaleString("en-US");
+/** Thousands shorthand for chart ticks and medians: 20250 → "$20k". */
 export const usdK = (v: number) => "$" + Math.round(v / 1000) + "k";
 /** Whole-unit amount in its own currency: USD → "$20,250", GBP → "£20,250", others → "CHF 20,250". */
 export const money = (v: number | null | undefined, currency: string | null | undefined) => {
@@ -19,8 +27,10 @@ export const money = (v: number | null | undefined, currency: string | null | un
 };
 export const isUsd = (currency: string | null | undefined) =>
   (currency ?? "USD").toUpperCase() === "USD";
+/** Miles with thousands separators and no unit: 48210 → "48,210"; null → "n/a". */
 export const mi = (v: number | null | undefined) =>
   v == null ? "n/a" : Math.round(v).toLocaleString("en-US");
+/** "Mar 4, 2026" style date, or "" when missing. */
 export const fmtDate = (d: Date | string | null | undefined) =>
   d
     ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })

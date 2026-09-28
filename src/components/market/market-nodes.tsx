@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { NodeStats } from "@/lib/market/tree";
 import { Sparkline } from "./sparkline";
-import { usd, usdK } from "./format";
+import { usd, usdK } from "@/lib/format/money";
 
 /** Green/red 90-day change pill, or a neutral "n/a". */
 export function ChangePill({ change, n90 }: { change: number | null; n90?: number }) {

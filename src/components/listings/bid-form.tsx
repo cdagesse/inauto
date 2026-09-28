@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { placeBidAction } from "@/server/listings";
-import { usd } from "@/components/account/money";
+import { usd } from "@/lib/format/money";
 
 export function BidForm({ listingId, minimum }: { listingId: string; minimum: number }) {
   const [state, action, pending] = useActionState(placeBidAction, null);

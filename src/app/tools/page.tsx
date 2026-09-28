@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { auth } from "@/auth";
 import { signInHref } from "@/components/account/require-signin";
-import { fmtDate } from "@/components/account/money";
+import { fmtDate } from "@/lib/format/money";
 import { ServiceOrderForm } from "@/components/listings/service-order-form";
 import { listMyServiceOrders } from "@/server/queries/services";
 

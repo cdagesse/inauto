@@ -1,4 +1,4 @@
-import { mi, usd } from "@/components/account/money";
+import { mi, usd } from "@/lib/format/money";
 import type { VinEvent } from "@/lib/vin/timeline";
 
 const TONE: Record<VinEvent["kind"], string> = {

@@ -11,4 +11,3 @@ export const guidanceInputSchema = z.object({
   history: z.enum(["clean", "acc"]).default("clean"),
   askingPrice: z.number().int().min(0).max(100_000_000),
 });
-export type GuidanceInput = z.infer<typeof guidanceInputSchema>;

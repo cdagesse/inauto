@@ -1,4 +1,4 @@
-import { fmtDate } from "@/components/account/money";
+import { fmtDate } from "@/lib/format/money";
 import { Flash } from "@/components/admin/flash";
 import { TitleReportCard } from "@/components/listings/title-report-card";
 import { env } from "@/env/server";

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useSyncExternalStore } from "react";
-import { money } from "@/components/account/money";
+import { money } from "@/lib/format/money";
 
 const KEY = "inauto-recent";
 const MAX = 12;

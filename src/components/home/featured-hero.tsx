@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { money } from "@/components/account/money";
+import { money } from "@/lib/format/money";
 import type { FeaturedCar } from "@/server/queries/featured";
 
 /** Rotating card of featured cars for the home hero. Pauses while hovered or focused. */

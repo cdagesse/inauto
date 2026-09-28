@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { fmtDate, isUsd, mi, money, usd } from "@/components/account/money";
+import { fmtDate, isUsd, mi, money, usd } from "@/lib/format/money";
 import { countryName, flag, normalizeCountry } from "@/lib/geo";
 import { bidDelta, maskVin } from "@/lib/sources/live";
 import { effectiveStatus } from "@/lib/sources/status";
@@ -349,7 +349,7 @@ function Row({ k, v, mono, note }: { k: string; v: string; mono?: boolean; note?
 }
 
 /** Extra fields Old Cars Data passes through from the platform listing. */
-export function listingExtras(raw: Record<string, unknown> | null | undefined): {
+function listingExtras(raw: Record<string, unknown> | null | undefined): {
   spec: { k: string; v: string }[];
   sections: { k: string; v: string }[];
 } {
