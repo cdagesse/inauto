@@ -3,9 +3,7 @@ import { desc, eq, sql } from "drizzle-orm";
 import { cache } from "react";
 import { db } from "@/db";
 import { auctionResults, dealerActive, dealerSales, externalListings, listings } from "@/db/schema";
-import { buildVinTimeline, type VinEvent, type VinRows } from "@/lib/vin/timeline";
-
-const isVin = (v: string) => /^[A-HJ-NPR-Z0-9]{11,17}$/i.test(v);
+import { buildVinTimeline, isVin, type VinEvent, type VinRows } from "@/lib/vin/timeline";
 
 /** Every sighting of a VIN across dealer, auction, platform and UrCar data, newest first. */
 export const getVinTimeline = cache(
