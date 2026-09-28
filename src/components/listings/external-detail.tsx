@@ -8,6 +8,7 @@ import type { ValuationResult } from "@/lib/valuation/types";
 import type { ExternalDetail as ExternalDetailData } from "@/server/queries/external";
 import { Countdown } from "./countdown";
 import { ExpandToggle } from "./expandable";
+import { ExternalGallery } from "./external-gallery";
 import { PlatformMark, SourceBadge } from "./source-badge";
 import { StickyHead } from "./sticky-head";
 import { RecordView } from "@/components/home/recent-views";
@@ -140,25 +141,16 @@ export function ExternalDetail({
 
       <div className="grid-2 listing-body">
         <div>
-          {photos.length ? (
-            <div className="gallery">
-              {photos.slice(0, 7).map((u, i) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={u}
-                  src={u}
-                  alt={i === 0 ? l.title : ""}
-                  className={i === 0 ? "big" : undefined}
-                  loading={i === 0 ? "eager" : "lazy"}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="external-placeholder" aria-hidden="true">
-              <PlatformMark source={l.source} />
-              <span className="hint">Photos are on {platformName}</span>
-            </div>
-          )}
+          <ExternalGallery
+            photos={photos}
+            title={l.title}
+            placeholder={
+              <div className="external-placeholder" aria-hidden="true">
+                <PlatformMark source={l.source} />
+                <span className="hint">Photos are on {platformName}</span>
+              </div>
+            }
+          />
           {l.description ? <p className="desc">{l.description}</p> : null}
           <h2 className="sec" style={{ marginTop: 20 }}>
             Specification

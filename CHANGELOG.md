@@ -78,6 +78,7 @@ Features and fixes as they ship, newest first. One line per change, with the pul
 
 ### Fixes
 
+- Photos that will not load (a platform moved or removed the file after we stored its URL) no longer show a broken-image glyph: cards fall back to their placeholder or a "No photo" tile, galleries drop the dead photo and show the platform placeholder when none is left, and the sticky header hides its thumbnail (#78)
 - Dealer listings: "listed now" reads each model's newest snapshot in one pass, days listed are aged from the snapshot day and the feed sorts by listing date, dealer search is indexed and typo-tolerant the same way as auctions, an exact model name no longer pulls in sibling models, Dealers with Auctions or Past explains itself, and partial Visor inventory walks no longer replace a model's newest snapshot (#75)
 - Live auction sweeps were re-reading the same 500 most recently changed auctions every 15 minutes and never reaching new listings: the window is now one cron gap plus 5 minutes (was 45 minutes) with an 8-page cap, so each sweep finishes (#73)
 - Build broke after the dead-export prune removed a type the purchase guidance change still used (#65)

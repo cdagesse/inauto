@@ -15,6 +15,7 @@ export function StickyHead({
   children: React.ReactNode;
 }) {
   const [stuck, setStuck] = useState(false);
+  const [thumbFailed, setThumbFailed] = useState(false);
   const sentinel = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -36,9 +37,15 @@ export function StickyHead({
     <>
       <div ref={sentinel} className="sticky-sentinel" aria-hidden="true" />
       <div className={`page-head compact sticky-head${stuck ? " stuck" : ""}`}>
-        {photo ? (
+        {photo && !thumbFailed ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={photo} alt="" className="sticky-thumb" aria-hidden="true" />
+          <img
+            src={photo}
+            alt=""
+            className="sticky-thumb"
+            aria-hidden="true"
+            onError={() => setThumbFailed(true)}
+          />
         ) : null}
         {children}
       </div>
