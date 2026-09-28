@@ -107,11 +107,22 @@ export function AuctionTables({
         </table>
       </div>
       <p className="note">
-        Read the gap with care: most of the {snapshot.order[0]} auction cars were Weissach-package
-        cars, and a few auction results per generation is a small sample. The 991 cars come in 5 to
-        7 percent under dealer asks at similar miles, roughly the room you&apos;d expect between a
-        dealer&apos;s asking price and a hammer price. The 997.1 figure is a single 33,780-mile car
-        and says little about the generation.
+        {snapshot.model.slug === "911-gt3-rs" ? (
+          <>
+            Read the gap with care: most of the {snapshot.order[0]} auction cars were
+            Weissach-package cars, and a few auction results per generation is a small sample. The
+            991 cars come in 5 to 7 percent under dealer asks at similar miles, roughly the room
+            you&apos;d expect between a dealer&apos;s asking price and a hammer price. The 997.1
+            figure is a single 33,780-mile car and says little about the generation.
+          </>
+        ) : (
+          <>
+            Read the gap with care: a few auction results per generation is a small sample, and
+            auction cars often differ in spec, mileage and condition from the dealer median. A
+            hammer price typically lands a little under a dealer&apos;s asking price for a similar
+            car.
+          </>
+        )}
       </p>
       <div className="tw" style={{ marginTop: 18 }}>
         <table>

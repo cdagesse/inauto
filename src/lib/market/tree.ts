@@ -19,7 +19,7 @@ export type TreeSnapshot = Pick<
 export interface TrendPoint {
   month: string; // YYYY-MM
   partial: boolean;
-  /** Dealer sales in the month. */
+  /** Sales in the month: dealer sales, or sold auctions when every model in the node reads from auctions. */
   n: number;
   /** Sales-weighted price index, 100 = each generation's overall median. Null when no sales. */
   index: number | null;
@@ -30,6 +30,8 @@ export interface NodeStats {
   dealerSales: number;
   auctionSales: number;
   activeNow: number;
+  /** Models whose price, change and trend come from auction results (no dealer sales yet). */
+  auctionModels: number;
   /** Median of the models' headline (latest generation) medians. */
   medianPrice: number | null;
   /** Sales-weighted 90-day change across generations. Null without enough data. */
@@ -84,9 +86,16 @@ function median(a: number[]): number | null {
   return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
 }
 
-function headlineOf(s: TreeSnapshot): number {
-  const first = s.order.map((c) => s.generations[c]).find((g) => g && g.median > 0);
-  return first?.median ?? 0;
+/** A model reads from dealer sales when it has any; otherwise from sold auctions. */
+export function usesAuctions(s: Pick<TreeSnapshot, "totals">): boolean {
+  return s.totals.dealerSales === 0 && s.totals.auctionSales > 0;
+}
+
+/** Headline price: the latest generation's dealer median, or its hammer median for an auction-only model. */
+export function headlineOf(s: Pick<TreeSnapshot, "totals" | "order" | "generations">): number {
+  const gens = s.order.map((c) => s.generations[c]);
+  if (usesAuctions(s)) return gens.find((g) => g && (g.auctionMedian ?? 0) > 0)?.auctionMedian ?? 0;
+  return gens.find((g) => g && g.median > 0)?.median ?? 0;
 }
 
 /** Union of months across snapshots, sorted, trimmed to the last TREND_MONTHS. */
@@ -105,31 +114,41 @@ export function aggregate(snapshots: TreeSnapshot[], months: string[]): NodeStat
   let chgDen = 0;
   const byMonth = new Map<
     string,
-    { n: number; idxNum: number; idxDen: number; partial: boolean }
+    { n: number; auctionN: number; idxNum: number; idxDen: number; partial: boolean }
   >();
-  for (const m of months) byMonth.set(m, { n: 0, idxNum: 0, idxDen: 0, partial: false });
+  for (const m of months)
+    byMonth.set(m, { n: 0, auctionN: 0, idxNum: 0, idxDen: 0, partial: false });
 
+  let auctionModels = 0;
   for (const s of snapshots) {
     dealerSales += s.totals.dealerSales;
     auctionSales += s.totals.auctionSales;
     activeNow += s.totals.activeNow;
+    const auctions = usesAuctions(s);
+    if (auctions) auctionModels++;
     const h = headlineOf(s);
     if (h > 0) heads.push(h);
     for (const code of s.order) {
       const g = s.generations[code];
       if (!g) continue;
-      if (g.n90 > 0 && g.prior90 > 0 && g.last90 > 0) {
-        chgNum += g.n90 * ((g.last90 - g.prior90) / g.prior90);
-        chgDen += g.n90;
+      const win = auctions
+        ? { n: g.auctionN90 ?? 0, last: g.auctionLast90 ?? 0, prior: g.auctionPrior90 ?? 0 }
+        : { n: g.n90, last: g.last90, prior: g.prior90 };
+      if (win.n > 0 && win.prior > 0 && win.last > 0) {
+        chgNum += win.n * ((win.last - win.prior) / win.prior);
+        chgDen += win.n;
       }
     }
     for (const p of s.monthly) {
       const slot = byMonth.get(p.month);
       if (!slot) continue;
       if (p.partial) slot.partial = true;
-      for (const [code, v] of Object.entries(p.series)) {
-        const base = s.generations[code]?.median ?? 0;
-        slot.n += v.n;
+      const series = auctions ? (p.auctionSeries ?? {}) : p.series;
+      for (const [code, v] of Object.entries(series)) {
+        const g = s.generations[code];
+        const base = (auctions ? g?.auctionMedian : g?.median) ?? 0;
+        if (auctions) slot.auctionN += v.n;
+        else slot.n += v.n;
         if (base > 0 && v.median > 0) {
           slot.idxNum += v.n * (v.median / base) * 100;
           slot.idxDen += v.n;
@@ -137,12 +156,15 @@ export function aggregate(snapshots: TreeSnapshot[], months: string[]): NodeStat
       }
     }
   }
+  // Volume bars count sold auctions only when every model reads from auctions; a mixed
+  // node keeps dealer sales so the bars match its "Dealer sales" figures.
+  const allAuctions = auctionModels > 0 && auctionModels === snapshots.length;
   const trend: TrendPoint[] = months.map((month) => {
     const v = byMonth.get(month)!;
     return {
       month,
       partial: v.partial,
-      n: v.n,
+      n: allAuctions ? v.auctionN : v.n,
       index: v.idxDen > 0 ? Math.round((v.idxNum / v.idxDen) * 10) / 10 : null,
     };
   });
@@ -151,6 +173,7 @@ export function aggregate(snapshots: TreeSnapshot[], months: string[]): NodeStat
     dealerSales,
     auctionSales,
     activeNow,
+    auctionModels,
     medianPrice: median(heads),
     change90: chgDen > 0 ? chgNum / chgDen : null,
     n90: chgDen,

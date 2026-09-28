@@ -27,12 +27,29 @@ export interface GenerationStats {
   extra: string | null;
   /** Package keys offered on this generation, e.g. ["weissach"]. */
   packages: string[];
+  /**
+   * Sold auctions, so a model without dealer data still has a price read. Absent on
+   * summaries built before these were added.
+   */
+  auctionSold?: number;
+  auctionMedian?: number;
+  auctionLast90?: number;
+  auctionPrior90?: number;
+  auctionN90?: number;
+  /** Typical hammer range: p25 to p75, or min to max on a thin sample. */
+  auctionLo?: number;
+  auctionHi?: number;
+  auctionMedianMiles?: number;
+  /** Cars that came to auction (sold or reserve not met). */
+  auctionOffered?: number;
 }
 
 export interface MonthlyPoint {
   month: string; // YYYY-MM
   partial: boolean;
   series: Record<GenerationCode, { n: number; median: number }>;
+  /** Sold auctions in the month, per generation. Absent on older summaries. */
+  auctionSeries?: Record<GenerationCode, { n: number; median: number }>;
 }
 
 export interface YearRow {
@@ -76,6 +93,8 @@ export interface MarketSnapshot {
   generations: Record<GenerationCode, GenerationStats>;
   monthly: MonthlyPoint[];
   byYear: YearRow[];
+  /** What the by-year rows count. Absent (dealer) on snapshots built before auction fallback. */
+  byYearBasis?: "dealer" | "auction";
   colors: { color: string; n: number; median: number }[];
   milesBands: Record<
     GenerationCode,

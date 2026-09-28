@@ -18,14 +18,31 @@ export function ChangePill({ change, n90 }: { change: number | null; n90?: numbe
   );
 }
 
+/** True when every reported model reads from auctions (no dealer sales yet). */
+export function auctionBasis(stats: NodeStats): boolean {
+  return stats.auctionModels > 0 && stats.auctionModels === stats.models;
+}
+
+/** What the volume chart counts: auction sales, dealer sales, or plain sales for a mix. */
+export function salesNoun(stats: NodeStats): string {
+  if (auctionBasis(stats)) return "auction sales";
+  return stats.auctionModels > 0 ? "sales" : "dealer sales";
+}
+
 /** KPI strip shared by the segment and make pages. */
 export function NodeKpis({ stats, label }: { stats: NodeStats; label: string }) {
+  const auctions = auctionBasis(stats);
   return (
     <div className="kpis node-kpis">
       <div className="kpi">
-        <div className="l">Median price · {label}</div>
+        <div className="l">
+          {auctions ? "Median hammer" : "Median price"} · {label}
+        </div>
         <div className="v">{stats.medianPrice != null ? usd(stats.medianPrice) : "n/a"}</div>
-        <div className="s">Median of {stats.models} model medians, latest generation</div>
+        <div className="s">
+          Median of {stats.models} model medians, latest generation
+          {stats.auctionModels && !auctions ? `, ${stats.auctionModels} from auctions` : ""}
+        </div>
       </div>
       <div className="kpi">
         <div className="l">90-day change</div>
@@ -37,12 +54,20 @@ export function NodeKpis({ stats, label }: { stats: NodeStats; label: string }) 
         ) : (
           <div className="v">n/a</div>
         )}
-        <div className="s">Sales-weighted across generations, {stats.n90} sales</div>
+        <div className="s">
+          Sales-weighted across generations, {stats.n90} {auctions ? "auction " : ""}sales
+        </div>
       </div>
       <div className="kpi">
-        <div className="l">Dealer sales</div>
-        <div className="v">{stats.dealerSales.toLocaleString("en-US")}</div>
-        <div className="s">{stats.auctionSales.toLocaleString("en-US")} auction results</div>
+        <div className="l">{auctions ? "Auction sales" : "Dealer sales"}</div>
+        <div className="v">
+          {(auctions ? stats.auctionSales : stats.dealerSales).toLocaleString("en-US")}
+        </div>
+        <div className="s">
+          {auctions
+            ? "No dealer sales pulled yet"
+            : `${stats.auctionSales.toLocaleString("en-US")} auction results`}
+        </div>
       </div>
       <div className="kpi">
         <div className="l">For sale now</div>
@@ -63,7 +88,13 @@ export function TrendPair({ stats, wide = false }: { stats: NodeStats; wide?: bo
   const h = wide ? 96 : 56;
   return (
     <div className={`spark-pair${wide ? " wide" : ""}`}>
-      <Sparkline trend={stats.trend} kind="volume" width={w} height={h} label="Sales per month" />
+      <Sparkline
+        trend={stats.trend}
+        kind="volume"
+        width={w}
+        height={h}
+        label={auctionBasis(stats) ? "Auction sales per month" : "Sales per month"}
+      />
       <Sparkline
         trend={stats.trend}
         kind="index"
@@ -107,14 +138,18 @@ export function NodeCard({
         <>
           <div className="node-nums">
             <div>
-              <div className="lab">Median price</div>
+              <div className="lab">{auctionBasis(stats) ? "Median hammer" : "Median price"}</div>
               <div className="num big">
                 {stats.medianPrice != null ? usdK(stats.medianPrice) : "n/a"}
               </div>
             </div>
             <div>
-              <div className="lab">Dealer sales</div>
-              <div className="num big">{stats.dealerSales.toLocaleString("en-US")}</div>
+              <div className="lab">{auctionBasis(stats) ? "Auction sales" : "Dealer sales"}</div>
+              <div className="num big">
+                {(auctionBasis(stats) ? stats.auctionSales : stats.dealerSales).toLocaleString(
+                  "en-US",
+                )}
+              </div>
             </div>
             <div>
               <div className="lab">For sale</div>

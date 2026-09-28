@@ -6,6 +6,8 @@ Features and fixes as they ship, newest first. One line per change, with the pul
 
 ### Features
 
+- Market reports without dealer data yet read from auction results instead of showing zeros: the model page's KPI strip shows the median hammer price, range, 90-day change, sell-through and miles from sold auctions, the by-year table switches to hammer prices, dealer-only sections say so instead of rendering empty, the value tool prices the car from hammer prices lifted by the usual auction gap instead of showing $0 and NaN, and make and segment cards and tables show the median hammer, auction sales and an auction price trend for those models, labelled as such (#76)
+
 - Dealer listings: cars for sale at dealers (from Visor) with photos, asking price, miles, dealer and location. A "Dealers" source on the Buy page, dealer cards alongside auctions whenever a make, model, trim or search narrows the list, a dealer listing page with a "View at dealer" link and the UrCar read, and a "For sale at dealers" section on every model report (#73)
 
 - Buy page search box: type a year, make, model, trim or keyword and the list narrows as you type, best match first; typos are tolerated (trigram matching in Postgres) (#72)

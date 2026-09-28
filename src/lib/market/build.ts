@@ -114,6 +114,9 @@ function yearsLabel(a: number, b: number): string {
 }
 
 /** Trailing-window counts and medians for the 90-day change KPI. */
+/** Below this many sold auctions the hammer range shows min to max instead of quartiles. */
+export const AUCTION_THIN = 10;
+
 function window90(rows: { price: number; date: Date }[], now: Date) {
   const t90 = now.getTime() - 90 * DAY;
   const t180 = now.getTime() - 180 * DAY;
@@ -213,6 +216,15 @@ export function buildSnapshot(input: SnapshotInput): MarketSnapshot {
     const dated = rows.filter((r): r is Sale & { date: Date } => r.date != null);
     const w = window90(dated, input.now);
     const msrp = g.originalMsrp ?? 0;
+    const hammers = auctionsSold.filter((a) => a.code === g.code);
+    const hammerPrices = hammers.map((a) => a.hammerPrice as number);
+    const hammerThin = hammers.length < AUCTION_THIN;
+    const aw = window90(
+      hammers
+        .filter((a): a is (typeof hammers)[number] & { ended: Date } => a.ended != null)
+        .map((a) => ({ price: a.hammerPrice as number, date: a.ended })),
+      input.now,
+    );
     generations[g.code] = {
       code: g.code,
       name: g.name,
@@ -238,6 +250,31 @@ export function buildSnapshot(input: SnapshotInput): MarketSnapshot {
       gearbox: g.gearbox ?? "",
       extra: g.notes,
       packages: g.packages,
+      auctionSold: hammers.length,
+      auctionMedian: r0(median(hammers.map((a) => a.hammerPrice as number))),
+      auctionLast90: r0(aw.last90 ?? 0),
+      auctionPrior90: r0(aw.prior90 ?? 0),
+      auctionN90: aw.n90,
+      auctionLo: r0(
+        hammerThin
+          ? hammerPrices.length
+            ? Math.min(...hammerPrices)
+            : 0
+          : percentile(hammerPrices, 0.25),
+      ),
+      auctionHi: r0(
+        hammerThin
+          ? hammerPrices.length
+            ? Math.max(...hammerPrices)
+            : 0
+          : percentile(hammerPrices, 0.75),
+      ),
+      auctionMedianMiles: r0(
+        median(hammers.map((a) => a.miles).filter((m): m is number => m != null && m > 0)),
+      ),
+      auctionOffered: auctionsAll.filter(
+        (a) => a.code === g.code && a.excludedReason == null && a.status !== "withdrawn",
+      ).length,
     };
     years[g.code] = Array.from({ length: g.yearEnd - g.yearStart + 1 }, (_, i) => g.yearEnd - i);
 
@@ -272,32 +309,61 @@ export function buildSnapshot(input: SnapshotInput): MarketSnapshot {
 
   // Monthly trend: last 8 months ending at the data-through month.
   const lastMonth = addMonths(dataThroughDate, 0);
+  // The oldest month is partial when the series the cards read (dealer sales, or sold
+  // auctions for a model without dealer sales) starts inside it.
+  const trendSinceDate =
+    sales.length === 0 && auctionsSold.length > 0 ? auctionSinceDate : dealerSinceDate;
   const monthly: MonthlyPoint[] = [];
   for (let i = 7; i >= 0; i--) {
     const start = addMonths(lastMonth, -i);
     const end = addMonths(start, 1);
     const key = ym(start);
     const series: MonthlyPoint["series"] = {};
+    const auctionSeries: MonthlyPoint["series"] = {};
     for (const g of gens) {
       const inMonth = sales.filter(
         (s) => s.code === g.code && s.date && s.date >= start && s.date < end,
       );
       if (inMonth.length)
         series[g.code] = { n: inMonth.length, median: r0(median(inMonth.map((s) => s.price))) };
+      const hammered = auctionsSold.filter(
+        (a) => a.code === g.code && a.ended && a.ended >= start && a.ended < end,
+      );
+      if (hammered.length)
+        auctionSeries[g.code] = {
+          n: hammered.length,
+          median: r0(median(hammered.map((a) => a.hammerPrice as number))),
+        };
     }
     const partial =
-      (i === 7 && dealerSinceDate > start) ||
+      (i === 7 && trendSinceDate > start) ||
       (i === 0 && dataThroughDate.getTime() < end.getTime() - DAY);
-    monthly.push({ month: key, partial, series });
+    monthly.push({ month: key, partial, series, auctionSeries });
   }
   const chartSeries = gens
     .filter((g) => monthly.filter((m) => (m.series[g.code]?.n ?? 0) >= 3).length >= 3)
     .slice(0, 3)
     .map((g) => g.code);
 
-  // By model year.
-  const yearMap = new Map<number, Sale[]>();
-  for (const s of sales)
+  // By model year: dealer sales, or hammer prices when the model has no dealer sales yet.
+  const byYearBasis: MarketSnapshot["byYearBasis"] =
+    sales.length === 0 && auctionsSold.length > 0 ? "auction" : "dealer";
+  const yearRows: {
+    year: number | null;
+    price: number;
+    miles: number | null;
+    code: string | null;
+  }[] =
+    byYearBasis === "auction"
+      ? auctionsSold.map((a) => ({
+          year: a.year,
+          price: a.hammerPrice as number,
+          miles: a.miles,
+          code: a.code ?? "",
+        }))
+      : sales;
+  const yearMap = new Map<number, typeof yearRows>();
+  for (const s of yearRows)
     if (s.year != null) yearMap.set(s.year, [...(yearMap.get(s.year) ?? []), s]);
   const byYear = [...yearMap.entries()]
     .sort((a, b) => b[0] - a[0])
@@ -306,7 +372,7 @@ export function buildSnapshot(input: SnapshotInput): MarketSnapshot {
       n: rows.length,
       median: r0(median(rows.map((r) => r.price))),
       medianMiles: r0(median(rows.map((r) => r.miles).filter((m): m is number => m != null))),
-      generation: rows[0].code ?? genForYear(year)?.code ?? "",
+      generation: rows[0].code || (genForYear(year)?.code ?? ""),
     }));
 
   // Color premium for the headline generation.
@@ -378,6 +444,7 @@ export function buildSnapshot(input: SnapshotInput): MarketSnapshot {
     generations,
     monthly,
     byYear,
+    byYearBasis,
     colors,
     milesBands,
     states,

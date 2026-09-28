@@ -3,7 +3,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { longDate } from "@/components/market/format";
 import { usd } from "@/lib/format/money";
-import { ChangePill, NodeKpis, TrendPair } from "@/components/market/market-nodes";
+import {
+  ChangePill,
+  NodeKpis,
+  TrendPair,
+  auctionBasis,
+  salesNoun,
+} from "@/components/market/market-nodes";
 import { Sparkline } from "@/components/market/sparkline";
 import { BrandLogo } from "@/components/site/brand-logo";
 import { segmentByKey, segmentForMake } from "@/data/segments";
@@ -43,6 +49,7 @@ export default async function MakePage({ params }: { params: Promise<Params> }) 
     listSellModels(make).catch(soft(`markets ${make} catalog`, [])),
   ]);
   const node = tree.segments.find((s) => s.key === segment)?.makes.find((m) => m.slug === make);
+  const allAuctions = node?.stats ? auctionBasis(node.stats) : false;
   if (!node && catalog.length === 0) notFound();
   const name = node?.name ?? catalog[0]?.name ?? make;
   const reported = new Set((node?.models ?? []).map((m) => m.model.slug));
@@ -92,8 +99,8 @@ export default async function MakePage({ params }: { params: Promise<Params> }) 
           <section>
             <h2 className="sec">Volume and price trend</h2>
             <p className="sub">
-              Monthly dealer sales across every reported {name} model, and a sales-weighted price
-              index where 100 is each generation&apos;s normal price.
+              Monthly {salesNoun(node.stats)} across every reported {name} model, and a
+              sales-weighted price index where 100 is each generation&apos;s normal price.
             </p>
             <TrendPair stats={node.stats} wide />
           </section>
@@ -107,46 +114,71 @@ export default async function MakePage({ params }: { params: Promise<Params> }) 
 
       <section className="market-section">
         <h2 className="sec">Models</h2>
-        <p className="sub">Ranked by dealer sales. Open a model for its full market report.</p>
+        <p className="sub">
+          Ranked by {allAuctions ? "auction" : "dealer"} sales. Open a model for its full market
+          report.
+        </p>
         {node && node.models.length ? (
           <div className="tw">
             <table className="compare models-table">
               <thead>
                 <tr>
                   <th>Model</th>
-                  <th className="n">Median price</th>
+                  <th className="n">{allAuctions ? "Median hammer" : "Median price"}</th>
                   <th className="n">90-day</th>
-                  <th className="n">Dealer sales</th>
+                  <th className="n">{allAuctions ? "Auction sales" : "Dealer sales"}</th>
                   <th className="n">For sale</th>
-                  <th>Sales per month</th>
+                  <th>{allAuctions ? "Auction sales per month" : "Sales per month"}</th>
                   <th>Price index</th>
                 </tr>
               </thead>
               <tbody>
-                {node.models.map((m) => (
-                  <tr key={m.model.slug}>
-                    <td>
-                      <Link href={`/${m.make.slug}/${m.model.slug}`} className="seg-link-name">
-                        {m.model.name}
-                      </Link>
-                      <div className="hint">
-                        {m.stats.auctionSales} auction results · median of latest generation
-                      </div>
-                    </td>
-                    <td className="n">{m.headline > 0 ? usd(m.headline) : "n/a"}</td>
-                    <td className="n">
-                      <ChangePill change={m.stats.change90} n90={m.stats.n90} />
-                    </td>
-                    <td className="n">{m.stats.dealerSales.toLocaleString("en-US")}</td>
-                    <td className="n">{m.stats.activeNow.toLocaleString("en-US")}</td>
-                    <td className="spark-cell">
-                      <Sparkline trend={m.stats.trend} kind="volume" width={160} height={40} />
-                    </td>
-                    <td className="spark-cell">
-                      <Sparkline trend={m.stats.trend} kind="index" width={160} height={40} />
-                    </td>
-                  </tr>
-                ))}
+                {node.models.map((m) => {
+                  // A model without dealer sales reads from its auctions; say so on the row
+                  // when the column headers still speak of dealer figures.
+                  const auctions = auctionBasis(m.stats);
+                  return (
+                    <tr key={m.model.slug}>
+                      <td>
+                        <Link href={`/${m.make.slug}/${m.model.slug}`} className="seg-link-name">
+                          {m.model.name}
+                        </Link>
+                        <div className="hint">
+                          {auctions
+                            ? `${m.stats.auctionSales} auction sales, no dealer sales yet · median hammer, latest generation`
+                            : `${m.stats.auctionSales} auction results · median of latest generation`}
+                        </div>
+                      </td>
+                      <td className="n" title={auctions ? "Median hammer price" : undefined}>
+                        {m.headline > 0 ? usd(m.headline) : "n/a"}
+                        {auctions && !allAuctions ? (
+                          <>
+                            {" "}
+                            <span className="pill">hammer</span>
+                          </>
+                        ) : null}
+                      </td>
+                      <td className="n">
+                        <ChangePill change={m.stats.change90} n90={m.stats.n90} />
+                      </td>
+                      <td className="n">
+                        {(auctions ? m.stats.auctionSales : m.stats.dealerSales).toLocaleString(
+                          "en-US",
+                        )}
+                        {auctions && !allAuctions ? (
+                          <span className="hint"> at auction</span>
+                        ) : null}
+                      </td>
+                      <td className="n">{m.stats.activeNow.toLocaleString("en-US")}</td>
+                      <td className="spark-cell">
+                        <Sparkline trend={m.stats.trend} kind="volume" width={160} height={40} />
+                      </td>
+                      <td className="spark-cell">
+                        <Sparkline trend={m.stats.trend} kind="index" width={160} height={40} />
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

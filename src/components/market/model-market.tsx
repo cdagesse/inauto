@@ -9,14 +9,48 @@ import { mi, usd, usdK } from "@/lib/format/money";
 import { AuctionTables, ByYearTable, RecentSalesTable } from "./tables";
 import { VenueTable } from "./venue-table";
 import { compareVenues } from "@/lib/market/venues";
+import { AUCTION_THIN } from "@/lib/market/build";
+import { monthYear } from "./format";
 
 /** Everything on the model page that reacts to the selected generation. */
 export function ModelMarket({ snapshot }: { snapshot: MarketSnapshot }) {
   const [sel, select] = useGeneration(snapshot.model.slug, snapshot.order, snapshot.order[0]);
   const g = snapshot.generations[sel];
-  const ch = (g.last90 - g.prior90) / g.prior90;
-  const up = ch >= 0;
+  // A generation with no dealer sales yet reads from its sold auctions instead of showing zeros.
+  const viaAuctions = g.sold === 0 && (g.auctionSold ?? 0) > 0;
+  const price = viaAuctions
+    ? {
+        median: g.auctionMedian ?? 0,
+        lo: g.auctionLo ?? 0,
+        hi: g.auctionHi ?? 0,
+        thin: (g.auctionSold ?? 0) < AUCTION_THIN,
+        miles: g.auctionMedianMiles ?? 0,
+        last90: g.auctionLast90 ?? 0,
+        prior90: g.auctionPrior90 ?? 0,
+        n90: g.auctionN90 ?? 0,
+      }
+    : {
+        median: g.median,
+        lo: g.lo,
+        hi: g.hi,
+        thin: g.thin,
+        miles: g.medianMiles,
+        last90: g.last90,
+        prior90: g.prior90,
+        n90: g.n90,
+      };
+  const ch = price.prior90 > 0 ? (price.last90 - price.prior90) / price.prior90 : null;
+  const up = ch != null && ch >= 0;
+  const multiple = viaAuctions
+    ? g.msrp && price.median
+      ? Math.round((price.median / g.msrp) * 100) / 100
+      : 0
+    : g.multiple;
+  const offered = g.auctionOffered ?? 0;
   const short = snapshot.model.shortName;
+  // "the S30" reads fine; "the All years" does not, so a single catch-all generation goes by
+  // the model's name.
+  const genRef = snapshot.order.length === 1 ? short : g.name;
   const dealerSinceLabel = fmtShort(snapshot.dealerSince);
   const bands = snapshot.milesBands[sel];
   const bandMax = bands ? Math.max(...bands.map((b) => b.median)) : 0;
@@ -47,50 +81,82 @@ export function ModelMarket({ snapshot }: { snapshot: MarketSnapshot }) {
       <div className="kpis">
         <div className="kpi">
           <div className="l">
-            Median sold price · {g.name}
-            {g.thin && (
+            {viaAuctions ? "Median hammer price" : "Median sold price"} · {g.name}
+            {price.thin && (
               <>
                 {" "}
                 <span className="pill">Thin sample</span>
               </>
             )}
           </div>
-          <div className="v">{usd(g.median)}</div>
+          <div className="v">{usd(price.median)}</div>
           <div className="s">
-            Typical range {usd(g.lo)} to {usd(g.hi)}
+            Typical range {usd(price.lo)} to {usd(price.hi)}
           </div>
         </div>
         <div className="kpi">
           <div className="l">90-day change</div>
-          <div className={`v chg ${up ? "up" : "down"}`}>
-            {up ? "+" : ""}
-            {(ch * 100).toFixed(1)}%
-          </div>
+          {ch == null ? (
+            <div className="v">n/a</div>
+          ) : (
+            <div className={`v chg ${up ? "up" : "down"}`}>
+              {up ? "+" : ""}
+              {(ch * 100).toFixed(1)}%
+            </div>
+          )}
           <div className="s">
-            {usdK(g.prior90)} to {usdK(g.last90)} median, {g.n90} sales in last 90 days
+            {ch == null
+              ? "Not enough sales in the prior 90 days"
+              : `${usdK(price.prior90)} to ${usdK(price.last90)} median, ${price.n90} ${
+                  viaAuctions ? "auction " : ""
+                }sales in last 90 days`}
           </div>
         </div>
-        <div className="kpi">
-          <div className="l">Sales since {dealerSinceLabel}</div>
-          <div className="v">{g.sold}</div>
-          <div className="s">Median {g.daysToSell} days to sell</div>
-        </div>
+        {viaAuctions ? (
+          <div className="kpi">
+            <div className="l">Auction sales since {monthYear(snapshot.auctionSince)}</div>
+            <div className="v">{g.auctionSold}</div>
+            <div className="s">
+              {offered > 0
+                ? `${offered} offered, ${Math.round(((g.auctionSold ?? 0) / offered) * 100)}% sold`
+                : "Hammer prices, reserve-not-met excluded"}
+            </div>
+          </div>
+        ) : (
+          <div className="kpi">
+            <div className="l">Sales since {dealerSinceLabel}</div>
+            <div className="v">{g.sold}</div>
+            <div className="s">Median {g.daysToSell} days to sell</div>
+          </div>
+        )}
         <div className="kpi">
           <div className="l">For sale now</div>
           <div className="v">{g.active}</div>
-          <div className="s">Asking {usdK(g.activeMedian)} median</div>
+          <div className="s">
+            {g.active > 0 ? `Asking ${usdK(g.activeMedian)} median` : "No dealer listings pulled"}
+          </div>
         </div>
         <div className="kpi">
           <div className="l">Median miles</div>
-          <div className="v">{mi(g.medianMiles)}</div>
-          <div className="s">Listed now {mi(g.activeMedianMiles)}</div>
+          <div className="v">{mi(price.miles)}</div>
+          <div className="s">
+            {viaAuctions ? "On sold auction cars" : `Listed now ${mi(g.activeMedianMiles)}`}
+          </div>
         </div>
         <div className="kpi">
           <div className="l">vs. original sticker</div>
-          <div className="v">{g.multiple.toFixed(2)}×</div>
-          <div className="s">MSRP {usdK(g.msrp)} median</div>
+          <div className="v">{multiple ? `${multiple.toFixed(2)}×` : "n/a"}</div>
+          <div className="s">
+            {g.msrp ? `MSRP ${usdK(g.msrp)} median` : "No original MSRP on file"}
+          </div>
         </div>
       </div>
+      {viaAuctions && (
+        <p className="note">
+          No dealer sales for the {genRef} have been pulled yet, so these figures come from{" "}
+          {g.auctionSold} auction results. Dealer figures replace them once sales are on file.
+        </p>
+      )}
 
       <section id="value">
         <h2 className="sec">What is my {short} worth?</h2>
@@ -104,26 +170,38 @@ export function ModelMarket({ snapshot }: { snapshot: MarketSnapshot }) {
 
       <section>
         <h2 className="sec">Price trend by generation</h2>
-        <p className="sub">
-          Median sold price per month for the {chartable.length === 3 ? "three" : chartable.length}{" "}
-          generations with enough sales to chart. The 997 cars trade too thinly for a monthly line;
-          their sales are in the table below.
-        </p>
-        <div className="panel">
-          <TrendChart snapshot={snapshot} selected={sel} />
-        </div>
+        {chartable.length ? (
+          <>
+            <p className="sub">
+              Median dealer sold price per month for the{" "}
+              {chartable.length === 1 ? "generation" : `${chartable.length} generations`} with
+              enough sales to chart. Generations that trade too thinly for a monthly line are in the
+              tables below.
+            </p>
+            <div className="panel">
+              <TrendChart snapshot={snapshot} selected={sel} />
+            </div>
+          </>
+        ) : (
+          <p className="sub">
+            Not enough monthly dealer sales to chart a trend yet.
+            {snapshot.totals.auctionSales > 0
+              ? " The auction results below carry the price history for now."
+              : ""}
+          </p>
+        )}
       </section>
 
       <section>
         <h2 className="sec">Price vs. mileage, {g.name}</h2>
         <p className="sub">
-          {snapshot.dealerSales[sel]
+          {snapshot.dealerSales[sel]?.length
             ? `Each dot is one ${g.name} dealer sale since ${dealerSinceLabel}; diamonds are auction sales. ${
                 sel === snapshot.order[0]
                   ? "Delivery-mile cars carry the biggest premium; the curve flattens after about 2,500 miles."
                   : `Miles matter less than on the ${snapshot.order[0]}; condition, color and spec explain most of the spread.`
               }`
-            : ""}
+            : `No ${genRef} dealer sales on file yet; each diamond is one auction sale.`}
         </p>
         <div className="grid2">
           <div className="panel">
@@ -178,13 +256,17 @@ export function ModelMarket({ snapshot }: { snapshot: MarketSnapshot }) {
       <section>
         <h2 className="sec">By model year</h2>
         <p className="sub">
-          Sold results by model year. The 2011 figures include the RS 4.0, a 600-car run that sells
-          at a large premium to the standard 997.2.
+          {snapshot.byYearBasis === "auction"
+            ? "Auction hammer prices by model year; no dealer sales have been pulled yet."
+            : "Dealer sold results by model year."}
+          {snapshot.model.slug === "911-gt3-rs"
+            ? " The 2011 figures include the RS 4.0, a 600-car run that sells at a large premium to the standard 997.2."
+            : ""}
         </p>
         <ByYearTable snapshot={snapshot} selected={sel} />
       </section>
 
-      <StaticTables snapshot={snapshot} />
+      {snapshot.totals.dealerSales > 0 && <StaticTables snapshot={snapshot} />}
 
       <section>
         <h2 className="sec">Auction results</h2>
@@ -197,7 +279,7 @@ export function ModelMarket({ snapshot }: { snapshot: MarketSnapshot }) {
       </section>
 
       <section id="venues">
-        <h2 className="sec">Where the {g.name} sells best</h2>
+        <h2 className="sec">Where the {genRef} sells best</h2>
         <p className="sub">
           The same generation, venue by venue: how many came to auction, how many actually sold, and
           the median hammer. Enter your mileage in the value tool above and the sell page narrows
@@ -208,8 +290,14 @@ export function ModelMarket({ snapshot }: { snapshot: MarketSnapshot }) {
 
       <section>
         <h2 className="sec">Recent dealer sales</h2>
-        <p className="sub">The latest dealer sales with an advertised price.</p>
-        <RecentSalesTable snapshot={snapshot} selected={sel} />
+        {snapshot.recentDealerSales.length ? (
+          <>
+            <p className="sub">The latest dealer sales with an advertised price.</p>
+            <RecentSalesTable snapshot={snapshot} selected={sel} />
+          </>
+        ) : (
+          <p className="sub">No dealer sales have been pulled for the {short} yet.</p>
+        )}
       </section>
     </div>
   );

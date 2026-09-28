@@ -5,7 +5,7 @@ import { getMarketSnapshot, listMarketModels } from "@/lib/market/source";
 import { DealerListingsSection } from "@/components/market/dealer-listings-section";
 import { ModelMarket } from "@/components/market/model-market";
 import { GenerationGuide } from "@/components/market/tables";
-import { longDate } from "@/components/market/format";
+import { longDate, monthYear } from "@/components/market/format";
 import { usd } from "@/lib/format/money";
 import { BrandLogo } from "@/components/site/brand-logo";
 import { getCatalogModel } from "@/server/queries/catalog";
@@ -201,11 +201,6 @@ export default async function ModelPage({ params }: { params: Promise<Params> })
       </footer>
     </>
   );
-}
-
-function monthYear(d: string) {
-  const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  return `${MON[+d.slice(5, 7) - 1]} ${d.slice(0, 4)}`;
 }
 
 function ninetyDayWindow(through: string) {
