@@ -1,8 +1,9 @@
 import "server-only";
-import { and, desc, eq, gte, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, sql } from "drizzle-orm";
 import { db as defaultDb, type Db } from "@/db";
 import {
   auctionResults,
+  carViews,
   dealerActive,
   dealerSales,
   generations,
@@ -11,14 +12,16 @@ import {
   marketDaily,
   modelAliases,
   models,
+  rawFetches,
 } from "@/db/schema";
 import { env } from "@/env/server";
 import { BudgetExceeded, withBudget } from "@/lib/sources/budget";
 import { createOcdClient, ocdRowMatches, parseOcdAlias } from "@/lib/sources/ocd";
 import { createVisorClient } from "@/lib/sources/visor";
 import type { NormalizedAuctionRow, NormalizedDealerRow } from "@/lib/sources/types";
-import { classify } from "./lib/clean";
+import { classify, groupReclassified, type Reclassified } from "./lib/clean";
 import { runChecks, type CheckInput, type CheckWarning } from "./lib/check";
+import { pruneInBatches, RETENTION_DAYS } from "./lib/retention";
 import {
   assignGeneration,
   detectPackages,
@@ -63,6 +66,13 @@ export interface ModelSummary {
   errors: string[];
 }
 
+/** Rows removed by the retention pass, per table. Absent on dry runs and on-demand report builds. */
+export interface RetentionSummary {
+  rawFetch: number;
+  carView: number;
+  jobRun: number;
+}
+
 export interface NightlySummary {
   jobRunId: string | null;
   dryRun: boolean;
@@ -70,6 +80,7 @@ export interface NightlySummary {
   finishedAt: string;
   models: ModelSummary[];
   errors: string[];
+  pruned?: RetentionSummary;
 }
 
 const DAY = 86_400_000;
@@ -354,7 +365,11 @@ async function pull(
   return { sold, active, auctions, unmatched, budgetStopped, errors };
 }
 
-/** Re-run cleaning over every non-manual dealer sale and auction result of the model. */
+/**
+ * Re-run cleaning over every non-manual dealer sale and auction result of the model.
+ * Selects only the columns classify() reads (never raw_json) and writes reclassified
+ * rows in one `update ... where id in (...)` per new reason.
+ */
 async function clean(db: Db, m: CatalogModel, now: Date, dryRun: boolean) {
   const genIds = m.gens.map((g) => g.id);
   const medians = await trailingMedians(db, genIds, now);
@@ -363,7 +378,19 @@ async function clean(db: Db, m: CatalogModel, now: Date, dryRun: boolean) {
     if (k) excluded[k] = (excluded[k] ?? 0) + 1;
   };
 
-  const sales = await db.select().from(dealerSales).where(eq(dealerSales.modelId, m.id));
+  const sales = await db
+    .select({
+      id: dealerSales.id,
+      price: dealerSales.price,
+      miles: dealerSales.miles,
+      year: dealerSales.year,
+      generationId: dealerSales.generationId,
+      excludedReason: dealerSales.excludedReason,
+      needsReview: dealerSales.needsReview,
+    })
+    .from(dealerSales)
+    .where(eq(dealerSales.modelId, m.id));
+  const salesChanged: Reclassified[] = [];
   for (const s of sales) {
     const reason = classify(m.slug, {
       price: s.price,
@@ -373,11 +400,31 @@ async function clean(db: Db, m: CatalogModel, now: Date, dryRun: boolean) {
       existing: s.excludedReason,
     });
     bump(reason);
-    if (!dryRun && reason !== s.excludedReason) {
-      await db.update(dealerSales).set({ excludedReason: reason }).where(eq(dealerSales.id, s.id));
+    if (reason !== s.excludedReason)
+      salesChanged.push({ id: s.id, before: s.excludedReason, after: reason });
+  }
+  if (!dryRun) {
+    for (const g of groupReclassified(salesChanged)) {
+      await db
+        .update(dealerSales)
+        .set({ excludedReason: g.reason })
+        .where(inArray(dealerSales.id, g.ids));
     }
   }
-  const aucs = await db.select().from(auctionResults).where(eq(auctionResults.modelId, m.id));
+
+  const aucs = await db
+    .select({
+      id: auctionResults.id,
+      hammerPrice: auctionResults.hammerPrice,
+      miles: auctionResults.miles,
+      year: auctionResults.year,
+      generationId: auctionResults.generationId,
+      excludedReason: auctionResults.excludedReason,
+      needsReview: auctionResults.needsReview,
+    })
+    .from(auctionResults)
+    .where(eq(auctionResults.modelId, m.id));
+  const aucsChanged: Reclassified[] = [];
   for (const a of aucs) {
     const reason = classify(m.slug, {
       price: a.hammerPrice,
@@ -387,18 +434,79 @@ async function clean(db: Db, m: CatalogModel, now: Date, dryRun: boolean) {
       existing: a.excludedReason,
     });
     bump(reason);
-    if (!dryRun && reason !== a.excludedReason) {
+    if (reason !== a.excludedReason)
+      aucsChanged.push({ id: a.id, before: a.excludedReason, after: reason });
+  }
+  if (!dryRun) {
+    for (const g of groupReclassified(aucsChanged)) {
       await db
         .update(auctionResults)
-        .set({ excludedReason: reason })
-        .where(eq(auctionResults.id, a.id));
+        .set({ excludedReason: g.reason })
+        .where(inArray(auctionResults.id, g.ids));
     }
   }
+
   const needsReview =
     sales.filter((s) => s.needsReview).length + aucs.filter((a) => a.needsReview).length;
   const total = sales.length + aucs.length;
   const excludedTotal = Object.values(excluded).reduce((a, b) => a + b, 0);
   return { excluded, needsReview, excludedShare: total ? excludedTotal / total : 0 };
+}
+
+/** Rows affected by a raw `... returning` statement, whichever shape the driver returns. */
+function returnedCount(res: unknown): number {
+  if (Array.isArray(res)) return res.length;
+  const rows = (res as { rows?: unknown[] } | null)?.rows;
+  return Array.isArray(rows) ? rows.length : 0;
+}
+
+/**
+ * Retention: drops raw_fetch, car_view and job_run rows past their window, in batches so
+ * the first run over a backlog fits the cron cap. Nothing reads raw_fetch back, trending
+ * reads only the last week of car_view, and job_run is only browsed for recent runs.
+ */
+async function pruneOldRows(db: Db): Promise<RetentionSummary> {
+  const rawFetch = await pruneInBatches(async (limit) =>
+    returnedCount(
+      await db.execute(sql`
+        DELETE FROM ${rawFetches}
+        WHERE id IN (
+          SELECT id FROM ${rawFetches}
+          WHERE fetched_at < now() - make_interval(days => ${RETENTION_DAYS.rawFetch}::int)
+          LIMIT ${limit}
+        )
+        RETURNING id
+      `),
+    ),
+  );
+  // car_view has a composite key, so batch on the physical row id instead.
+  const carView = await pruneInBatches(async (limit) =>
+    returnedCount(
+      await db.execute(sql`
+        DELETE FROM ${carViews}
+        WHERE ctid IN (
+          SELECT ctid FROM ${carViews}
+          WHERE day < current_date - ${RETENTION_DAYS.carView}::int
+          LIMIT ${limit}
+        )
+        RETURNING day
+      `),
+    ),
+  );
+  const jobRun = await pruneInBatches(async (limit) =>
+    returnedCount(
+      await db.execute(sql`
+        DELETE FROM ${jobRuns}
+        WHERE id IN (
+          SELECT id FROM ${jobRuns}
+          WHERE started_at < now() - make_interval(days => ${RETENTION_DAYS.jobRun}::int)
+          LIMIT ${limit}
+        )
+        RETURNING id
+      `),
+    ),
+  );
+  return { rawFetch, carView, jobRun };
 }
 
 /** Rebuild today's market_daily rows for each generation of the model. */
@@ -592,6 +700,21 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<NightlySumm
     errors.push(e instanceof Error ? e.message : String(e));
   }
 
+  // Retention runs outside the pull so a failed pull still prunes. Full live runs only:
+  // dry runs write nothing and on-demand report builds should stay short.
+  let pruned: RetentionSummary | undefined;
+  if (!dryRun && !opts.modelSlugs?.length) {
+    try {
+      pruned = await pruneOldRows(db);
+      log(
+        `retention: raw_fetch -${pruned.rawFetch}, car_view -${pruned.carView}, job_run -${pruned.jobRun}`,
+      );
+    } catch (e) {
+      errors.push(`retention: ${describe(e)}`);
+      log(`error retention: ${describe(e)}`);
+    }
+  }
+
   const finishedAt = new Date().toISOString();
   const summary: NightlySummary = {
     jobRunId,
@@ -600,6 +723,7 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<NightlySumm
     finishedAt,
     models: summaries,
     errors,
+    ...(pruned ? { pruned } : {}),
   };
   if (jobRunId) {
     await db

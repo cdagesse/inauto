@@ -1224,8 +1224,11 @@ svg .lbl {
   border-color: var(--ink-3);
 }
 .listing-card .photo {
+  /* positioned + clipped: the photo inside is an absolutely filled <img> */
+  position: relative;
+  overflow: hidden;
   aspect-ratio: 4 / 3;
-  background: var(--paper) center / cover no-repeat;
+  background: var(--paper);
   border-radius: 6px;
   display: grid;
   place-items: center;
@@ -3186,7 +3189,8 @@ table.compare td.down {
 .featured-photo {
   position: absolute;
   inset: 0;
-  background: var(--card) center / cover no-repeat;
+  overflow: hidden;
+  background: var(--card);
   transition: transform 0.6s ease;
 }
 .featured-card:hover .featured-photo {

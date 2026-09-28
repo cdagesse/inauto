@@ -9,6 +9,7 @@ import { BrandLogo } from "@/components/site/brand-logo";
 import { segmentByKey, segmentForMake } from "@/data/segments";
 import { getMarketTree } from "@/lib/market/tree-source";
 import { listSellModels } from "@/server/queries/sell-catalog";
+import { soft } from "@/server/result";
 
 export const revalidate = 3600;
 
@@ -39,7 +40,7 @@ export default async function MakePage({ params }: { params: Promise<Params> }) 
   if (!seg || segmentForMake(make).key !== seg.key) notFound();
   const [tree, catalog] = await Promise.all([
     getMarketTree(),
-    listSellModels(make).catch(() => []),
+    listSellModels(make).catch(soft(`markets ${make} catalog`, [])),
   ]);
   const node = tree.segments.find((s) => s.key === segment)?.makes.find((m) => m.slug === make);
   if (!node && catalog.length === 0) notFound();

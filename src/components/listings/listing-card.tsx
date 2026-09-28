@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { mi, usd } from "@/lib/format/money";
 import { BrandLogo } from "@/components/site/brand-logo";
+import { CardPhoto } from "./card-photo";
 import { Countdown } from "./countdown";
 
 export interface ListingCardData {
@@ -48,13 +49,9 @@ export function ListingCard({ l, highlight = false }: { l: ListingCardData; high
       href={`/listings/${l.id}`}
       className={`panel car-card link-card listing-card${highlight ? " inauto-card" : ""}`}
     >
-      <div
-        className="photo"
-        style={photo ? { backgroundImage: `url("${photo}")` } : undefined}
-        aria-hidden="true"
-      >
-        {!photo ? <span className="lab">No photo</span> : null}
-      </div>
+      <CardPhoto src={photo}>
+        <span className="lab">No photo</span>
+      </CardPhoto>
       <div className="lab card-meta">
         <span className="meta-main">
           {highlight ? <span className="pill accent inauto-pill">On UrCar</span> : null}

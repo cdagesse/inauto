@@ -1,19 +1,23 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { auth } from "@/auth";
 import { ExternalDetail, type UrCarRead } from "@/components/listings/external-detail";
 import { ExpandedRegion } from "@/components/listings/expandable";
 import { ExternalAdminBar } from "@/components/listings/external-admin-bar";
 import { isFeatured } from "@/server/queries/featured";
-import { MarketBlock } from "@/components/listings/market-block";
-import { VinTimeline } from "@/components/listings/vin-timeline";
+import { MarketBlock, MarketBlockFallback } from "@/components/listings/market-block";
+import {
+  VinTimelineSection,
+  VinTimelineSkeleton,
+} from "@/components/listings/vin-timeline-section";
 import { packagesFromText } from "@/components/market/market-summary-lib";
 import { env } from "@/env/server";
 import { getMarketSnapshot } from "@/lib/market/source";
 import { isPlatformKey } from "@/lib/sources/platforms";
 import { valuate } from "@/lib/valuation/engine";
 import { getExternalListing } from "@/server/queries/external";
-import { getVinTimeline } from "@/server/queries/vin";
+import { isVin } from "@/lib/vin/timeline";
 import { after } from "next/server";
 import { recordCarView } from "@/server/views";
 import { maskVin } from "@/lib/sources/live";
@@ -54,11 +58,9 @@ export default async function ExternalListingPage({ params }: { params: Params }
   const session = await auth();
   const isAdmin = session?.user?.role === "admin";
   const featured = isAdmin ? await isFeatured("external", l.id) : false;
-  const history = await getVinTimeline(l.vin, {
-    kind: "external",
-    id: `${l.source}:${l.sourceId}`,
-  });
 
+  // The valuation feeds the headline delta in the sticky head, so it stays in the
+  // first wave; the snapshot read is request-cached and shared with <MarketBlock>.
   let read: UrCarRead | null = null;
   if (l.market) {
     const reportHref = `/${l.market.makeSlug}/${l.market.modelSlug}`;
@@ -91,21 +93,31 @@ export default async function ExternalListingPage({ params }: { params: Params }
   const market = (
     <>
       <ExpandedRegion id={expandId}>
-        <MarketBlock
-          market={l.market}
-          make={l.make}
-          model={l.model}
-          car={{
-            year: l.year,
-            miles: l.miles,
-            price: price ?? null,
-            packages: packagesFromText(`${l.title} ${l.trim ?? ""}`),
-            title: l.title,
-          }}
-          priceLabel={priceLabel}
-        />
+        <Suspense fallback={<MarketBlockFallback />}>
+          <MarketBlock
+            market={l.market}
+            make={l.make}
+            model={l.model}
+            car={{
+              year: l.year,
+              miles: l.miles,
+              price: price ?? null,
+              packages: packagesFromText(`${l.title} ${l.trim ?? ""}`),
+              title: l.title,
+            }}
+            priceLabel={priceLabel}
+          />
+        </Suspense>
       </ExpandedRegion>
-      <VinTimeline events={history} vinShown={maskVin(l.vin)} />
+      {isVin(l.vin) ? (
+        <Suspense fallback={<VinTimelineSkeleton />}>
+          <VinTimelineSection
+            vin={l.vin}
+            current={{ kind: "external", id: `${l.source}:${l.sourceId}` }}
+            vinShown={maskVin(l.vin)}
+          />
+        </Suspense>
+      ) : null}
     </>
   );
 

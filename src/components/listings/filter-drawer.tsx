@@ -23,6 +23,9 @@ type Form = {
 type Scope = { when: string; result: string; type: string; source: string };
 
 const THIS_YEAR = new Date().getFullYear();
+/** Next model year down to 1930, newest first. Built once, not per render. */
+const YEARS: number[] = [];
+for (let y = THIS_YEAR + 1; y >= 1930; y--) YEARS.push(y);
 
 function ScopePills({
   label,
@@ -75,8 +78,8 @@ export function FilterDrawer({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
-  const [models, setModels] = useState<SellModel[]>([]);
-  const [loadingModels, setLoadingModels] = useState(false);
+  // Models fetched so far, keyed by make slug, so reopening or switching back is free.
+  const [modelsBySlug, setModelsBySlug] = useState<Record<string, SellModel[]>>({});
   const [form, setForm] = useState<Form>(() => ({
     make: s(current.make),
     model: s(current.model),
@@ -98,20 +101,26 @@ export function FilterDrawer({
   const panel = useRef<HTMLDivElement>(null);
   const active = countActive(current);
   const makeSlug = makes.find((m) => m.name.toLowerCase() === form.make.toLowerCase())?.slug;
+  const models = (makeSlug && modelsBySlug[makeSlug]) || [];
+  const loadingModels = !!makeSlug && !(makeSlug in modelsBySlug);
 
   // Models for the chosen make (catalog makes only; free text still works).
+  // Only while the drawer is open: /listings?make=… must not cost a server
+  // action on every load for a panel most visitors never open.
+  const inflight = useRef(new Set<string>());
   useEffect(() => {
-    if (!makeSlug) return;
-    let cancelled = false;
-    getSellModels({ makeSlug }).then((r) => {
-      if (cancelled) return;
-      setLoadingModels(false);
-      setModels(r.ok ? r.data : []);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [makeSlug]);
+    if (!open || !makeSlug || makeSlug in modelsBySlug || inflight.current.has(makeSlug)) return;
+    inflight.current.add(makeSlug);
+    // A failed call (network, deploy skew) caches an empty list rather than
+    // leaving the field on "Loading models…" for the session; free text still works.
+    getSellModels({ makeSlug })
+      .then(
+        (r) => (r.ok ? r.data : []),
+        () => [] as SellModel[],
+      )
+      .then((list) => setModelsBySlug((m) => ({ ...m, [makeSlug]: list })))
+      .finally(() => inflight.current.delete(makeSlug));
+  }, [open, makeSlug, modelsBySlug]);
 
   // Escape closes; focus moves into the panel when it opens.
   useEffect(() => {
@@ -129,8 +138,6 @@ export function FilterDrawer({
   }
   function changeMake(v: string) {
     setForm((f) => ({ ...f, make: v, model: "" }));
-    setModels([]);
-    setLoadingModels(!!makes.find((m) => m.name.toLowerCase() === v.toLowerCase()));
   }
 
   function apply(next: Form, sc: Scope = scope) {
@@ -164,9 +171,6 @@ export function FilterDrawer({
     setScope(plain);
     apply(empty, plain);
   }
-
-  const years: number[] = [];
-  for (let y = THIS_YEAR + 1; y >= 1930; y--) years.push(y);
 
   return (
     <>
@@ -320,7 +324,7 @@ export function FilterDrawer({
                 onChange={(e) => set("yearMin", e.target.value)}
               >
                 <option value="">From</option>
-                {years.map((y) => (
+                {YEARS.map((y) => (
                   <option key={y} value={y}>
                     {y}
                   </option>
@@ -333,7 +337,7 @@ export function FilterDrawer({
                 onChange={(e) => set("yearMax", e.target.value)}
               >
                 <option value="">To</option>
-                {years.map((y) => (
+                {YEARS.map((y) => (
                   <option key={y} value={y}>
                     {y}
                   </option>

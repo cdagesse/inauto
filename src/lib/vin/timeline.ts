@@ -82,6 +82,10 @@ export interface VinRows {
   inauto: UrCarRow[];
 }
 
+/** True for a plausible VIN: 11 to 17 characters, no I, O or Q. Case-insensitive. */
+export const isVin = (v: string | null | undefined): v is string =>
+  /^[A-HJ-NPR-Z0-9]{11,17}$/i.test((v ?? "").trim());
+
 const day = (s: string | null | undefined) => (s ? s.slice(0, 10) : null);
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 const daysBetween = (a: string, b: string) =>

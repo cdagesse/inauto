@@ -1,10 +1,10 @@
+import "server-only";
 import { z } from "zod";
 
 export const PAGE_SIZE = 24;
 export const MAX_PHOTOS = 24;
 
-/** Public-read Blob store host, or any https URL for the paste-a-link fallback. */
-export const BLOB_HOST_SUFFIX = ".public.blob.vercel-storage.com";
+/** UrCar blob uploads, or any https URL for the paste-a-link fallback. */
 export const photoUrl = z
   .string()
   .trim()
@@ -17,13 +17,6 @@ export const photoUrl = z
       return false;
     }
   }, "Photo links must be https.");
-export const isBlobUrl = (u: string) => {
-  try {
-    return new URL(u).hostname.endsWith(BLOB_HOST_SUFFIX);
-  } catch {
-    return false;
-  }
-};
 
 export const createListingSchema = z.object({
   type: z.enum(["classified", "auction", "private"]),

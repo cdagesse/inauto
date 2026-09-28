@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { money } from "@/lib/format/money";
+import { CardPhoto } from "@/components/listings/card-photo";
+import { prefetchPhoto } from "@/lib/listings/photo-request";
 import type { FeaturedCar } from "@/server/queries/featured";
+
+/** The hero card is a full column on phones and roughly half the row above 900px. */
+const HERO_SIZES = "(max-width: 900px) 100vw, 50vw";
 
 /** Rotating card of featured cars for the home hero. Pauses while hovered or focused. */
 export function FeaturedHero({
@@ -15,13 +20,27 @@ export function FeaturedHero({
 }) {
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
+  const n = cars.length;
+  const rotating = n > 1 && !paused;
+
+  // Warm the upcoming slide's photo so the swap never blanks the card. Keyed
+  // on the URL, not the cars array, so a parent re-render (router.refresh,
+  // revalidation) that reserializes props does not re-issue the fetch.
+  const next = n > 1 ? cars[(i + 1) % n]?.photo : undefined;
   useEffect(() => {
-    if (cars.length < 2 || paused) return;
-    const t = setInterval(() => setI((x) => (x + 1) % cars.length), interval);
-    return () => clearInterval(t);
-  }, [cars.length, paused, interval]);
-  if (cars.length === 0) return null;
-  const car = cars[i % cars.length]!;
+    if (next) prefetchPhoto(next, HERO_SIZES);
+  }, [next]);
+
+  // Advance on a timeout (not an interval) so the clock restarts after manual
+  // navigation and a chosen car gets its full turn.
+  useEffect(() => {
+    if (!rotating) return;
+    const t = setTimeout(() => setI((x) => (x + 1) % n), interval);
+    return () => clearTimeout(t);
+  }, [rotating, i, n, interval]);
+
+  if (n === 0) return null;
+  const car = cars[i % n]!;
   return (
     <div
       className="featured"
@@ -32,11 +51,13 @@ export function FeaturedHero({
       aria-roledescription="carousel"
       aria-label="Featured cars"
     >
-      <Link href={car.href} className="featured-card" aria-live="polite">
-        <div
+      {/* Silent while auto-rotating (otherwise every tick is announced); polite once paused. */}
+      <Link href={car.href} className="featured-card" aria-live={rotating ? "off" : "polite"}>
+        <CardPhoto
+          src={car.photo}
           className="featured-photo"
-          style={car.photo ? { backgroundImage: `url("${car.photo}")` } : undefined}
-          aria-hidden="true"
+          sizes={HERO_SIZES}
+          priority={i === 0}
         />
         <div className="featured-body">
           <span className="pill accent">
@@ -55,13 +76,13 @@ export function FeaturedHero({
           </p>
         </div>
       </Link>
-      {cars.length > 1 ? (
+      {n > 1 ? (
         <div className="featured-nav">
           <button
             type="button"
             className="btn sm"
             aria-label="Previous car"
-            onClick={() => setI((x) => (x - 1 + cars.length) % cars.length)}
+            onClick={() => setI((x) => (x - 1 + n) % n)}
           >
             ‹
           </button>
@@ -82,7 +103,7 @@ export function FeaturedHero({
             type="button"
             className="btn sm"
             aria-label="Next car"
-            onClick={() => setI((x) => (x + 1) % cars.length)}
+            onClick={() => setI((x) => (x + 1) % n)}
           >
             ›
           </button>

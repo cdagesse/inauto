@@ -11,6 +11,7 @@ import { listingFilterSchema } from "@/server/listings-schema";
 import { countLiveBySource, listExternalListings } from "@/server/queries/external";
 import { listActiveListings } from "@/server/queries/listings";
 import { listSellMakes } from "@/server/queries/sell-catalog";
+import { soft } from "@/server/result";
 
 export const metadata: Metadata = {
   title: "Cars for sale",
@@ -70,8 +71,8 @@ export default async function ListingsPage({
           limit: source === "all" ? 12 : 24,
         })
       : Promise.resolve({ rows: [], nextCursor: null }),
-    countLiveBySource().catch(() => ({}) as Record<string, number>),
-    listSellMakes().catch(() => []),
+    countLiveBySource().catch(soft("listings live counts", {} as Record<string, number>)),
+    listSellMakes().catch(soft("listings makes", [])),
   ]);
   const liveTotal = Object.values(liveCounts).reduce((a, b) => a + b, 0);
   const platformsWithLive = PLATFORM_KEYS.filter((k) => (liveCounts[k] ?? 0) > 0);

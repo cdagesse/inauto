@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildVinTimeline, type VinRows } from "@/lib/vin/timeline";
+import { buildVinTimeline, isVin, type VinRows } from "@/lib/vin/timeline";
 
 const rows: VinRows = {
   dealer: [
@@ -146,5 +146,24 @@ describe("buildVinTimeline", () => {
     expect(sold.price).toBe(91_000);
     expect(sold.from).toBe("2026-05-01");
     expect(sold.date).toBe("2026-05-09");
+  });
+});
+
+describe("isVin", () => {
+  it("accepts 11 to 17 character VINs in either case, trimming whitespace", () => {
+    expect(isVin("WP0AB2A99KS123456")).toBe(true);
+    expect(isVin("wp0ab2a99ks123456")).toBe(true);
+    expect(isVin("  WP0AB2A99KS123456 ")).toBe(true);
+    expect(isVin("ZFF77XJA1D0")).toBe(true);
+  });
+  it("rejects I, O and Q, short or long strings, and empty input", () => {
+    expect(isVin("WP0AB2A99KS12345I")).toBe(false);
+    expect(isVin("WP0AB2A99KS12345O")).toBe(false);
+    expect(isVin("WP0AB2A99KS12345Q")).toBe(false);
+    expect(isVin("WP0AB2A99K")).toBe(false);
+    expect(isVin("WP0AB2A99KS1234567")).toBe(false);
+    expect(isVin("")).toBe(false);
+    expect(isVin(null)).toBe(false);
+    expect(isVin(undefined)).toBe(false);
   });
 });
