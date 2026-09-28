@@ -27,7 +27,8 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { clerkAppearance } from "@/components/site/clerk-appearance";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://ur.car"),
+  // The www host: the bare domain redirects, and scrapers follow og:url and images from here.
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.ur.car"),
   title: { default: "UrCar", template: "%s · UrCar" },
   description:
     "Collector car market data, pricing tools, and a safer way to buy and sell: classifieds, auctions, private networks, title vetting and condition reports.",

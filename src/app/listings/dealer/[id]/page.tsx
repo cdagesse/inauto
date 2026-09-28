@@ -18,6 +18,9 @@ import { valuate } from "@/lib/valuation/engine";
 import { isVin } from "@/lib/vin/timeline";
 import { getDealerListing } from "@/server/queries/dealers";
 import { recordCarView } from "@/server/views";
+import { mi, usd } from "@/lib/format/money";
+import { carLine, carPreview } from "@/lib/seo/preview";
+import { dealerPlace } from "@/components/listings/dealer-card";
 
 export const dynamic = "force-dynamic";
 
@@ -28,9 +31,21 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const l = await getDealerListing(id);
   // Third-party inventory: never indexed under our domain.
   if (!l) return { title: "Listing", robots: { index: false, follow: false } };
+  const title = `${dealerTitle(l)} at ${l.dealerName ?? "a dealer"}`;
+  const description = `${carLine([
+    l.miles ? `${mi(l.miles)} mi` : null,
+    l.price != null ? `asking ${usd(l.price)}` : null,
+    dealerPlace(l),
+  ])}. For sale at ${l.dealerName ?? "a dealer"}.`;
   return {
-    title: `${dealerTitle(l)} at ${l.dealerName ?? "a dealer"}`,
+    title,
     robots: { index: false, follow: false },
+    ...carPreview({
+      title: `${title} · UrCar`,
+      description,
+      photos: l.photos,
+      path: `/listings/dealer/${l.id}`,
+    }),
   };
 }
 

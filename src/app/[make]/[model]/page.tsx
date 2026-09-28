@@ -42,7 +42,8 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
     title,
     description,
     alternates: { canonical: `/${s.make.slug}/${s.model.slug}` },
-    openGraph: { title, description, type: "website" },
+    // No openGraph block here: the title and description carry over on their own, and
+    // leaving it out lets the site's default preview image apply to report pages.
   };
 }
 

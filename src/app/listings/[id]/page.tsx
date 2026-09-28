@@ -39,6 +39,7 @@ import { minimumIncrement } from "@/server/listings-schema";
 import { getListingForViewer, getTitleCheckForViewer } from "@/server/queries/listings";
 import { TitleReportCard } from "@/components/listings/title-report-card";
 import { isVin } from "@/lib/vin/timeline";
+import { carLine, carPreview } from "@/lib/seo/preview";
 
 export async function generateMetadata({
   params,
@@ -50,7 +51,26 @@ export async function generateMetadata({
   const session = await auth();
   const l = await getListingForViewer(id, session?.user?.id ?? null);
   if (!l) return { title: "Listing", robots: { index: false } };
-  return { title: l.title, description: `${l.year} ${l.make} ${l.model}, ${mi(l.miles)} miles.` };
+  const price =
+    l.type === "auction"
+      ? l.highBid
+        ? `high bid ${usd(l.highBid)}`
+        : "no bids yet"
+      : l.askingPrice
+        ? `asking ${usd(l.askingPrice)}`
+        : null;
+  const description = `${carLine([`${l.year} ${l.make} ${l.model}`, `${mi(l.miles)} mi`, l.location, price])}. ${
+    l.type === "auction" ? "Auction" : l.type === "private" ? "Private network listing" : "For sale"
+  } on UrCar.`;
+  return {
+    title: l.title,
+    ...carPreview({
+      title: `${l.title} · UrCar`,
+      description,
+      photos: l.photos,
+      path: `/listings/${l.id}`,
+    }),
+  };
 }
 
 const COND = { ex: "Excellent", good: "Good", fair: "Needs work" } as const;
