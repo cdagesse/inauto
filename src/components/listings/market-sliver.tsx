@@ -130,3 +130,15 @@ export async function MarketSliver({
     </div>
   );
 }
+
+/** Suspense fallback for the sliver while the snapshot loads (or rebuilds on a store miss). */
+export function MarketSliverFallback() {
+  return (
+    <div className="panel market-sliver" aria-busy="true">
+      <div className="lab">Market data</div>
+      <p className="note" style={{ margin: "6px 0 0" }}>
+        Loading market data…
+      </p>
+    </div>
+  );
+}

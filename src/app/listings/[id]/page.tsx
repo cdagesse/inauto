@@ -6,18 +6,22 @@ import { recordCarView } from "@/server/views";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { auth } from "@/auth";
 import { signInHref } from "@/components/account/require-signin";
 import { fmtDate, mi, usd } from "@/components/account/money";
 import { BidForm } from "@/components/listings/bid-form";
 import { Countdown } from "@/components/listings/countdown";
 import { ExpandedRegion } from "@/components/listings/expandable";
-import { MarketBlock } from "@/components/listings/market-block";
-import { MarketSliver } from "@/components/listings/market-sliver";
+import { MarketBlock, MarketBlockFallback } from "@/components/listings/market-block";
+import { MarketSliver, MarketSliverFallback } from "@/components/listings/market-sliver";
 import { PurchaseCta } from "@/components/listings/purchase-cta";
 import { PhotoGallery } from "@/components/listings/photo-gallery";
 import { ServiceOrderForm } from "@/components/listings/service-order-form";
-import { VinTimeline } from "@/components/listings/vin-timeline";
+import {
+  VinTimelineSection,
+  VinTimelineSkeleton,
+} from "@/components/listings/vin-timeline-section";
 import { verdictClass, verdictLabel } from "@/components/listings/verdict";
 import type { PriceGuidance } from "@/lib/valuation/types";
 import { adminDeleteListingForm } from "@/server/admin/actions";
@@ -34,7 +38,7 @@ import { isFeatured } from "@/server/queries/featured";
 import { minimumIncrement } from "@/server/listings-schema";
 import { getListingForViewer, getTitleCheckForViewer } from "@/server/queries/listings";
 import { TitleReportCard } from "@/components/listings/title-report-card";
-import { getVinTimeline } from "@/server/queries/vin";
+import { isVin } from "@/lib/vin/timeline";
 
 export async function generateMetadata({
   params,
@@ -42,7 +46,9 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const l = await getListingForViewer(id, null);
+  // Same viewer as the page so the request-cached loader runs once per request.
+  const session = await auth();
+  const l = await getListingForViewer(id, session?.user?.id ?? null);
   if (!l) return { title: "Listing", robots: { index: false } };
   return { title: l.title, description: `${l.year} ${l.make} ${l.model}, ${mi(l.miles)} miles.` };
 }
@@ -66,10 +72,7 @@ export default async function ListingPage({
   if (!l) notFound();
   after(() => recordCarView("listing", l.id));
   const featured = session?.user?.role === "admin" ? await isFeatured("listing", l.id) : false;
-  const [history, titleCheck] = await Promise.all([
-    getVinTimeline(l.historyVin, { kind: "inauto", id: l.id }),
-    getTitleCheckForViewer(l.id, viewerId),
-  ]);
+  const titleCheck = await getTitleCheckForViewer(l.id, viewerId);
   const closed = l.status === "sold" || l.status === "ended" || l.status === "withdrawn";
   const ended = l.ended || closed;
   const winningMine = l.status === "sold" && l.bids[0]?.mine === true;
@@ -254,24 +257,34 @@ export default async function ListingPage({
               </div>
             </>
           ) : null}
-          <VinTimeline events={history} vinShown={l.vin} />
+          {isVin(l.historyVin) ? (
+            <Suspense fallback={<VinTimelineSkeleton />}>
+              <VinTimelineSection
+                vin={l.historyVin}
+                current={{ kind: "inauto", id: l.id }}
+                vinShown={l.vin}
+              />
+            </Suspense>
+          ) : null}
         </div>
 
         <aside className="side">
-          <MarketSliver
-            id={`market-${l.id}`}
-            market={l.market}
-            make={l.make}
-            model={l.model}
-            car={{
-              year: l.year,
-              miles: l.miles,
-              price: marketPrice ?? null,
-              packages: l.packages,
-              title: l.title,
-            }}
-            priceLabel={marketLabel}
-          />
+          <Suspense fallback={<MarketSliverFallback />}>
+            <MarketSliver
+              id={`market-${l.id}`}
+              market={l.market}
+              make={l.make}
+              model={l.model}
+              car={{
+                year: l.year,
+                miles: l.miles,
+                price: marketPrice ?? null,
+                packages: l.packages,
+                title: l.title,
+              }}
+              priceLabel={marketLabel}
+            />
+          </Suspense>
           {!l.isOwner ? (
             <PurchaseCta
               id={l.id}
@@ -378,19 +391,21 @@ export default async function ListingPage({
         />
       ) : null}
       <ExpandedRegion id={`market-${l.id}`}>
-        <MarketBlock
-          market={l.market}
-          make={l.make}
-          model={l.model}
-          car={{
-            year: l.year,
-            miles: l.miles,
-            price: marketPrice ?? null,
-            packages: l.packages,
-            title: l.title,
-          }}
-          priceLabel={marketLabel}
-        />
+        <Suspense fallback={<MarketBlockFallback />}>
+          <MarketBlock
+            market={l.market}
+            make={l.make}
+            model={l.model}
+            car={{
+              year: l.year,
+              miles: l.miles,
+              price: marketPrice ?? null,
+              packages: l.packages,
+              title: l.title,
+            }}
+            priceLabel={marketLabel}
+          />
+        </Suspense>
       </ExpandedRegion>
     </article>
   );
