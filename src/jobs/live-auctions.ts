@@ -376,7 +376,13 @@ export async function syncLiveAuctions(
     try {
       await db
         .update(jobRuns)
-        .set({ finishedAt: new Date(), ok: errors.length === 0, summary, error: errors[0] ?? null })
+        .set({
+          finishedAt: new Date(),
+          ok: errors.length === 0,
+          summary,
+          error: errors[0] ?? null,
+          changed: upserted + markedEnded + reconciled,
+        })
         .where(eq(jobRuns.id, jobRunId));
     } catch (e) {
       log(`job_run update failed: ${(e as Error).message}`);

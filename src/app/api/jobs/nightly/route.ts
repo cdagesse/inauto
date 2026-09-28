@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { db } from "@/db";
 import { env } from "@/env/server";
 import { sweepPurchaseEvidence } from "@/jobs/evidence-sweep";
+import { recordRun } from "@/jobs/lib/run";
 import { requireCron } from "@/lib/cron-auth";
 import { runNightly } from "@/jobs/nightly";
 import { rebuildAllSnapshots } from "@/lib/market/store";
@@ -17,7 +19,19 @@ async function handle(req: Request) {
   const dryRun = url.searchParams.get("live") === "1" ? false : env.jobsDryRun;
   const summary = await runNightly({ dryRun });
   // Precompute every model's market report once, so pages read stored JSON.
-  const snapshots = await rebuildAllSnapshots(undefined, (m) => console.log(`[nightly] ${m}`));
+  const log = (m: string) => console.log(`[nightly] ${m}`);
+  const snapshots = await recordRun(
+    db,
+    "snapshots",
+    { dryRun: false },
+    () => rebuildAllSnapshots(db, log),
+    (s) => ({
+      ok: s.failed.length === 0,
+      changed: s.built,
+      summary: s,
+      error: s.failed[0] ?? null,
+    }),
+  );
   // Model pages are statically cached for an hour; fresh data must invalidate them.
   // "layout" covers /markets and every drill-down under it, which render from the same tree.
   revalidatePath("/[make]/[model]", "page");
@@ -26,7 +40,13 @@ async function handle(req: Request) {
   // Evidence blobs upload before a purchase is submitted; drop the ones nothing references.
   let evidence: Awaited<ReturnType<typeof sweepPurchaseEvidence>> | { error: string };
   try {
-    evidence = await sweepPurchaseEvidence({ dryRun, log: (m) => console.log(`[nightly] ${m}`) });
+    evidence = await recordRun(
+      db,
+      "evidence-sweep",
+      { dryRun },
+      () => sweepPurchaseEvidence({ dryRun, log }),
+      (s) => ({ ok: true, changed: s.deleted, summary: s }),
+    );
   } catch (e) {
     evidence = { error: e instanceof Error ? e.message : String(e) };
     console.error("[nightly] evidence sweep failed", e);

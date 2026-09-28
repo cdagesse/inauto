@@ -1,4 +1,5 @@
 import "server-only";
+import { eq } from "drizzle-orm";
 import { db as defaultDb, type Db } from "@/db";
 import { auctionResults, jobRuns } from "@/db/schema";
 import { env } from "@/env/server";
@@ -188,5 +189,21 @@ export async function backfillAuctions(opts: BackfillOptions): Promise<BackfillS
     log(`error: ${msg}`);
   }
   out.finishedAt = new Date().toISOString();
+  if (out.jobRunId) {
+    try {
+      await db
+        .update(jobRuns)
+        .set({
+          finishedAt: new Date(out.finishedAt),
+          ok: out.errors.length === 0,
+          summary: out,
+          error: out.errors[0] ?? null,
+          changed: out.upserted + out.auctionResultsInserted,
+        })
+        .where(eq(jobRuns.id, out.jobRunId));
+    } catch (e) {
+      log(`job_run update failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
   return out;
 }

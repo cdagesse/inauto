@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { fmtDate } from "@/lib/format/money";
+import { needsAttention } from "@/lib/jobs/health";
+import { jobHealth } from "@/server/admin/health";
 import { dashboardStats } from "@/server/admin/queries";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +27,8 @@ function Card({
 }
 
 export default async function AdminHome() {
-  const s = await dashboardStats();
+  const [s, jobs] = await Promise.all([dashboardStats(), jobHealth()]);
+  const attention = jobs.filter((j) => needsAttention(j.assessment.status));
   const u = s.users;
   const l = s.listings;
   const m = s.models;
@@ -44,6 +47,16 @@ export default async function AdminHome() {
           value={sum(l)}
           sub={`${l.active ?? 0} active · ${l.draft ?? 0} draft · ${l.sold ?? 0} sold · ${l.withdrawn ?? 0} withdrawn`}
           href="/admin/users"
+        />
+        <Card
+          label="Job health"
+          value={attention.length === 0 ? "OK" : attention.length}
+          sub={
+            attention.length === 0
+              ? "every scheduled job ran on time"
+              : `need attention: ${attention.map((j) => j.spec.label).join(", ")}`
+          }
+          href="/admin/health"
         />
         <Card label="Title vetting pending" value={s.pendingTitle} href="/admin/vetting" />
         <Card

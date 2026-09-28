@@ -6,6 +6,8 @@ Features and fixes as they ship, newest first. One line per change, with the pul
 
 ### Features
 
+- Admin Health page: every job's status (healthy, overdue, failed, did not finish), what its last run added or updated, Visor and Old Cars Data monthly budget use and recent errors, data on hand, and a filterable run history with a detail page per run; close-auctions, report requests, title vetting, snapshots and the evidence sweep now record their runs (#68)
+
 - Phones: home page opens straight on the search box and featured car; the headline and eyebrow are hidden (#55)
 
 - The site is UrCar everywhere: titles, copy, sign-in, bill of sale, admin, crawler user agent; default site URL is ur.car (#54)

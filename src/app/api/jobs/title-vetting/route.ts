@@ -1,6 +1,8 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { requireCron } from "@/lib/cron-auth";
+import { db } from "@/db";
+import { recordRun } from "@/jobs/lib/run";
 import { runTitleVetting } from "@/jobs/title-vetting";
 
 export const runtime = "nodejs";
@@ -10,7 +12,18 @@ export const dynamic = "force-dynamic";
 async function handle(req: Request) {
   const denied = requireCron(req);
   if (denied) return denied;
-  const summary = await runTitleVetting();
+  const summary = await recordRun(
+    db,
+    "title-vetting",
+    { dryRun: false },
+    () => runTitleVetting(),
+    (s) => ({
+      ok: s.errors.length === 0,
+      changed: s.processed.length,
+      summary: s,
+      error: s.errors[0] ?? null,
+    }),
+  );
   if (summary.processed.length) {
     revalidatePath("/tools");
     revalidatePath("/listings");

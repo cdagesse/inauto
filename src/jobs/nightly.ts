@@ -611,7 +611,7 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<NightlySumm
 
   const [run] = await db
     .insert(jobRuns)
-    .values({ name: "nightly", dryRun, startedAt: now })
+    .values({ name: opts.modelSlugs?.length ? "report-build" : "nightly", dryRun, startedAt: now })
     .returning({ id: jobRuns.id });
   const jobRunId = run?.id ?? null;
   log(`start ${dryRun ? "(dry run)" : "(LIVE)"} job_run=${jobRunId}`);
@@ -733,6 +733,7 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<NightlySumm
         ok: errors.length === 0,
         summary,
         error: errors.join("\n") || null,
+        changed: summaries.reduce((a, s) => a + s.visorSold + s.visorActive + s.ocdAuctions, 0),
       })
       .where(eq(jobRuns.id, jobRunId));
   }
