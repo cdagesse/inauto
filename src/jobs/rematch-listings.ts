@@ -1,7 +1,8 @@
 import "server-only";
-import { eq, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db as defaultDb, type Db } from "@/db";
-import { auctionResults, externalListings, makes, models } from "@/db/schema";
+import { auctionResults, externalListings, makes, marketSnapshots, models } from "@/db/schema";
+import { rebuildSnapshot } from "@/lib/market/store";
 import { matchOcdRules } from "@/lib/sources/ocd";
 import { assignGeneration } from "./lib/normalize";
 import { loadCatalog, type CatalogModel } from "./live-auctions";
@@ -30,11 +31,20 @@ export interface RematchSummary {
   byModel: { model: string; n: number }[];
   /** With scope "all": the make/model slugs a move must start or end in; empty = any. */
   onlyModels: string[];
+  /** Models that gained or lost rows, as make/model slugs. */
+  touchedModels: string[];
+  /** Destination models with no report yet that were queued for one. */
+  reportsQueued: number;
+  /** Snapshots rebuilt for touched models, and those left to the nightly for time. */
+  snapshotsRebuilt: number;
+  snapshotsSkipped: number;
   errors: string[];
 }
 
 const WRITE_CHUNK = 25;
 const TOP_MODELS = 12;
+/** Snapshot rebuilds stop here so the route (120 s) always returns; the nightly does the rest. */
+const REBUILD_BUDGET_MS = 80_000;
 
 interface Candidate {
   id: string;
@@ -49,6 +59,7 @@ interface Update {
   id: string;
   modelId: string;
   generationId: string | null;
+  needsReview: boolean;
 }
 
 type Rules = Awaited<ReturnType<typeof loadCatalog>>["rules"];
@@ -71,7 +82,9 @@ function plan(
   rows: Candidate[],
   rules: Rules,
   byId: Map<string, CatalogModel>,
+  gensOf: (m: CatalogModel) => CatalogModel["gens"],
   perModel: Map<string, number>,
+  touched: Set<string>,
   only: Set<string> | null,
 ): Update[] {
   const out: Update[] = [];
@@ -89,31 +102,30 @@ function plan(
     // A targeted run only touches rows leaving or entering the named models.
     if (only && !only.has(modelId) && !(r.modelId && only.has(r.modelId))) continue;
     const m = byId.get(modelId);
-    const generationId =
-      m && m.gens.length > 0 ? assignGeneration(m.gens, r.year, r.title).generationId : null;
-    out.push({ id: r.id, modelId, generationId });
+    const gens = m ? gensOf(m) : [];
+    const g = gens.length > 0 ? assignGeneration(gens, r.year, r.title) : null;
+    out.push({
+      id: r.id,
+      modelId,
+      generationId: g?.generationId ?? null,
+      needsReview: g?.needsReview ?? false,
+    });
     perModel.set(modelId, (perModel.get(modelId) ?? 0) + 1);
+    touched.add(modelId);
+    if (r.modelId) touched.add(r.modelId);
   }
   return out;
 }
 
-async function write(
-  db: Db,
-  table: typeof externalListings | typeof auctionResults,
-  updates: Update[],
+async function writeChunks<T>(
+  updates: T[],
   errors: string[],
+  one: (u: T) => Promise<unknown>,
 ): Promise<number> {
   let updated = 0;
   for (let i = 0; i < updates.length; i += WRITE_CHUNK) {
     const slice = updates.slice(i, i + WRITE_CHUNK);
-    const results = await Promise.allSettled(
-      slice.map((u) =>
-        db
-          .update(table)
-          .set({ modelId: u.modelId, generationId: u.generationId })
-          .where(eq(table.id, u.id)),
-      ),
-    );
+    const results = await Promise.allSettled(slice.map(one));
     let failed = 0;
     for (const r of results) {
       if (r.status === "fulfilled") updated++;
@@ -135,7 +147,9 @@ async function write(
  * rewritten here. Scope "unmatched" (the default) fills in rows that have no model; scope
  * "all" also moves listings and auction results whose match changed, which is what a
  * catalog split needs (a new "360 Challenge Stradale" model taking rows from the "360").
- * Rows that match nothing are left as they are.
+ * Rows that match nothing are left as they are. A live "all" run then queues a report for
+ * destination models that have none, and rebuilds the snapshots of every touched model
+ * within a time budget so their pages and reads do not wait for the nightly.
  */
 export async function rematchListings(opts: {
   db?: Db;
@@ -149,20 +163,23 @@ export async function rematchListings(opts: {
   const db = opts.db ?? defaultDb;
   const log = opts.log ?? (() => {});
   const scope: RematchScope = opts.scope ?? "unmatched";
-  const startedAt = (opts.now ?? new Date()).toISOString();
+  const now = opts.now ?? new Date();
+  const startedAt = now.toISOString();
   const errors: string[] = [];
   const perModel = new Map<string, number>();
+  const touched = new Set<string>();
   const { rules, byId } = await loadCatalog(db);
+  const slugRows = await db
+    .select({ id: models.id, make: makes.slug, slug: models.slug })
+    .from(models)
+    .innerJoin(makes, eq(makes.id, models.makeId));
+  const slugOf = new Map(slugRows.map((r) => [r.id, `${r.make}/${r.slug}`]));
   const onlyModels = scope === "all" ? (opts.onlyModels ?? []) : [];
   let only: Set<string> | null = null;
   if (onlyModels.length) {
-    const rows = await db
-      .select({ id: models.id, make: makes.slug, slug: models.slug })
-      .from(models)
-      .innerJoin(makes, eq(makes.id, models.makeId));
     const wanted = new Set(onlyModels);
-    only = new Set(rows.filter((r) => wanted.has(`${r.make}/${r.slug}`)).map((r) => r.id));
-    const missing = onlyModels.filter((m) => !rows.some((r) => `${r.make}/${r.slug}` === m));
+    only = new Set(slugRows.filter((r) => wanted.has(`${r.make}/${r.slug}`)).map((r) => r.id));
+    const missing = onlyModels.filter((m) => !slugRows.some((r) => `${r.make}/${r.slug}` === m));
     if (missing.length) errors.push(`unknown models: ${missing.join(", ")}`);
   }
 
@@ -179,17 +196,24 @@ export async function rematchListings(opts: {
       ? await db.select(listingCols).from(externalListings)
       : await db.select(listingCols).from(externalListings).where(isNull(externalListings.modelId));
   log(`rematch(${scope}): ${listings.length} listings, ${rules.length} rules`);
-  const listingUpdates = plan(listings, rules, byId, perModel, only);
-  const updated = opts.dryRun ? 0 : await write(db, externalListings, listingUpdates, errors);
+  // Listings take a curated generation only, like the sweeps' upsert.
+  const listingUpdates = plan(listings, rules, byId, (m) => m.gens, perModel, touched, only);
+  const updated = opts.dryRun
+    ? 0
+    : await writeChunks(listingUpdates, errors, (u) =>
+        db
+          .update(externalListings)
+          .set({ modelId: u.modelId, generationId: u.generationId })
+          .where(eq(externalListings.id, u.id)),
+      );
 
   let auctions: Candidate[] = [];
   let auctionUpdates: Update[] = [];
   let auctionsUpdated = 0;
   if (scope === "all") {
     // Auction results only exist when they matched a model, so only "all" can move them; the
-    // feed's names live in the raw row.
-    // Only the three name fields, not the whole raw row: 56k full JSON rows would take minutes.
-    const rows = await db
+    // feed's names live in the raw row. Only the three name fields, not the whole raw JSON.
+    auctions = await db
       .select({
         id: auctionResults.id,
         year: auctionResults.year,
@@ -203,16 +227,74 @@ export async function rematchListings(opts: {
         title: sql<string | null>`${auctionResults.rawJson}->>'title'`,
       })
       .from(auctionResults);
-    auctions = rows;
-    auctionUpdates = plan(auctions, rules, byId, perModel, only);
-    auctionsUpdated = opts.dryRun ? 0 : await write(db, auctionResults, auctionUpdates, errors);
+    // Auction results get the catch-all generation too, like the nightly and ended ingest.
+    auctionUpdates = plan(auctions, rules, byId, (m) => m.allGens, perModel, touched, only);
+    // A moved row's exclusion was judged against the old model, so it is reset (a manual
+    // exclusion stays) and the fetch time bumped so the nightly's clean pass re-judges it.
+    auctionsUpdated = opts.dryRun
+      ? 0
+      : await writeChunks(auctionUpdates, errors, (u) =>
+          db
+            .update(auctionResults)
+            .set({
+              modelId: u.modelId,
+              generationId: u.generationId,
+              needsReview: sql`${auctionResults.needsReview} or ${u.needsReview}`,
+              excludedReason: sql`case when ${auctionResults.excludedReason} = 'manual' then 'manual'::excluded_reason end`,
+              fetchedAt: now,
+            })
+            .where(eq(auctionResults.id, u.id)),
+        );
     log(`rematch(all): ${auctions.length} auction results, ${auctionUpdates.length} move`);
+  }
+
+  // A destination model with no report yet gets one queued: nothing else would, since the
+  // page only asks for a report when there is no snapshot at all.
+  let reportsQueued = 0;
+  if (!opts.dryRun && scope === "all" && perModel.size) {
+    const queued = await db
+      .update(models)
+      .set({ reportStatus: "requested", reportRequestedAt: now, reportError: null })
+      .where(
+        and(
+          inArray(models.id, [...perModel.keys()]),
+          inArray(models.reportStatus, ["none", "failed"]),
+        ),
+      )
+      .returning({ id: models.id });
+    reportsQueued = queued.length;
+  }
+
+  // Touched models get their snapshots rebuilt now, within a budget; the rest wait for the
+  // nightly. A model drained of every row loses its stale snapshot.
+  let snapshotsRebuilt = 0;
+  let snapshotsSkipped = 0;
+  const touchedModels = [...touched].map((id) => slugOf.get(id) ?? id).sort();
+  if (!opts.dryRun && updated + auctionsUpdated > 0) {
+    const deadline = now.getTime() + REBUILD_BUDGET_MS;
+    for (const id of touched) {
+      const slug = slugOf.get(id);
+      if (!slug) continue;
+      if (Date.now() > deadline) {
+        snapshotsSkipped++;
+        continue;
+      }
+      const [makeSlug, modelSlug] = slug.split("/") as [string, string];
+      try {
+        const built = await rebuildSnapshot(makeSlug, modelSlug, db, new Date(), { strict: true });
+        if (built) snapshotsRebuilt++;
+        else await db.delete(marketSnapshots).where(eq(marketSnapshots.modelId, id));
+      } catch (e) {
+        if (errors.length < 10)
+          errors.push(`snapshot ${slug}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
   }
 
   const byModel = [...perModel.entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, TOP_MODELS)
-    .map(([model, n]) => ({ model, n }));
+    .map(([model, n]) => ({ model: slugOf.get(model) ?? model, n }));
   log(`rematch: listings matched ${listingUpdates.length}, wrote ${updated}`);
   return {
     startedAt,
@@ -227,6 +309,10 @@ export async function rematchListings(opts: {
     auctionsUpdated,
     byModel,
     onlyModels,
+    touchedModels,
+    reportsQueued,
+    snapshotsRebuilt,
+    snapshotsSkipped,
     errors,
   };
 }

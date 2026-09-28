@@ -39,7 +39,7 @@ export function headlineFigures(g: GenerationStats): HeadlineFigures {
         median: g.auctionMedian ?? 0,
         lo: g.auctionLo ?? 0,
         hi: g.auctionHi ?? 0,
-        thin: (g.auctionSold ?? 0) < AUCTION_THIN,
+        thin: (g.auctionBasis ?? g.auctionSold ?? 0) < AUCTION_THIN,
         miles: g.auctionMedianMiles ?? 0,
         last90: g.auctionLast90 ?? 0,
         prior90: g.auctionPrior90 ?? 0,

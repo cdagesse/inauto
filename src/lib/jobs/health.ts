@@ -361,7 +361,13 @@ export function describeRun(name: string, summary: unknown, error: string | null
         `${n(updated)} written`,
       );
       if (num(s, "auctionsScanned"))
-        parts.push(`${n(num(s, "auctionsScanned"))} auction results scanned, ${n(auctions)} moved`);
+        parts.push(
+          `${n(num(s, "auctionsScanned"))} auction results scanned, ${n(num(s, "auctionsMatched"))} placed, ${n(auctions)} moved`,
+        );
+      if (num(s, "snapshotsRebuilt") || num(s, "snapshotsSkipped"))
+        parts.push(
+          `${n(num(s, "snapshotsRebuilt"))} snapshots rebuilt${num(s, "snapshotsSkipped") ? `, ${n(num(s, "snapshotsSkipped"))} left to the nightly` : ""}`,
+        );
       changed = updated + auctions;
       break;
     }

@@ -172,7 +172,7 @@ export function valuate(
     loMul = cfg["thin.lo"];
     hiMul = cfg["thin.hi"];
     basis = auctionsOnly
-      ? `${y ? y.n : gen.auctionSold} auction sales (thin)`
+      ? `${y ? y.n : (gen.auctionBasis ?? gen.auctionSold)} auction sales (thin)`
       : `${y ? y.n : gen.sold} dealer sales (thin)`;
     thin = true;
   }

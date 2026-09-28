@@ -17,6 +17,7 @@ import {
   createOcdClient,
   matchOcdRules,
   parseOcdAlias,
+  ruleSpecificity,
   type NormalizedLiveRow,
 } from "@/lib/sources/ocd";
 import { chunk, UPSERT_CHUNK } from "./lib/batch";
@@ -126,9 +127,10 @@ export async function loadCatalog(
       reportStatus: m.reportStatus,
     });
   }
-  // Most specific first: keyworded aliases (S63) before bare lines (S-Class), then the
-  // narrower year span (M3 E46 before the open-ended M3) so a row lands on the narrow model
-  // when both would match. matchOcdRules skips rules whose years exclude the row.
+  // Most specific first: longer keywords (GT3 RS) before shorter (GT3) before bare lines
+  // (S-Class), a rule that carries an exclude before one that does not, then the narrower
+  // year span (M3 E46 before the open-ended M3) so a row lands on the narrow model when both
+  // would match. matchOcdRules skips rules whose years exclude the row.
   const span = (id: string) => {
     const y = byId.get(id)?.years;
     return (y?.end ?? 9999) - (y?.start ?? 0);
@@ -141,11 +143,15 @@ export async function loadCatalog(
       rawModel: a.rawModel,
       rawTrimPattern: a.rawTrimPattern,
     }))
-    .sort(
-      (x, y) =>
-        (y.rawTrimPattern?.length ?? 0) - (x.rawTrimPattern?.length ?? 0) ||
-        span(x.modelId) - span(y.modelId),
-    );
+    .sort((x, y) => {
+      const a = ruleSpecificity(x);
+      const b = ruleSpecificity(y);
+      return (
+        b.keywordLength - a.keywordLength ||
+        Number(b.hasExclude) - Number(a.hasExclude) ||
+        span(x.modelId) - span(y.modelId)
+      );
+    });
   return { rules, byId };
 }
 

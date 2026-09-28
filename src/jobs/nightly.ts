@@ -16,7 +16,13 @@ import {
 } from "@/db/schema";
 import { env } from "@/env/server";
 import { BudgetExceeded, callsUsed, withBudget } from "@/lib/sources/budget";
-import { createOcdClient, ocdLinesFor, ocdRowMatches, parseOcdAlias } from "@/lib/sources/ocd";
+import {
+  createOcdClient,
+  keywordAlternatives,
+  ocdLinesFor,
+  ocdRowMatches,
+  parseOcdAlias,
+} from "@/lib/sources/ocd";
 import { createVisorClient, VisorDeadline } from "@/lib/sources/visor";
 import type { NormalizedAuctionRow, NormalizedDealerRow } from "@/lib/sources/types";
 import { classify, groupReclassified, type Reclassified } from "./lib/clean";
@@ -447,21 +453,25 @@ async function pull(
             const alias = parseOcdAlias(a);
             // The feed tags some cars by chassis code (a 2000 911 Carrera is line "996"), so
             // an alias walks its own line and every code that maps to it.
+            // An alias with keyword alternatives ("R|SVR|R75") walks once per alternative.
+            const keywords = alias.keyword ? keywordAlternatives(alias.keyword) : [null];
             for (const line of ocdLinesFor(alias)) {
               const lineAlias = { ...alias, model: line };
-              const rows = await client.auctions(
-                {
-                  make: alias.make,
-                  model: line || undefined,
-                  keyword: alias.keyword,
-                  yearMin: years.start,
-                  yearMax: years.end,
-                },
-                since,
-              );
-              for (const r of rows) {
-                if (ocdRowMatches(lineAlias, r, years)) auctions.push(r);
-                else unmatched++;
+              for (const keyword of keywords) {
+                const rows = await client.auctions(
+                  {
+                    make: alias.make,
+                    model: line || undefined,
+                    keyword,
+                    yearMin: years.start,
+                    yearMax: years.end,
+                  },
+                  since,
+                );
+                for (const r of rows) {
+                  if (ocdRowMatches(lineAlias, r, years)) auctions.push(r);
+                  else unmatched++;
+                }
               }
             }
           }

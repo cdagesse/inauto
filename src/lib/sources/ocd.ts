@@ -137,10 +137,49 @@ export function parseOcdAlias(a: {
 }
 
 const squash = (s: string | null | undefined) => (s ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
-const hasWord = (text: string, word: string) =>
-  new RegExp(`(^|[^a-z0-9])${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`, "i").test(
-    text,
+const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+/**
+ * A one- or two-character keyword ("R", "GP", "S/T", "SL") must stand as a word. A boundary is
+ * the string edge, a non-alphanumeric character, or a digit/letter transition, so "560SL",
+ * "CLA45", "2SS", "SS396", "GT2" and "Z4M" hold their keyword while "Convertible" does not
+ * hold "R". A run of capitals before a capitalised word is split first ("SVAutobiography").
+ */
+const TRANSITION = "(?<=[0-9])(?=[a-z])|(?<=[a-z])(?=[0-9])";
+const hasShortKeyword = (text: string, word: string) =>
+  new RegExp(`(?:(?<![a-z0-9])|${TRANSITION})${esc(word)}(?:(?![a-z0-9])|${TRANSITION})`, "i").test(
+    text.replace(/([A-Z])([A-Z][a-z])/g, "$1 $2"),
   );
+
+/** Keyword alternatives ("R|SVR|R75") split on "|"; a row matches when any one does. */
+export function keywordAlternatives(keyword: string | null | undefined): string[] {
+  return (keyword ?? "")
+    .split("|")
+    .map((k) => k.trim())
+    .filter(Boolean);
+}
+
+/** Does the title carry this keyword: whole word when it squashes to one or two characters, else anywhere ignoring spacing. */
+function hasKeyword(title: string, keyword: string): boolean {
+  return keywordAlternatives(keyword).some((kw) => {
+    const k = squash(kw);
+    if (!k) return false;
+    return k.length <= 2 ? hasShortKeyword(title, kw) : squash(title).includes(k);
+  });
+}
+
+/** How specific an alias rule is, for ordering: longer keywords first, then rules that carry an exclude. */
+export function ruleSpecificity(a: {
+  rawMake: string;
+  rawModel: string | null;
+  rawTrimPattern: string | null;
+}): { keywordLength: number; hasExclude: boolean } {
+  const parsed = parseOcdAlias(a);
+  const keywordLength = Math.max(
+    0,
+    ...keywordAlternatives(parsed.keyword).map((k) => squash(k).length),
+  );
+  return { keywordLength, hasExclude: parsed.excludeKeyword != null };
+}
 
 /** Does a normalized OCD row belong to this alias? Keyword matching ignores spacing ("S 63" = "S63"). */
 export function ocdRowMatches(
@@ -156,13 +195,10 @@ export function ocdRowMatches(
   if (squash(alias.make) !== squash(row.rawMake)) return false;
   if (alias.model && squash(alias.model) !== squash(row.rawModel)) return false;
   const title = row.title ?? "";
-  // A keyword of one or two characters ("R", "GP", "S/T") must stand as a word; longer
-  // ones match spacing-insensitively ("GT3RS" is a GT3 RS, "S 63" an S63).
-  if (alias.keyword) {
-    const k = squash(alias.keyword);
-    if (k.length <= 2 ? !hasWord(title, alias.keyword) : !squash(title).includes(k)) return false;
-  }
-  if (alias.excludeKeyword && hasWord(title, alias.excludeKeyword)) return false;
+  // The exclude is read the same way as a keyword, so "excluded" means "the sibling's
+  // keyword would match": "GT3RS" leaves the plain GT3 when its exclude is "GT3 RS".
+  if (alias.keyword && !hasKeyword(title, alias.keyword)) return false;
+  if (alias.excludeKeyword && hasKeyword(title, alias.excludeKeyword)) return false;
   if (years && row.year != null) {
     if (years.start != null && row.year < years.start) return false;
     if (years.end != null && row.year > years.end) return false;

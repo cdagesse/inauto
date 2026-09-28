@@ -38,7 +38,13 @@ async function handle(req: Request) {
         error: s.errors[0] ?? null,
       }),
     );
-    if (summary.updated + summary.auctionsUpdated > 0) revalidatePath("/listings");
+    if (summary.updated + summary.auctionsUpdated > 0) {
+      revalidatePath("/listings");
+      // Model pages, the markets drill-down and the home page read the rebuilt snapshots.
+      revalidatePath("/[make]/[model]", "page");
+      revalidatePath("/markets", "layout");
+      revalidatePath("/");
+    }
     return NextResponse.json(summary, { status: summary.errors.length ? 500 : 200 });
   } catch (e) {
     return NextResponse.json(

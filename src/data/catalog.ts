@@ -61,7 +61,7 @@ const OCD_MAP: Record<string, OcdOverride> = {
   // Porsche: OCD lines are 356, 550 Spyder, 718, 911, 912, 914, 918 Spyder, 924, 928, 930, 944,
   // 959, 964, 968, 991, 992, 996, 997, Boxster, Carrera GT, Cayenne, Cayman, Macan, Panamera, Taycan
   "Porsche|911 GT3 RS": { line: "911", kw: "GT3 RS" },
-  "Porsche|911 GT3": { line: "911", kw: "GT3", not: "RS" },
+  "Porsche|911 GT3": { line: "911", kw: "GT3", not: "GT3 RS" },
   "Porsche|911 GT2 RS": { line: "911", kw: "GT2 RS" },
   "Porsche|911 Turbo S": { line: "911", kw: "Turbo S" },
   "Porsche|911 Turbo": { line: "911", kw: "Turbo", not: "Turbo S" },
@@ -96,7 +96,7 @@ const OCD_MAP: Record<string, OcdOverride> = {
   "Mercedes-AMG|CLS63": { line: "CLS AMG", kw: "CLS63" },
   "Mercedes-AMG|GLE63": { line: "GLE-Class", kw: "GLE63" },
   "Mercedes-AMG|GT 63": { line: "AMG GT", kw: "GT 63" },
-  "Mercedes-AMG|AMG GT": { line: "AMG GT", not: "63" },
+  "Mercedes-AMG|AMG GT": { line: "AMG GT", not: "GT 63" },
   "Mercedes-AMG|AMG GT Black Series": { line: "AMG GT", kw: "Black Series" },
   "Mercedes-AMG|SLS AMG": { line: "SLS AMG" },
   "Mercedes-AMG|AMG One": { line: "AMG", kw: "One" },
@@ -132,7 +132,7 @@ const OCD_MAP: Record<string, OcdOverride> = {
   "Ferrari|488": { line: "488", not: "Pista" },
   "Ferrari|488 Pista": { line: "488", kw: "Pista" },
   "Ferrari|360": { line: "360", not: "Stradale" },
-  "Ferrari|360 Challenge Stradale": { line: "360", kw: "Stradale" },
+  "Ferrari|360 Challenge Stradale": { line: "360", kw: "Stradale|CS" },
   "Ferrari|458": { line: "458", not: "Speciale" },
   "Ferrari|458 Speciale": { line: "458", kw: "Speciale" },
   "Ferrari|Enzo": { line: null, kw: "Enzo" },
@@ -250,7 +250,7 @@ const OCD_MAP: Record<string, OcdOverride> = {
   "Jeep|Grand Wagoneer (SJ)": { line: "Wagoneer/Grand Wagoneer (1963–1991)" },
   // Jaguar
   "Jaguar|E-Type": { line: "XKE" },
-  "Jaguar|F-Type R": { line: "F-TYPE", kw: "R" },
+  "Jaguar|F-Type R": { line: "F-TYPE", kw: "R|SVR|R75", not: "R-Dynamic" },
   "Jaguar|F-Type": { line: "F-TYPE" },
   // Lotus
   "Lotus|Evija": { line: null, kw: "Evija" },
@@ -285,7 +285,7 @@ const OCD_MAP: Record<string, OcdOverride> = {
   "Volkswagen|R32": { line: "Golf", kw: "R32" },
   "Volkswagen|Beetle (classic)": { line: "Beetle" },
   "Mini|John Cooper Works GP": { line: "Cooper", kw: "GP" },
-  "Mini|John Cooper Works": { line: "Cooper", kw: "John Cooper Works" },
+  "Mini|John Cooper Works": { line: "Cooper", kw: "John Cooper Works", not: "GP" },
   "Mini|Cooper (classic)": { line: "Classic Mini" },
   // Pontiac / Buick / GMC
   "Pontiac|GTO (2004-06)": { line: "GTO" },
@@ -755,7 +755,7 @@ export const CATALOG: CatalogEntry[] = [
       [
         "360 Challenge Stradale",
         2003,
-        2004,
+        2005,
         ["Challenge Stradale", "CS", "360 CS", "Stradale"],
         { model: "360", trim: "Stradale" },
       ],
