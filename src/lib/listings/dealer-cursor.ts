@@ -42,8 +42,13 @@ export function dealerTitle(l: {
 }): string {
   const model = l.modelShort ?? l.model;
   const trim = l.trim?.trim();
-  // Skip a trim that only repeats the model (Visor often lists the model line as the trim).
-  const repeats = (v: string) => trim?.toLowerCase() === v.toLowerCase();
+  // Visor often repeats the model line in the trim ("GT3", or "GT3 RS" for the GT3):
+  // drop an exact repeat, and let a trim that extends the model name stand in for it.
+  const lower = trim?.toLowerCase() ?? "";
+  const repeats = (v: string) => lower === v.toLowerCase();
+  const extends_ = (v: string) => lower.startsWith(v.toLowerCase() + " ");
+  if (trim && (extends_(model) || extends_(l.model)))
+    return [l.year, l.make, trim].filter(Boolean).join(" ");
   const trimPart = trim && !repeats(model) && !repeats(l.model) ? trim : null;
   return [l.year, l.make, model, trimPart].filter(Boolean).join(" ");
 }

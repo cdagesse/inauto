@@ -25,8 +25,8 @@ describe("dealer cursor", () => {
 
 describe("dealerTitle", () => {
   it("joins year, make, model and a distinct trim", () => {
-    expect(dealerTitle({ year: 2019, make: "Porsche", model: "911 GT3", trim: "GT3 RS" })).toBe(
-      "2019 Porsche 911 GT3 GT3 RS",
+    expect(dealerTitle({ year: 2019, make: "Porsche", model: "911 GT3", trim: "Touring" })).toBe(
+      "2019 Porsche 911 GT3 Touring",
     );
     expect(dealerTitle({ year: null, make: "BMW", model: "M3", trim: null })).toBe("BMW M3");
   });
@@ -49,5 +49,25 @@ describe("dealerTitle", () => {
         trim: "911 GT3",
       }),
     ).toBe("2019 Porsche GT3");
+  });
+  it("lets a trim that extends the model name stand in for it", () => {
+    expect(
+      dealerTitle({
+        year: 2024,
+        make: "Porsche",
+        model: "911 GT3",
+        modelShort: "GT3",
+        trim: "GT3 RS",
+      }),
+    ).toBe("2024 Porsche GT3 RS");
+    expect(
+      dealerTitle({
+        year: 2024,
+        make: "Porsche",
+        model: "911 GT3",
+        modelShort: "GT3",
+        trim: "911 GT3 Touring",
+      }),
+    ).toBe("2024 Porsche 911 GT3 Touring");
   });
 });

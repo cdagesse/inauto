@@ -93,9 +93,11 @@ export function DealerDetail({
             <div className="pill">No longer in the dealer&apos;s latest inventory</div>
           ) : null}
           <div className="hint">
-            {l.daysOnMarket != null
-              ? `${l.daysOnMarket} day${l.daysOnMarket === 1 ? "" : "s"} on the market`
-              : "Days on market unknown"}
+            {l.daysOnMarket == null
+              ? "Days on market unknown"
+              : l.daysOnMarket <= 0
+                ? "Listed today"
+                : `${l.daysOnMarket} day${l.daysOnMarket === 1 ? "" : "s"} on the market`}
             {l.listedAt ? ` · listed ${fmtDate(l.listedAt)}` : ""}
           </div>
         </div>

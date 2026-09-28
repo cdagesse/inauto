@@ -96,8 +96,8 @@ export default async function ListingsPage({
           ...carFilter,
           cursor: dcursor,
           limit: filter.q ? 36 : source === "dealer" ? 24 : 12,
-        }).catch(soft("listings dealers", { rows: [], nextCursor: null }))
-      : Promise.resolve({ rows: [], nextCursor: null }),
+        }).catch(soft("listings dealers", { rows: [], nextCursor: null, truncated: false }))
+      : Promise.resolve({ rows: [], nextCursor: null, truncated: false }),
     countLiveBySource().catch(soft("listings live counts", {} as Record<string, number>)),
     past ? Promise.resolve(0) : countDealerListings().catch(soft("listings dealer count", 0)),
     listSellMakes().catch(soft("listings makes", [])),
@@ -407,7 +407,7 @@ export default async function ListingsPage({
                 ? { ...carFilter, limit: filter.q ? 36 : source === "dealer" ? 24 : 12 }
                 : null
             }
-            searchTruncated={own.truncated || external.truncated}
+            searchTruncated={own.truncated || external.truncated || dealers.truncated}
             ownFilter={
               showOwn ? { type: filter.type, ...carFilter, when: filter.when, result } : null
             }

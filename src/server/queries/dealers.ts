@@ -153,7 +153,7 @@ function conditions(filter: DealerFilter): { conds: SQL[]; relevance: SQL | null
  */
 export async function listDealerListings(
   filter: DealerFilter = {},
-): Promise<{ rows: DealerCardData[]; nextCursor: string | null }> {
+): Promise<{ rows: DealerCardData[]; nextCursor: string | null; truncated: boolean }> {
   const limit = Math.min(filter.limit ?? DEALER_PAGE_SIZE, 100);
   const { conds, relevance } = conditions(filter);
   const cur = relevance ? null : decodeDealerCursor(filter.cursor);
@@ -181,6 +181,8 @@ export async function listDealerListings(
       rows.length > limit && !relevance && last
         ? encodeDealerCursor({ listedOn: last.listedOn, id: last.id })
         : null,
+    /** A search shows its best matches only; true when more matched than fit the page. */
+    truncated: !!relevance && rows.length > limit,
   };
 }
 
