@@ -1850,6 +1850,15 @@ svg .lbl {
 .external-card .photo {
   background-color: var(--card);
 }
+/* A card photo box whose image is missing or would not load. */
+.photo-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--card);
+  color: var(--ink-3);
+}
 .external-placeholder {
   aspect-ratio: 16 / 9;
   border: 1px dashed var(--rule);

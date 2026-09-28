@@ -9,6 +9,7 @@ import type { DealerDetail as DealerDetailData } from "@/server/queries/dealers"
 import { DealerBadge, DealerMark, dealerPlace } from "./dealer-card";
 import type { UrCarRead } from "./external-detail";
 import { ExpandToggle } from "./expandable";
+import { ExternalGallery } from "./external-gallery";
 import { StickyHead } from "./sticky-head";
 
 function Row({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
@@ -105,25 +106,16 @@ export function DealerDetail({
 
       <div className="grid-2 listing-body">
         <div>
-          {l.photos.length ? (
-            <div className="gallery">
-              {l.photos.slice(0, 7).map((u, i) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={u}
-                  src={u}
-                  alt={i === 0 ? title : ""}
-                  className={i === 0 ? "big" : undefined}
-                  loading={i === 0 ? "eager" : "lazy"}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="external-placeholder" aria-hidden="true">
-              <DealerMark />
-              <span className="hint">Photos are on the dealer&apos;s page</span>
-            </div>
-          )}
+          <ExternalGallery
+            photos={l.photos}
+            title={title}
+            placeholder={
+              <div className="external-placeholder" aria-hidden="true">
+                <DealerMark />
+                <span className="hint">Photos are on the dealer&apos;s page</span>
+              </div>
+            }
+          />
           <h2 className="sec" style={{ marginTop: 20 }}>
             Specification
           </h2>
