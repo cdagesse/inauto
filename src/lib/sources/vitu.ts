@@ -23,6 +23,8 @@ export interface VituConfig {
   authUrl: string;
   scope: string;
   fetchImpl?: typeof fetch;
+  /** Injected for tests: the pause before the single GET retry. */
+  sleepImpl?: (ms: number) => Promise<unknown>;
   /** Called with every non-token response's status and headers (for diagnostics). */
   onResponse?: (info: {
     method: string;
@@ -46,6 +48,11 @@ const tokenSchema = z.object({
 
 let cached: { token: string; exp: number; key: string } | null = null;
 
+/** Per-request cap on the token and API fetches. Status 0 in a VituError means abort/network. */
+export const VITU_TIMEOUT_MS = 15_000;
+/** Pause before the one GET retry. */
+export const VITU_RETRY_DELAY_MS = 750;
+
 export class VituError extends Error {
   constructor(
     public readonly step: "token" | "report",
@@ -57,12 +64,37 @@ export class VituError extends Error {
   }
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * fetch with a hard timeout; an abort or network failure surfaces as a VituError with
+ * status 0 and the given step, so callers' `e.step === "token"` handling keeps working.
+ */
+async function fetchWithTimeout(
+  f: typeof fetch,
+  step: "token" | "report",
+  url: string,
+  init: RequestInit,
+): Promise<Response> {
+  try {
+    return await f(url, { ...init, signal: AbortSignal.timeout(VITU_TIMEOUT_MS) });
+  } catch (e) {
+    if (e instanceof VituError) throw e;
+    const name = e instanceof Error ? e.name : "Error";
+    const detail =
+      name === "TimeoutError" || name === "AbortError"
+        ? `no response within ${VITU_TIMEOUT_MS / 1000}s`
+        : `network error (${name})`;
+    throw new VituError(step, 0, detail);
+  }
+}
+
 /** Client-credentials token, cached in memory until a minute before expiry. */
 export async function getVituToken(c: VituConfig, now = Date.now()): Promise<string> {
   const key = `${c.authUrl}|${c.clientId}|${c.scope}`;
   if (cached && cached.key === key && cached.exp > now) return cached.token;
   const f = c.fetchImpl ?? fetch;
-  const res = await f(c.authUrl, {
+  const res = await fetchWithTimeout(f, "token", c.authUrl, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -81,7 +113,12 @@ export async function getVituToken(c: VituConfig, now = Date.now()): Promise<str
   return parsed.data.access_token;
 }
 
-/** Authenticated JSON call against a product base. Shared by the NMVTIS, MVR and Notifications clients. */
+/**
+ * Authenticated JSON call against a product base. Shared by the NMVTIS, MVR and Notifications
+ * clients. A GET is retried once after a 5xx, timeout or network error; nothing else is ever
+ * retried, since a repeated create POST would open a second billed inquiry (the next cron tick
+ * resolves an unanswered create by refNumber instead).
+ */
 export async function vituCall<T>(
   c: VituConfig & { apiBase: string; locationId?: string | null },
   method: "GET" | "POST" | "PUT" | "DELETE",
@@ -90,29 +127,46 @@ export async function vituCall<T>(
 ): Promise<T> {
   const token = await getVituToken(c);
   const f = c.fetchImpl ?? fetch;
+  const sleepImpl = c.sleepImpl ?? sleep;
+  const url = `${c.apiBase.replace(/\/$/, "")}${path}`;
   const headers: Record<string, string> = {
     Authorization: `Bearer ${token}`,
     Accept: "application/json",
   };
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (c.locationId) headers["x-location-id"] = c.locationId;
-  const res = await f(`${c.apiBase.replace(/\/$/, "")}${path}`, {
+  const init: RequestInit = {
     method,
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  };
+  const attempts = method === "GET" ? 2 : 1;
+  let res: Response | null = null;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      res = await fetchWithTimeout(f, "report", url, init);
+    } catch (e) {
+      if (attempt < attempts && e instanceof VituError && e.status === 0) {
+        await sleepImpl(VITU_RETRY_DELAY_MS);
+        continue;
+      }
+      throw e;
+    }
+    if (res.status >= 500 && attempt < attempts) {
+      void res.text().catch(() => undefined); // release the socket
+      await sleepImpl(VITU_RETRY_DELAY_MS);
+      continue;
+    }
+    break;
+  }
+  if (!res) throw new VituError("report", 0, "no response");
   const text = await res.text();
   if (c.onResponse) {
     const headers: Record<string, string> = {};
     res.headers.forEach((val, key) => {
       headers[key] = val;
     });
-    c.onResponse({
-      method,
-      url: `${c.apiBase.replace(/\/$/, "")}${path}`,
-      status: res.status,
-      headers,
-    });
+    c.onResponse({ method, url, status: res.status, headers });
   }
   if (!res.ok) throw new VituError("report", res.status, text.slice(0, 500));
   if (!text.trim()) return {} as T;

@@ -25,7 +25,7 @@ export interface MislabelRule {
   maxMiles: number;
   minPrice: number;
 }
-export const MISLABEL_RULES: Record<string, MislabelRule[]> = {
+const MISLABEL_RULES: Record<string, MislabelRule[]> = {
   // keyed by model slug
   "911-gt3-rs": [{ years: [2016, 2016], maxMiles: 500, minPrice: 600_000 }],
 };

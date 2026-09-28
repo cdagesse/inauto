@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isUsd, money } from "@/components/account/money";
+import { isUsd, money } from "@/lib/format/money";
 import { countryName, flag, normalizeCountry, placeLine } from "@/lib/geo";
 import { normalizeLiveRow } from "@/lib/sources/ocd";
 

@@ -1,4 +1,5 @@
 /** Pure helpers for the Buy page filter drawer: what is set, and how to say it. */
+import { mi, usd } from "@/lib/format/money";
 
 export interface CarFilter {
   make?: string;
@@ -23,9 +24,6 @@ export const CAR_FILTER_KEYS = [
   "milesMin",
   "milesMax",
 ] as const;
-
-const usd = (v: number) => "$" + Math.round(v).toLocaleString("en-US");
-const num = (v: number) => Math.round(v).toLocaleString("en-US");
 
 /** Human chips for the active filters, in display order. */
 export function filterChips(f: CarFilter): { key: string; label: string }[] {
@@ -60,10 +58,10 @@ export function filterChips(f: CarFilter): { key: string; label: string }[] {
       key: "miles",
       label:
         f.milesMin != null && f.milesMax != null
-          ? `${num(f.milesMin)} to ${num(f.milesMax)} mi`
+          ? `${mi(f.milesMin)} to ${mi(f.milesMax)} mi`
           : f.milesMin != null
-            ? `${num(f.milesMin)}+ mi`
-            : `Under ${num(f.milesMax!)} mi`,
+            ? `${mi(f.milesMin)}+ mi`
+            : `Under ${mi(f.milesMax!)} mi`,
     });
   return out;
 }

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireSignedIn } from "@/components/account/require-signin";
-import { fmtDate, mi, usd } from "@/components/account/money";
+import { fmtDate, mi, usd } from "@/lib/format/money";
 import { GarageCarForm } from "@/components/garage/car-form";
 import { BrandLogo } from "@/components/site/brand-logo";
 import { listMarketModels } from "@/lib/market/source";

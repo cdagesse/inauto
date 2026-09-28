@@ -1,6 +1,6 @@
 import type { VenueComparison } from "@/lib/market/venues";
 import { venuePrice } from "@/lib/market/venues";
-import { mi, usd } from "./format";
+import { mi, usd } from "@/lib/format/money";
 
 /**
  * "Where a car like this sells best": one row per auction venue with results

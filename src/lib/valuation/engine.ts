@@ -1,4 +1,5 @@
 import type { AuctionRow, DealerSalePoint, MarketSnapshot } from "@/lib/market/types";
+import { usd } from "@/lib/format/money";
 import { resolveConfig, yearOverride, type ValuationConfig } from "./config";
 import type { Adjustment, CompRow, ValuationInputs, ValuationResult } from "./types";
 
@@ -63,7 +64,7 @@ export interface AuctionGap {
   estimated: boolean;
 }
 
-export function auctionGap(
+function auctionGap(
   snapshot: MarketSnapshot,
   generation: string,
   cfg: ValuationConfig,
@@ -268,18 +269,4 @@ export function valuate(
     comps: buildComps(snapshot, inputs, cfg),
     disclaimer: DISCLAIMER,
   };
-}
-
-/* ------------------------------------------------------------------ */
-/* Formatting (shared by UI and messages)                              */
-/* ------------------------------------------------------------------ */
-
-export function usd(v: number | null | undefined): string {
-  return v == null ? "n/a" : "$" + Math.round(v).toLocaleString("en-US");
-}
-export function usdK(v: number): string {
-  return "$" + Math.round(v / 1000) + "k";
-}
-export function fmtMiles(v: number | null | undefined): string {
-  return v == null ? "n/a" : Math.round(v).toLocaleString("en-US");
 }

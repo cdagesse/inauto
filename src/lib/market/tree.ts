@@ -84,7 +84,7 @@ function median(a: number[]): number | null {
   return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
 }
 
-export function headlineOf(s: TreeSnapshot): number {
+function headlineOf(s: TreeSnapshot): number {
   const first = s.order.map((c) => s.generations[c]).find((g) => g && g.median > 0);
   return first?.median ?? 0;
 }

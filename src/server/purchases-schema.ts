@@ -45,9 +45,3 @@ export function purchaseSchemaFor(clerkId: string) {
   });
 }
 export type PurchaseInput = z.infer<ReturnType<typeof purchaseSchemaFor>>;
-
-export const sellerDetailsSchema = z.object({
-  legalName: z.string().trim().max(120).optional(),
-  address: z.string().trim().max(300).optional(),
-  phone: z.string().trim().max(40).optional(),
-});

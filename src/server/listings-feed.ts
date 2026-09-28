@@ -31,7 +31,7 @@ const externalSchema = listingFilterSchema.omit({ type: true, cursor: true }).ex
   limit: z.number().int().min(1).max(48).optional(),
 });
 
-/** Public, read-only. Next page of platform auctions (live first, then settled). */
+/** Public, read-only. Next page of platform auctions (live, or settled when `when` is "past"). */
 export async function loadMoreExternal(
   raw: unknown,
 ): Promise<ActionResult<{ rows: ExternalCardData[]; nextCursor: string | null }>> {
@@ -41,8 +41,7 @@ export async function loadMoreExternal(
     const { when, result, ...rest } = parsed.data;
     const page = await listExternalListings({
       ...rest,
-      includeSettled: when === "past",
-      settledOnly: when === "past",
+      phase: when === "past" ? "past" : "live",
       result: when === "past" ? result : undefined,
     });
     return { ok: true, data: page };

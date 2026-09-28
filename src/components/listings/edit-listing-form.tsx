@@ -143,9 +143,7 @@ export function EditListingForm({
       <div className="fld">
         <span className="lab">Photos</span>
         <PhotoUpload value={photos} onChange={setPhotos} />
-        <span className="hint">
-          The first photo is the cover. Drag a file in, or paste an https image link.
-        </span>
+        <span className="hint">The first photo is the cover.</span>
       </div>
       <div className="fld">
         <label htmlFor="e-desc">Description</label>

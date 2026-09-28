@@ -5,6 +5,7 @@ import {
   loadNmvtisRecord,
   many,
   summarizeNmvtis,
+  VITU_RETRY_DELAY_MS,
   VituError,
 } from "@/lib/sources/vitu";
 
@@ -176,5 +177,111 @@ describe("getVituToken", () => {
     await expect(
       getVituToken({ ...base, clientId: "bad", fetchImpl }, 5_000),
     ).rejects.toBeInstanceOf(VituError);
+  });
+});
+
+describe("vituCall resilience", () => {
+  const noSleep = async () => {};
+  const tokenOk = () => new Response(JSON.stringify({ access_token: "t", expires_in: 300 }));
+
+  it("sends a timeout signal on the token and API fetches", async () => {
+    const signals: (AbortSignal | null | undefined)[] = [];
+    const fetchImpl = fakeFetch((url, init) => {
+      signals.push(init?.signal);
+      if (url.includes("/token")) return tokenOk();
+      return new Response("{}");
+    });
+    await loadNmvtisRecord({ ...base, clientId: "signal-test", fetchImpl, sleepImpl: noSleep }, 1);
+    expect(signals).toHaveLength(2);
+    for (const s of signals) expect(s).toBeInstanceOf(AbortSignal);
+  });
+
+  it("retries a GET once after a 5xx and then succeeds", async () => {
+    let hits = 0;
+    const slept: number[] = [];
+    const fetchImpl = fakeFetch((url) => {
+      if (url.includes("/token")) return tokenOk();
+      hits++;
+      return hits === 1
+        ? new Response("bad gateway", { status: 502 })
+        : new Response(JSON.stringify({ title: [{ titlingState: "MA" }] }));
+    });
+    const c = {
+      ...base,
+      clientId: "retry-get",
+      fetchImpl,
+      sleepImpl: async (ms: number) => {
+        slept.push(ms);
+      },
+    };
+    const rec = await loadNmvtisRecord(c, 5);
+    expect(many(rec.title)[0]?.titlingState).toBe("MA");
+    expect(hits).toBe(2);
+    expect(slept).toEqual([VITU_RETRY_DELAY_MS]);
+  });
+
+  it("gives up a GET after the second 5xx", async () => {
+    let hits = 0;
+    const fetchImpl = fakeFetch((url) => {
+      if (url.includes("/token")) return tokenOk();
+      hits++;
+      return new Response("down", { status: 503 });
+    });
+    await expect(
+      loadNmvtisRecord({ ...base, clientId: "retry-give-up", fetchImpl, sleepImpl: noSleep }, 5),
+    ).rejects.toSatisfy((e: unknown) => e instanceof VituError && e.status === 503);
+    expect(hits).toBe(2);
+  });
+
+  it("never retries the create POST", async () => {
+    let posts = 0;
+    const fetchImpl = fakeFetch((url) => {
+      if (url.includes("/token")) return tokenOk();
+      posts++;
+      return new Response("boom", { status: 500 });
+    });
+    await expect(
+      createNmvtisInquiry(
+        { ...base, clientId: "no-post-retry", fetchImpl, sleepImpl: noSleep },
+        { vin: "WP0AA2996XS620000", refNumber: "ref-2" },
+      ),
+    ).rejects.toSatisfy(
+      (e: unknown) => e instanceof VituError && e.step === "report" && e.status === 500,
+    );
+    expect(posts).toBe(1);
+  });
+
+  it("wraps a network failure or abort as a VituError with status 0 and retries only GETs", async () => {
+    let calls = 0;
+    const fetchImpl = (async (input: RequestInfo | URL) => {
+      if (String(input).includes("/token")) return tokenOk();
+      calls++;
+      throw new DOMException("The operation was aborted due to timeout", "TimeoutError");
+    }) as typeof fetch;
+    const c = { ...base, clientId: "abort-test", fetchImpl, sleepImpl: noSleep };
+    await expect(loadNmvtisRecord(c, 1)).rejects.toSatisfy(
+      (e: unknown) =>
+        e instanceof VituError &&
+        e.step === "report" &&
+        e.status === 0 &&
+        /within 15s/.test(e.message),
+    );
+    expect(calls).toBe(2);
+    calls = 0;
+    await expect(
+      createNmvtisInquiry(c, { vin: "WP0AA2996XS620000", refNumber: "ref-3" }),
+    ).rejects.toSatisfy((e: unknown) => e instanceof VituError && e.status === 0);
+    expect(calls).toBe(1);
+  });
+
+  it("reports a token fetch that never answers as a token-step error", async () => {
+    const fetchImpl = (async () => {
+      throw new TypeError("fetch failed");
+    }) as typeof fetch;
+    await expect(
+      getVituToken({ ...base, clientId: "token-network", fetchImpl }, 9_000),
+    ).rejects.toSatisfy(
+      (e: unknown) => e instanceof VituError && e.step === "token" && e.status === 0,
+    );
   });
 });

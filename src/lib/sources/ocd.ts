@@ -516,16 +516,3 @@ export function createOcdClient(o: OcdClientOptions) {
     },
   };
 }
-export type OcdClient = ReturnType<typeof createOcdClient>;
-
-/** Convenience wrappers matching the job's call sites. */
-export function fetchLiveAuctions(
-  opts: OcdClientOptions,
-  params: LiveAuctionParams = {},
-  now = new Date(),
-): Promise<NormalizedLiveRow[]> {
-  return createOcdClient(opts).live(params, now);
-}
-export function fetchAuctionBids(opts: OcdClientOptions, id: string | number) {
-  return createOcdClient(opts).bids(id);
-}

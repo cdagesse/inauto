@@ -9,7 +9,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { auth } from "@/auth";
 import { signInHref } from "@/components/account/require-signin";
-import { fmtDate, mi, usd } from "@/components/account/money";
+import { fmtDate, mi, usd } from "@/lib/format/money";
 import { BidForm } from "@/components/listings/bid-form";
 import { Countdown } from "@/components/listings/countdown";
 import { ExpandedRegion } from "@/components/listings/expandable";

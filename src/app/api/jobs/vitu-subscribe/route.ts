@@ -1,6 +1,6 @@
-import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { env } from "@/env/server";
+import { requireCron } from "@/lib/cron-auth";
 import {
   getSubscription,
   setHmacSecurity,
@@ -20,14 +20,6 @@ export const dynamic = "force-dynamic";
  * Each Notifications product is served from its parent API's base, so only the
  * product needs to be enabled. VITU_WEBHOOK_KEY becomes the HMAC key.
  */
-function authorized(req: Request): boolean {
-  const secret = env.CRON_SECRET;
-  if (!secret) return false;
-  const a = Buffer.from(req.headers.get("authorization") ?? "");
-  const b = Buffer.from(`Bearer ${secret}`);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
-
 function config(req: Request) {
   const product = new URL(req.url).searchParams.get("product") ?? "mvr";
   const vitu = env.vitu;
@@ -39,9 +31,8 @@ function config(req: Request) {
 }
 
 async function handle(req: Request) {
-  if (!env.CRON_SECRET)
-    return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 503 });
-  if (!authorized(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const denied = requireCron(req);
+  if (denied) return denied;
   const cfg = config(req);
   if ("error" in cfg) return NextResponse.json({ error: cfg.error }, { status: cfg.status });
   try {

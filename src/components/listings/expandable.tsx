@@ -18,7 +18,7 @@ function set(key: string, open: boolean) {
   listeners.forEach((l) => l());
 }
 
-export function useExpanded(key: string) {
+function useExpanded(key: string) {
   const open = useSyncExternalStore(
     subscribe,
     () => state.get(key) ?? false,

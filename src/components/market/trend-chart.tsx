@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import type { MarketSnapshot } from "@/lib/market/types";
-import { monthLabel, niceTicks, seriesVar, usd, usdK } from "./format";
+import { monthLabel, niceTicks, seriesVar } from "./format";
+import { usd, usdK } from "@/lib/format/money";
 import { useWidth } from "./use-width";
 
 export function TrendChart({ snapshot, selected }: { snapshot: MarketSnapshot; selected: string }) {

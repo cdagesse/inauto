@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { usd } from "@/lib/format/money";
 
 export interface BillOfSaleData {
   purchaseId: string;
@@ -18,8 +19,6 @@ export interface BillOfSaleData {
   mode: "in_person" | "online";
   escrow: boolean;
 }
-
-const usd = (v: number) => "$" + Math.round(v).toLocaleString("en-US");
 
 /** Plain-text lines of the bill of sale, shared by the PDF and by tests. */
 export function billOfSaleLines(d: BillOfSaleData): string[] {

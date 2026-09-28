@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { fmtDate } from "@/components/account/money";
+import { fmtDate } from "@/lib/format/money";
 import { dashboardStats } from "@/server/admin/queries";
 
 export const dynamic = "force-dynamic";

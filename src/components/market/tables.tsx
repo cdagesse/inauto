@@ -1,5 +1,6 @@
 import type { MarketSnapshot } from "@/lib/market/types";
-import { dayLabel, longDate, median, mi, usd } from "./format";
+import { dayLabel, longDate, median } from "./format";
+import { mi, usd } from "@/lib/format/money";
 
 /** Generation-aware tables. Pure components: fine in client or server trees. */
 

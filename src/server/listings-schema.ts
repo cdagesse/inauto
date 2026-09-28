@@ -1,10 +1,11 @@
 import "server-only";
 import { z } from "zod";
+import { isBlobUrl } from "@/lib/listings/blob-url";
 
 export const PAGE_SIZE = 24;
 export const MAX_PHOTOS = 24;
 
-/** UrCar blob uploads, or any https URL for the paste-a-link fallback. */
+/** Photos are UrCar Blob uploads only, so a seller cannot point a listing at a host they control. */
 export const photoUrl = z
   .string()
   .trim()
@@ -16,7 +17,8 @@ export const photoUrl = z
     } catch {
       return false;
     }
-  }, "Photo links must be https.");
+  }, "Photo links must be https.")
+  .refine(isBlobUrl, "Upload photos through UrCar.");
 
 export const createListingSchema = z.object({
   type: z.enum(["classified", "auction", "private"]),
@@ -48,7 +50,6 @@ export const createListingSchema = z.object({
   auctionDays: z.union([z.literal(7), z.literal(14)]).optional(),
   publish: z.boolean().default(false),
 });
-export type CreateListingInput = z.infer<typeof createListingSchema>;
 
 const money = z.coerce.number().int().min(0).max(100_000_000).optional();
 const year = z.coerce.number().int().min(1900).max(2100).optional();
@@ -84,7 +85,6 @@ export const updateListingSchema = createListingSchema
       })
       .optional(),
   });
-export type UpdateListingInput = z.infer<typeof updateListingSchema>;
 
 export const listingFilterSchema = z.object({
   type: z.enum(["classified", "auction"]).optional(),
