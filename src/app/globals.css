@@ -3540,3 +3540,28 @@ header.site-head {
     color: var(--accent);
   }
 }
+
+/* header on phones: logo keeps its shape, Garage/Admin become icons */
+.brand {
+  flex: 0 0 auto;
+}
+.brand-img {
+  flex: none;
+  max-width: none;
+}
+@media (max-width: 640px) {
+  .bar-right .btn.with-icon .btn-text {
+    display: none;
+  }
+  .bar-right .btn.with-icon {
+    width: 34px;
+    padding-inline: 0;
+    justify-content: center;
+  }
+  .bar {
+    gap: 8px;
+  }
+  .bar-right {
+    gap: 6px;
+  }
+}

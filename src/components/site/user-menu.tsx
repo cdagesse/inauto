@@ -44,8 +44,17 @@ export function UserMenu() {
   return (
     <div className="user-menu">
       {isAdmin ? (
-        <Link href="/admin" className="btn sm">
-          Admin
+        <Link href="/admin" className="btn sm with-icon" aria-label="Admin">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M12 3 4 6v5c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10V6l-8-3Z"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinejoin="round"
+            />
+            <path d="m9 12 2 2 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+          <span className="btn-text">Admin</span>
         </Link>
       ) : null}
       <Link href="/garage" className="btn sm with-icon" aria-label="My garage">
@@ -58,7 +67,7 @@ export function UserMenu() {
           />
           <path d="M7 21v-8h10v8M7 16h10" stroke="currentColor" strokeWidth="1.8" />
         </svg>
-        Garage
+        <span className="btn-text">Garage</span>
       </Link>
       <UserButton />
     </div>
