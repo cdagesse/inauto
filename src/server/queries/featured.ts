@@ -54,7 +54,8 @@ export async function resolveCars(
   if (picks.length === 0) return [];
   const listingIds = picks.filter((p) => p.kind === "listing").map((p) => p.refId);
   const externalIds = picks.filter((p) => p.kind === "external").map((p) => p.refId);
-  const [own, ext] = await Promise.all([
+  const dealerIds = picks.filter((p) => p.kind === "dealer").map((p) => p.refId);
+  const [own, ext, dealers] = await Promise.all([
     listingIds.length
       ? db
           .select({
@@ -94,8 +95,55 @@ export async function resolveCars(
           .from(externalListings)
           .where(inArray(externalListings.id, externalIds))
       : Promise.resolve([]),
+    dealerIds.length
+      ? db
+          .select({
+            id: dealerActive.id,
+            year: dealerActive.year,
+            make: makes.name,
+            model: models.name,
+            modelShort: models.shortName,
+            trim: sql<string | null>`${dealerActive.rawJson}->>'trim'`,
+            miles: dealerActive.miles,
+            price: dealerActive.price,
+            dealerName: dealerActive.dealerName,
+            city: sql<string | null>`${dealerActive.rawJson}->>'city'`,
+            state: dealerActive.state,
+            photo: sql<
+              string | null
+            >`(select u from jsonb_array_elements_text(${dealerActive.rawJson}->'photo_urls') u where u like 'https://%' limit 1)`,
+          })
+          .from(dealerActive)
+          .innerJoin(models, eq(models.id, dealerActive.modelId))
+          .innerJoin(makes, eq(makes.id, models.makeId))
+          .where(
+            and(
+              inArray(dealerActive.id, dealerIds),
+              // Still in the model's newest, recent snapshot: listed now.
+              sql`${dealerActive.snapshotDate} = (select max(b.snapshot_date) from dealer_active b where b.model_id = ${dealerActive.modelId})`,
+              sql`${dealerActive.snapshotDate} >= current_date - 28`,
+            ),
+          )
+      : Promise.resolve([]),
   ]);
   const byKey = new Map<string, FeaturedCar>();
+  for (const d of dealers)
+    byKey.set(`dealer:${d.id}`, {
+      key: `dealer:${d.id}`,
+      kind: "dealer",
+      href: `/listings/dealer/${d.id}`,
+      title: dealerTitle(d),
+      sub:
+        [d.dealerName, [d.city, d.state].filter(Boolean).join(", ")].filter(Boolean).join(" · ") +
+        (d.miles != null ? ` · ${d.miles.toLocaleString("en-US")} mi` : ""),
+      price: d.price,
+      currency: "USD",
+      priceLabel: "Asking",
+      photo: d.photo,
+      badge: d.dealerName ? `At ${d.dealerName}` : "At a dealer",
+      endsAt: null,
+      featured,
+    });
   for (const l of own)
     byKey.set(`listing:${l.id}`, {
       key: `listing:${l.id}`,

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, gte, ilike, isNull, lt, lte, max, or, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, isNull, lt, lte, or, sql, type SQL } from "drizzle-orm";
 import { cache } from "react";
 import { db } from "@/db";
 import { dealerActive, generations, makes, models } from "@/db/schema";
@@ -40,10 +40,16 @@ const raw = dealerActive.rawJson;
 const trimExpr = sql<string | null>`${raw}->>'trim'`;
 const cityExpr = sql<string | null>`${raw}->>'city'`;
 /** Days on market as of today; Visor's figure is as of the snapshot day. */
-const daysExpr = sql<number | null>`(${dealerActive.daysOnMarket} + (current_date - ${dealerActive.snapshotDate}))`;
+const daysExpr = sql<
+  number | null
+>`(${dealerActive.daysOnMarket} + (current_date - ${dealerActive.snapshotDate}))`;
 /** The listing date; null when Visor has no days-on-market for the row. */
-const listedOnExpr = sql<string | null>`(${dealerActive.snapshotDate} - ${dealerActive.daysOnMarket})::text`;
-const photoExpr = sql<string | null>`(select u from jsonb_array_elements_text(${raw}->'photo_urls') u where u like 'https://%' limit 1)`;
+const listedOnExpr = sql<
+  string | null
+>`(${dealerActive.snapshotDate} - ${dealerActive.daysOnMarket})::text`;
+const photoExpr = sql<
+  string | null
+>`(select u from jsonb_array_elements_text(${raw}->'photo_urls') u where u like 'https://%' limit 1)`;
 const cardColumns = {
   id: dealerActive.id,
   year: dealerActive.year,
@@ -66,18 +72,13 @@ const cardColumns = {
 };
 
 /**
- * Each model's newest inventory snapshot day, computed once per query (a few hundred
- * rows through dealer_active_model_day_idx) and joined, rather than a subquery per row.
+ * "Listed now": rows of each model's newest inventory snapshot (one uncorrelated grouped
+ * subquery, hashed once, through dealer_active_model_day_idx), recent enough, and not set
+ * aside by the cleaner.
  */
-const latest = db
-  .select({ modelId: dealerActive.modelId, day: max(dealerActive.snapshotDate).as("day") })
-  .from(dealerActive)
-  .groupBy(dealerActive.modelId)
-  .as("latest");
-
-/** "Listed now": rows of the newest snapshot, recent enough, not set aside by the cleaner. */
 const listedNow = and(
-  sql`${dealerActive.snapshotDate} >= current_date - ${DEALER_STALE_DAYS}`,
+  sql`(${dealerActive.modelId}, ${dealerActive.snapshotDate}) in (select b.model_id, max(b.snapshot_date) from dealer_active b group by b.model_id)`,
+  sql`${dealerActive.snapshotDate} >= current_date - ${sql.raw(String(DEALER_STALE_DAYS))}`,
   isNull(dealerActive.excludedReason),
 )!;
 
@@ -85,10 +86,6 @@ function fromListedNow() {
   return db
     .select(cardColumns)
     .from(dealerActive)
-    .innerJoin(
-      latest,
-      and(eq(latest.modelId, dealerActive.modelId), eq(latest.day, dealerActive.snapshotDate)),
-    )
     .innerJoin(models, eq(models.id, dealerActive.modelId))
     .innerJoin(makes, eq(makes.id, models.makeId));
 }
@@ -192,10 +189,6 @@ export const countDealerListings = cache(async (): Promise<number> => {
   const [r] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(dealerActive)
-    .innerJoin(
-      latest,
-      and(eq(latest.modelId, dealerActive.modelId), eq(latest.day, dealerActive.snapshotDate)),
-    )
     .where(listedNow);
   return Number(r?.n ?? 0);
 });
@@ -219,10 +212,6 @@ export async function listDealerListingsForModel(
     db
       .select({ n: sql<number>`count(*)::int` })
       .from(dealerActive)
-      .innerJoin(
-        latest,
-        and(eq(latest.modelId, dealerActive.modelId), eq(latest.day, dealerActive.snapshotDate)),
-      )
       .innerJoin(models, eq(models.id, dealerActive.modelId))
       .innerJoin(makes, eq(makes.id, models.makeId))
       .where(scope),
@@ -266,7 +255,7 @@ export const getDealerListing = cache(async (id: string): Promise<DealerDetail |
       generationCode: generations.code,
       reportStatus: models.reportStatus,
       reportError: models.reportError,
-      current: sql<boolean>`${dealerActive.snapshotDate} = (select max(b.snapshot_date) from dealer_active b where b.model_id = ${dealerActive.modelId}) and ${dealerActive.snapshotDate} >= current_date - ${DEALER_STALE_DAYS} and ${dealerActive.excludedReason} is null`,
+      current: sql<boolean>`${dealerActive.snapshotDate} = (select max(b.snapshot_date) from dealer_active b where b.model_id = ${dealerActive.modelId}) and ${dealerActive.snapshotDate} >= current_date - ${sql.raw(String(DEALER_STALE_DAYS))} and ${dealerActive.excludedReason} is null`,
     })
     .from(dealerActive)
     .innerJoin(models, eq(models.id, dealerActive.modelId))

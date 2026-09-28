@@ -6,7 +6,7 @@ Features and fixes as they ship, newest first. One line per change, with the pul
 
 ### Features
 
-- Dealer listings: cars for sale at dealers (from Visor) with photos, asking price, miles, dealer and location. A "Dealers" source on the Buy page, dealer cards alongside auctions whenever a make, model, trim or search narrows the list, a dealer listing page with a "View at dealer" link and the UrCar read, and a "For sale at dealers" section on every model report (#73)
+- Dealer listings: cars for sale at dealers (from Visor) with photos, asking price, miles, dealer and location. A "Dealers" source on the Buy page, dealer cards alongside auctions whenever a make, model, trim or search narrows the list, a dealer listing page with a "View at dealer" link and the UrCar read, and a "For sale at dealers" section on every model report (#74)
 
 - Buy page search box: type a year, make, model, trim or keyword and the list narrows as you type, best match first; typos are tolerated (trigram matching in Postgres) (#72)
 - Buy page filters: Make, Model and Trim are dropdowns that follow each other, with trims taken from what is actually on the market for that model; the filter drawer no longer hides under the sticky header on phones or desktop (#72)
