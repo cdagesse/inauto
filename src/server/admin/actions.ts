@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireAdmin } from "@/auth";
+import { safeBack } from "@/components/account/require-signin";
 import { type ActionResult, fail, toError } from "@/server/result";
 import * as listingsCore from "./core/listings";
 import * as modelsCore from "./core/models";
@@ -39,11 +40,22 @@ const optMoney = z
 const text = (max: number) => z.string().trim().max(max);
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "");
 
-async function run(back: string, r: Promise<ActionResult | ActionResult<unknown>>, okMsg?: string) {
+/**
+ * Awaits an action and redirects back with the outcome. `back` may come from a
+ * hidden form field, so it is limited to a same-origin path here for every
+ * caller; anything else lands on the admin home.
+ */
+async function run<T>(
+  back: string,
+  r: Promise<ActionResult<T>>,
+  okMsg?: string | ((data: T) => string),
+) {
   const res = await r;
-  const sep = back.includes("?") ? "&" : "?";
-  if (!res.ok) redirect(`${back}${sep}error=${encodeURIComponent(res.error)}`);
-  redirect(`${back}${sep}ok=${encodeURIComponent(okMsg ?? "Done.")}`);
+  const target = safeBack(back, "/admin");
+  const sep = target.includes("?") ? "&" : "?";
+  if (!res.ok) redirect(`${target}${sep}error=${encodeURIComponent(res.error)}`);
+  const msg = typeof okMsg === "function" ? okMsg(res.data as T) : (okMsg ?? "Done.");
+  redirect(`${target}${sep}ok=${encodeURIComponent(msg)}`);
 }
 
 /* ---------------- listings ---------------- */
@@ -71,9 +83,7 @@ export async function adminDeleteListing(fd: FormData): Promise<ActionResult> {
 }
 /** From the listing page or the admin user page; returns to `back` (same-origin path only). */
 export async function adminDeleteListingForm(fd: FormData) {
-  const back = str(fd, "back");
-  const safe = back.startsWith("/") && !back.startsWith("//") ? back : "/admin/users";
-  await run(safe, adminDeleteListing(fd), "Listing removed.");
+  await run(safeBack(str(fd, "back"), "/admin/users"), adminDeleteListing(fd), "Listing removed.");
 }
 
 /* ---------------- users ---------------- */
@@ -380,11 +390,11 @@ export async function reviewRows(fd: FormData): Promise<ActionResult<{ count: nu
   }
 }
 export async function reviewRowsForm(fd: FormData) {
-  const back = str(fd, "back") || "/admin/review";
-  const r = await reviewRows(fd);
-  const sep = back.includes("?") ? "&" : "?";
-  if (!r.ok) redirect(`${back}${sep}error=${encodeURIComponent(r.error)}`);
-  redirect(`${back}${sep}ok=${encodeURIComponent(`${r.data.count} rows updated.`)}`);
+  await run(
+    safeBack(str(fd, "back"), "/admin/review"),
+    reviewRows(fd),
+    (d) => `${d.count} rows updated.`,
+  );
 }
 
 export async function reassignGeneration(fd: FormData): Promise<ActionResult> {
@@ -411,7 +421,11 @@ export async function reassignGeneration(fd: FormData): Promise<ActionResult> {
   }
 }
 export async function reassignGenerationForm(fd: FormData) {
-  await run(str(fd, "back") || "/admin/review", reassignGeneration(fd), "Generation reassigned.");
+  await run(
+    safeBack(str(fd, "back"), "/admin/review"),
+    reassignGeneration(fd),
+    "Generation reassigned.",
+  );
 }
 
 /* ---------------- service orders ---------------- */
@@ -451,5 +465,5 @@ export async function serviceOrderAction(fd: FormData): Promise<ActionResult> {
   }
 }
 export async function serviceOrderActionForm(fd: FormData) {
-  await run(str(fd, "back") || "/admin/vetting", serviceOrderAction(fd), "Order updated.");
+  await run(safeBack(str(fd, "back"), "/admin/vetting"), serviceOrderAction(fd), "Order updated.");
 }

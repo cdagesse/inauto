@@ -1,8 +1,29 @@
 import "server-only";
-import { and, asc, desc, eq, gt, gte, ilike, inArray, lt, lte, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gt,
+  gte,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  lte,
+  or,
+  type SQL,
+  sql,
+} from "drizzle-orm";
 import { cache } from "react";
 import { db } from "@/db";
 import { externalListings, generations, makes, models } from "@/db/schema";
+import {
+  decodeExternalCursor,
+  encodeExternalCursor,
+  type ExternalPhase,
+} from "@/lib/listings/external-cursor";
 import { isPlatformKey, type PlatformKey } from "@/lib/sources/platforms";
 
 export const EXTERNAL_PAGE_SIZE = 24;
@@ -70,27 +91,6 @@ function asCard(
   return { ...row, source: isPlatformKey(row.source) ? row.source : "other" };
 }
 
-/** Cursor for the external feed: "<endsAtISO|null>|<id>". Live rows sort by endsAt asc, then settled rows by endsAt desc. */
-function decodeCursor(
-  c?: string,
-): { endsAt: Date | null; id: string; phase: "live" | "done" } | null {
-  if (!c) return null;
-  try {
-    const [phase, ts, id] = Buffer.from(c, "base64url").toString("utf8").split("|");
-    if ((phase !== "live" && phase !== "done") || !/^[0-9a-f-]{36}$/.test(id)) return null;
-    const d = ts === "null" ? null : new Date(ts);
-    if (d && Number.isNaN(d.getTime())) return null;
-    return { endsAt: d, id, phase };
-  } catch {
-    return null;
-  }
-}
-function encodeCursor(phase: "live" | "done", row: { endsAt: Date | null; id: string }): string {
-  return Buffer.from(
-    `${phase}|${row.endsAt ? row.endsAt.toISOString() : "null"}|${row.id}`,
-  ).toString("base64url");
-}
-
 export interface ExternalFilter {
   source?: PlatformKey;
   make?: string;
@@ -103,116 +103,94 @@ export interface ExternalFilter {
   milesMin?: number;
   milesMax?: number;
   cursor?: string;
-  /** Live only (default) or include recently settled results. */
-  includeSettled?: boolean;
-  /** Skip the live phase entirely: past results only. */
-  settledOnly?: boolean;
-  /** With settled rows: only those that sold, or only those that did not. */
+  /** Live auctions (default) or settled results. */
+  phase?: ExternalPhase;
+  /** Past phase only: only those that sold, or only those that did not. */
   result?: "sold" | "unsold";
   limit?: number;
 }
 
 /**
- * Live auctions first (soonest ending first), then, when asked, settled ones
- * newest first. Keyset paginated so deep pages stay cheap.
+ * Live auctions soonest ending first, or, with `phase: "past"`, settled ones
+ * newest first. Keyset paginated so deep pages stay cheap. A cursor from the
+ * other phase is ignored, so the request starts from the first page.
  */
 export async function listExternalListings(filter: ExternalFilter = {}) {
   const limit = Math.min(filter.limit ?? EXTERNAL_PAGE_SIZE, 100);
-  const cur = decodeCursor(filter.cursor);
-  const base = [] as ReturnType<typeof eq>[];
-  if (filter.source) base.push(eq(externalListings.source, filter.source));
-  if (filter.make) base.push(sql`lower(${externalListings.make}) = ${filter.make.toLowerCase()}`);
+  const phase: ExternalPhase = filter.phase ?? "live";
+  const decoded = decodeExternalCursor(filter.cursor);
+  const cur = decoded?.phase === phase ? decoded : null;
+  const conds = [] as ReturnType<typeof eq>[];
+  if (filter.source) conds.push(eq(externalListings.source, filter.source));
+  if (filter.make) conds.push(sql`lower(${externalListings.make}) = ${filter.make.toLowerCase()}`);
   const like = (s: string) => `%${s.replace(/[%_\\]/g, (c) => `\\${c}`)}%`;
   if (filter.model)
-    base.push(
+    conds.push(
       or(
         ilike(externalListings.model, like(filter.model)),
         ilike(externalListings.title, like(filter.model)),
       )!,
     );
   if (filter.trim)
-    base.push(
+    conds.push(
       or(
         ilike(externalListings.trim, like(filter.trim)),
         ilike(externalListings.title, like(filter.trim)),
       )!,
     );
-  if (filter.yearMin != null) base.push(gte(externalListings.year, filter.yearMin));
-  if (filter.yearMax != null) base.push(lte(externalListings.year, filter.yearMax));
-  if (filter.milesMin != null) base.push(gte(externalListings.miles, filter.milesMin));
-  if (filter.milesMax != null) base.push(lte(externalListings.miles, filter.milesMax));
+  if (filter.yearMin != null) conds.push(gte(externalListings.year, filter.yearMin));
+  if (filter.yearMax != null) conds.push(lte(externalListings.year, filter.yearMax));
+  if (filter.milesMin != null) conds.push(gte(externalListings.miles, filter.milesMin));
+  if (filter.milesMax != null) conds.push(lte(externalListings.miles, filter.milesMax));
   const priceExpr = sql<
     number | null
   >`coalesce(${externalListings.finalPrice}, ${externalListings.currentBid})`;
-  if (filter.priceMin != null) base.push(sql`${priceExpr} >= ${filter.priceMin}`);
-  if (filter.priceMax != null) base.push(sql`${priceExpr} <= ${filter.priceMax}`);
+  if (filter.priceMin != null) conds.push(sql`${priceExpr} >= ${filter.priceMin}`);
+  if (filter.priceMax != null) conds.push(sql`${priceExpr} <= ${filter.priceMax}`);
 
-  const out: ExternalCardData[] = [];
-  let nextCursor: string | null = null;
-
-  if (!filter.settledOnly && (!cur || cur.phase === "live")) {
-    const conds = [...base, liveNow];
+  const endsAt = externalListings.endsAt;
+  const id = externalListings.id;
+  let order: SQL[];
+  if (phase === "live") {
+    conds.push(liveNow);
+    // ends_at asc nulls last (Postgres' default for asc, spelled out to match the
+    // predicate), then id asc. Rows without an end time sit at the tail, so once
+    // the cursor is inside them only later ids of that group remain.
     if (cur)
       conds.push(
-        or(
-          cur.endsAt ? gt(externalListings.endsAt, cur.endsAt) : sql`false`,
-          and(
-            cur.endsAt
-              ? eq(externalListings.endsAt, cur.endsAt)
-              : sql`${externalListings.endsAt} is null`,
-            gt(externalListings.id, cur.id),
-          ),
-        )!,
+        cur.endsAt
+          ? or(gt(endsAt, cur.endsAt), isNull(endsAt), and(eq(endsAt, cur.endsAt), gt(id, cur.id)))!
+          : and(isNull(endsAt), gt(id, cur.id))!,
       );
-    const rows = await db
-      .select(cardColumns)
-      .from(externalListings)
-      .where(and(...conds))
-      .orderBy(asc(externalListings.endsAt), asc(externalListings.id))
-      .limit(limit + 1);
-    if (rows.length > limit) {
-      const page = rows.slice(0, limit);
-      out.push(...page.map(asCard));
-      return { rows: out, nextCursor: encodeCursor("live", page[page.length - 1]) };
-    }
-    out.push(...rows.map(asCard));
-    if (!filter.includeSettled) return { rows: out, nextCursor: null };
+    order = [sql`${endsAt} asc nulls last`, asc(id)];
+  } else {
+    conds.push(settled);
+    if (filter.result === "sold") conds.push(eq(externalListings.status, "sold"));
+    else if (filter.result === "unsold")
+      conds.push(inArray(externalListings.status, ["rnm", "withdrawn"]));
+    // ends_at desc nulls first (Postgres' default for desc), then id desc. Rows
+    // without an end time come first, so a null cursor still has to admit every
+    // dated row after the rest of the null group.
+    if (cur)
+      conds.push(
+        cur.endsAt
+          ? or(lt(endsAt, cur.endsAt), and(eq(endsAt, cur.endsAt), lt(id, cur.id)))!
+          : or(and(isNull(endsAt), lt(id, cur.id)), isNotNull(endsAt))!,
+      );
+    order = [sql`${endsAt} desc nulls first`, desc(id)];
   }
 
-  const remaining = limit - out.length;
-  if (remaining <= 0)
-    return {
-      rows: out,
-      nextCursor: cur
-        ? encodeCursor("done", { endsAt: null, id: "00000000-0000-0000-0000-000000000000" })
-        : null,
-    };
-  const conds = [...base, settled];
-  if (filter.result === "sold") conds.push(eq(externalListings.status, "sold"));
-  else if (filter.result === "unsold")
-    conds.push(inArray(externalListings.status, ["rnm", "withdrawn"]));
-  if (cur?.phase === "done")
-    conds.push(
-      or(
-        cur.endsAt ? lt(externalListings.endsAt, cur.endsAt) : sql`false`,
-        and(
-          cur.endsAt
-            ? eq(externalListings.endsAt, cur.endsAt)
-            : sql`${externalListings.endsAt} is null`,
-          lt(externalListings.id, cur.id),
-        ),
-      )!,
-    );
   const rows = await db
     .select(cardColumns)
     .from(externalListings)
     .where(and(...conds))
-    .orderBy(desc(externalListings.endsAt), desc(externalListings.id))
-    .limit(remaining + 1);
-  const page = rows.slice(0, remaining);
-  out.push(...page.map(asCard));
-  if (rows.length > remaining) nextCursor = encodeCursor("done", page[page.length - 1]);
-  return { rows: out, nextCursor };
+    .orderBy(...order)
+    .limit(limit + 1);
+  const page = rows.slice(0, limit);
+  return {
+    rows: page.map(asCard),
+    nextCursor: rows.length > limit ? encodeExternalCursor(phase, page[page.length - 1]) : null,
+  };
 }
 
 export interface ExternalDetail extends ExternalCardData {

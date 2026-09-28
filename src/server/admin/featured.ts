@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { requireAdmin } from "@/auth";
+import { safeBack } from "@/components/account/require-signin";
 import { db } from "@/db";
 import { featuredCars } from "@/db/schema";
 
@@ -24,8 +25,7 @@ export async function toggleFeaturedForm(fd: FormData) {
   });
   if (!parsed.success) redirect("/admin/featured?error=Invalid+request");
   const { kind, refId } = parsed.data;
-  const back =
-    parsed.data.back && parsed.data.back.startsWith("/") ? parsed.data.back : "/admin/featured";
+  const back = safeBack(parsed.data.back, "/admin/featured");
   const removed = await db
     .delete(featuredCars)
     .where(and(eq(featuredCars.kind, kind), eq(featuredCars.refId, refId)))

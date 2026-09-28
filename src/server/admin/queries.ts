@@ -1,5 +1,6 @@
 import "server-only";
 import { and, count, desc, eq, ilike, isNotNull, or, sql } from "drizzle-orm";
+import { requireAdmin } from "@/auth";
 import { db } from "@/db";
 import {
   adminActions,
@@ -19,9 +20,16 @@ import { PAGE_SIZE } from "./rules";
 
 const off = (page: number) => (page - 1) * PAGE_SIZE;
 
+/*
+ * Every reader re-checks the admin role, like the mutations do, so a demoted
+ * admin's open tab stops reading admin data on the next soft navigation. auth()
+ * is request-cached, so this adds no round trip beyond the layout's own check.
+ */
+
 /* ---------------- dashboard ---------------- */
 
 export async function dashboardStats() {
+  await requireAdmin();
   const [userRows, listingRows, serviceRows, modelRows, reviewDealer, reviewAuction, recent] =
     await Promise.all([
       db.select({ status: users.status, n: count() }).from(users).groupBy(users.status),
@@ -71,6 +79,7 @@ export async function dashboardStats() {
 /* ---------------- users ---------------- */
 
 export async function listUsers(q: string, page: number) {
+  await requireAdmin();
   const where = q ? or(ilike(users.email, `%${q}%`), ilike(users.name, `%${q}%`)) : undefined;
   const [rows, total] = await Promise.all([
     db
@@ -95,6 +104,7 @@ export async function listUsers(q: string, page: number) {
 }
 
 export async function getUserDetail(id: string) {
+  await requireAdmin();
   if (!/^[0-9a-f-]{36}$/.test(id)) return null;
   const [user] = await db.select().from(users).where(eq(users.id, id)).limit(1);
   if (!user) return null;
@@ -146,6 +156,7 @@ export async function getUserDetail(id: string) {
 /* ---------------- models ---------------- */
 
 export async function listModelsAdmin(q: string) {
+  await requireAdmin();
   const where = q ? ilike(models.searchText, `%${q}%`) : undefined;
   return db
     .select({
@@ -170,6 +181,7 @@ export async function listModelsAdmin(q: string) {
 }
 
 export async function getModelAdmin(id: string) {
+  await requireAdmin();
   if (!/^[0-9a-f-]{36}$/.test(id)) return null;
   const [row] = await db
     .select({ model: models, make: makes })
@@ -194,6 +206,7 @@ export async function getModelAdmin(id: string) {
 }
 
 export async function listModelOptions() {
+  await requireAdmin();
   return db
     .select({ id: models.id, name: models.name, makeName: makes.name })
     .from(models)
@@ -203,6 +216,7 @@ export async function listModelOptions() {
 }
 
 export async function listGenerationOptions(modelId: string | null) {
+  await requireAdmin();
   return db
     .select({
       id: generations.id,
@@ -237,6 +251,7 @@ function rawTrim(raw: unknown): string | null {
 }
 
 export async function listReviewRows(f: ReviewFilter) {
+  await requireAdmin();
   if (f.source === "dealer") {
     const t = dealerSales;
     const conds = [
@@ -334,6 +349,7 @@ export async function listServiceQueue(
   showClosed: boolean,
   page: number,
 ) {
+  await requireAdmin();
   const where = showClosed
     ? eq(serviceOrders.kind, kind)
     : and(
@@ -365,6 +381,7 @@ export async function listServiceQueue(
 /* ---------------- audit ---------------- */
 
 export async function recentActions(limit: number) {
+  await requireAdmin();
   return db
     .select({
       id: adminActions.id,
@@ -382,6 +399,7 @@ export async function recentActions(limit: number) {
 }
 
 export async function listAudit(f: { action?: string; targetType?: string; page: number }) {
+  await requireAdmin();
   const conds = [];
   if (f.action) conds.push(ilike(adminActions.action, `${f.action}%`));
   if (f.targetType) conds.push(eq(adminActions.targetType, f.targetType));

@@ -1,10 +1,11 @@
 import "server-only";
 import { z } from "zod";
+import { isBlobUrl } from "@/lib/listings/blob-url";
 
 export const PAGE_SIZE = 24;
 export const MAX_PHOTOS = 24;
 
-/** UrCar blob uploads, or any https URL for the paste-a-link fallback. */
+/** Photos are UrCar Blob uploads only, so a seller cannot point a listing at a host they control. */
 export const photoUrl = z
   .string()
   .trim()
@@ -16,7 +17,8 @@ export const photoUrl = z
     } catch {
       return false;
     }
-  }, "Photo links must be https.");
+  }, "Photo links must be https.")
+  .refine(isBlobUrl, "Upload photos through UrCar.");
 
 export const createListingSchema = z.object({
   type: z.enum(["classified", "auction", "private"]),
