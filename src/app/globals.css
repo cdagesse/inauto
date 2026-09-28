@@ -2083,6 +2083,7 @@ svg .lbl {
 /* card meta row: badge on the left, time left or outcome pinned right, never wrapping */
 .card-meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
@@ -2105,9 +2106,13 @@ svg .lbl {
 }
 .card-meta .meta-side {
   flex: none;
+  margin-left: auto;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
   text-align: right;
+}
+.card-meta .meta-side .hint {
+  font-size: inherit;
 }
 .listing-card > .price {
   margin-top: auto;

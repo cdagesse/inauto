@@ -174,6 +174,7 @@ export async function listActiveListings(
       photos: listings.photos,
       location: listings.location,
       auctionEndsAt: listings.auctionEndsAt,
+      closedAt: listings.closedAt,
       createdAt: listings.createdAt,
       titleVetted: listings.titleVetted,
       status: listings.status,

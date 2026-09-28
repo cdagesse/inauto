@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { isUsd, mi, money } from "@/lib/format/money";
+import { fmtDay, isUsd, mi, money } from "@/lib/format/money";
 import { BrandLogo } from "@/components/site/brand-logo";
 import { placeLine } from "@/lib/geo";
-import { effectiveStatus, outcomeLabel, priceLabel } from "@/lib/sources/status";
+import { effectiveStatus, endedOn, outcomeLabel, priceLabel } from "@/lib/sources/status";
 import type { ExternalCardData } from "@/server/queries/external";
 import { CardPhoto } from "./card-photo";
 import { PlatformMark, SourceBadge } from "./source-badge";
@@ -13,6 +13,7 @@ export function ExternalCard({ l, showPhotos }: { l: ExternalCardData; showPhoto
   const status = effectiveStatus(l.status, l.endsAt);
   const live = status === "live";
   const price = live ? l.currentBid : (l.finalPrice ?? l.currentBid);
+  const ended = endedOn(status, l.endsAt);
   const foreign = !isUsd(l.currency);
   return (
     <Link
@@ -27,7 +28,18 @@ export function ExternalCard({ l, showPhotos }: { l: ExternalCardData; showPhoto
           <SourceBadge source={l.source} sourceName={l.sourceName} status={status} compact />
         </span>
         <span className={`meta-side${status === "sold" ? " up" : status === "rnm" ? " down" : ""}`}>
-          {live ? l.endsAt ? <Countdown endsAt={l.endsAt} /> : "Live" : outcomeLabel(status)}
+          {live ? (
+            l.endsAt ? (
+              <Countdown endsAt={l.endsAt} />
+            ) : (
+              "Live"
+            )
+          ) : (
+            <>
+              {outcomeLabel(status)}
+              {ended ? <span className="hint"> · {fmtDay(ended)}</span> : null}
+            </>
+          )}
         </span>
       </div>
       <h3 className="display" style={{ fontSize: 18, margin: "2px 0 4px" }}>

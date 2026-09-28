@@ -11,9 +11,10 @@ import {
   VinTimelineSection,
   VinTimelineSkeleton,
 } from "@/components/listings/vin-timeline-section";
-import { packagesFromText } from "@/components/market/market-summary-lib";
+import { generationFor, packagesFromText } from "@/components/market/market-summary-lib";
 import { env } from "@/env/server";
 import { getMarketSnapshot } from "@/lib/market/source";
+import { matchCatalog } from "@/server/market-match";
 import { isPlatformKey } from "@/lib/sources/platforms";
 import { valuate } from "@/lib/valuation/engine";
 import { getExternalListing } from "@/server/queries/external";
@@ -77,18 +78,6 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   };
 }
 
-/** Pick the generation for the valuation: the matched one, else by year from the snapshot. */
-function generationFor(
-  years: Record<string, number[]>,
-  matched: string | null,
-  year: number | null,
-) {
-  if (matched && years[matched]) return matched;
-  if (year == null) return null;
-  for (const [code, ys] of Object.entries(years)) if (ys.includes(year)) return code;
-  return null;
-}
-
 export default async function ExternalListingPage({ params }: { params: Params }) {
   const l = await load(params);
   if (!l) notFound();
@@ -99,11 +88,24 @@ export default async function ExternalListingPage({ params }: { params: Params }
 
   // The valuation feeds the headline delta in the sticky head, so it stays in the
   // first wave; the snapshot read is request-cached and shared with <MarketBlock>.
+  // A listing the sync could not link by alias still gets a read when its make, model or
+  // title names a catalog model; <MarketBlock> falls back the same way.
+  let byName = false;
+  let ref = l.market;
+  if (!ref) {
+    const m = await matchCatalog(l.make, l.model, l.title);
+    if (m) {
+      ref = { ...m, generationCode: null };
+      byName = true;
+    }
+  }
   let read: UrCarRead | null = null;
-  if (l.market) {
-    const reportHref = `/${l.market.makeSlug}/${l.market.modelSlug}`;
-    const snapshot = await getMarketSnapshot(l.market.makeSlug, l.market.modelSlug);
-    const gen = snapshot ? generationFor(snapshot.years, l.market.generationCode, l.year) : null;
+  if (ref) {
+    const reportHref = `/${ref.makeSlug}/${ref.modelSlug}`;
+    const snapshot = await getMarketSnapshot(ref.makeSlug, ref.modelSlug);
+    const gen = snapshot
+      ? generationFor(snapshot.years, ref.generationCode, l.year, snapshot.order[0])
+      : null;
     const year = l.year ?? (gen && snapshot ? snapshot.years[gen][0] : null);
     let valuation = null;
     if (snapshot && gen && year != null) {
@@ -121,7 +123,7 @@ export default async function ExternalListingPage({ params }: { params: Params }
         console.warn("external valuation failed", e instanceof Error ? e.message : e);
       }
     }
-    read = { valuation, reportHref, modelName: l.market.modelName, pending: !snapshot };
+    read = { valuation, reportHref, modelName: ref.modelName, pending: !snapshot, byName };
   }
 
   const live = l.status === "live";
