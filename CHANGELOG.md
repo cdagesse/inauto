@@ -6,6 +6,8 @@ Features and fixes as they ship, newest first. One line per change, with the pul
 
 ### Features
 
+- Phones: the light/dark toggle and Admin move into the menu panel; the bar keeps logo, garage, avatar and menu (#51)
+
 - Phones: header logo keeps its shape; Garage and Admin collapse to icons (#50)
 
 - Phones: hamburger menu in the header with Buy, Sell, Market reports, Buyer tools, Garage and search (#49)
