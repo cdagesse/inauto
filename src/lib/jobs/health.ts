@@ -281,10 +281,12 @@ export function describeRun(name: string, summary: unknown, error: string | null
       if (hasInserted) parts.push(`${plural(inserted, "new row")} written`);
       if (Object.keys(rotation).length) {
         parts.push(
-          `${n(num(rotation, "pulled"))} of ${n(num(rotation, "eligible"))} models refreshed`,
+          `${n(num(rotation, "pulled"))} of ${n(num(rotation, "eligible"))} models refreshed (${plural(num(rotation, "visorCalls"), "Visor call")})`,
         );
+        if (num(rotation, "failed")) parts.push(`${n(num(rotation, "failed"))} failed`);
+        if (rotation["budgetStopped"] === true) parts.push("Visor budget reached");
         if (num(rotation, "remaining"))
-          parts.push(`time cap hit with ${plural(num(rotation, "remaining"), "model")} left`);
+          parts.push(`stopped early with ${plural(num(rotation, "remaining"), "model")} left`);
         if (num(rotation, "cleaned")) parts.push(`${n(num(rotation, "cleaned"))} re-cleaned`);
       }
       if (unmatched) parts.push(`${n(unmatched)} unmatched`);
@@ -307,6 +309,8 @@ export function describeRun(name: string, summary: unknown, error: string | null
         `${n(ended)} ended`,
       );
       if (reconciled) parts.push(`${n(reconciled)} reconciled`);
+      if (typeof s.pages === "number") parts.push(plural(num(s, "pages"), "page"));
+      if (s.truncated === true) parts.push("page cap hit");
       const stop = str(s, "budgetStopped");
       if (stop) parts.push(`budget stopped: ${stop}`);
       changed = upserted + ended + reconciled;
@@ -341,6 +345,8 @@ export function describeRun(name: string, summary: unknown, error: string | null
           `${n(num(s, "matchedToCatalog"))} matched to catalog`,
         );
         if (results) parts.push(`${plural(results, "result")} stored`);
+        if (typeof s.pages === "number") parts.push(plural(num(s, "pages"), "page"));
+        if (s.truncated === true) parts.push("page cap hit");
         const stop = str(s, "budgetStopped");
         if (stop) parts.push(`budget stopped: ${stop}`);
         changed = upserted + results;
@@ -397,6 +403,7 @@ export function describeRun(name: string, summary: unknown, error: string | null
       const failed = arr(s, "failed");
       parts.push(`built ${plural(num(s, "built"), "report")}`);
       if (failed.length) parts.push(`${n(failed.length)} failed`);
+      if (num(s, "skipped")) parts.push(`${n(num(s, "skipped"))} skipped at the time cap`);
       changed = num(s, "built");
       break;
     }

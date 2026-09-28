@@ -6,13 +6,13 @@ import { createOcdClient, type OcdAuctionQuery } from "@/lib/sources/ocd";
 import type { NormalizedAuctionRow } from "@/lib/sources/types";
 import { ingestEndedAuctions } from "./ended-ingest";
 import { lastGoodRun } from "./lib/run";
-import { endedSince } from "./lib/schedule";
+import { endedSince, OCD_SWEEP_SHARE } from "./lib/schedule";
 import { loadCatalog } from "./live-auctions";
 
 export const ENDED_SWEEP_JOB = "ended-auctions";
 
-/** Pages per status per run. Auctions close at roughly 250 a day, so a 6-hour window is 1 page. */
-export const ENDED_SWEEP_MAX_PAGES = 10;
+/** Pages per status per run. Auctions close at roughly 250 a day and a run walks 2 to 3 days, so 3 to 8 pages. */
+export const ENDED_SWEEP_MAX_PAGES = 12;
 
 export interface EndedSweepOptions {
   db?: Db;
@@ -31,6 +31,9 @@ export interface EndedSweepSummary {
   upserted: number;
   matchedToCatalog: number;
   auctionResultsInserted: number;
+  /** Pages fetched and whether the page cap cut the walk short. */
+  pages: number;
+  truncated: boolean;
   budgetStopped: string | null;
   skipped: string | null;
   errors: string[];
@@ -54,6 +57,8 @@ export async function sweepEndedAuctions(opts: EndedSweepOptions = {}): Promise<
     upserted: 0,
     matchedToCatalog: 0,
     auctionResultsInserted: 0,
+    pages: 0,
+    truncated: false,
     budgetStopped: null,
     skipped: null,
     errors: [],
@@ -71,10 +76,11 @@ export async function sweepEndedAuctions(opts: EndedSweepOptions = {}): Promise<
     const { rules, byId } = await loadCatalog(db);
     const rows: NormalizedAuctionRow[] = [];
     try {
+      // Sweeps stop at a share of the plan so on-demand report builds keep the rest.
       await withBudget(
         db,
         "ocd",
-        env.OCD_MONTHLY_BUDGET,
+        Math.floor(env.OCD_MONTHLY_BUDGET * OCD_SWEEP_SHARE),
         async (record) => {
           const client = createOcdClient({
             apiKey: env.OCD_API_KEY!,
@@ -82,7 +88,14 @@ export async function sweepEndedAuctions(opts: EndedSweepOptions = {}): Promise<
             fetchImpl: opts.fetchImpl,
             maxPages: opts.maxPages ?? ENDED_SWEEP_MAX_PAGES,
           });
-          rows.push(...(await client.auctions({} as OcdAuctionQuery, out.since)));
+          try {
+            // `rows` is the client's output, so pages already paid for survive a budget stop.
+            await client.auctions({} as OcdAuctionQuery, out.since, rows);
+          } finally {
+            const walk = client.lastWalk();
+            out.pages = walk.pages;
+            out.truncated = walk.truncated;
+          }
         },
         log,
       );
@@ -98,7 +111,7 @@ export async function sweepEndedAuctions(opts: EndedSweepOptions = {}): Promise<
     out.matchedToCatalog = ing.matched;
     out.auctionResultsInserted = ing.auctionResultsInserted;
     log(
-      `since ${out.since}: pulled ${out.pulled}, upserted ${out.upserted}, matched ${out.matchedToCatalog}, auction_result +${out.auctionResultsInserted}`,
+      `since ${out.since}: ${out.pages} pages, pulled ${out.pulled}, upserted ${out.upserted}, matched ${out.matchedToCatalog}, auction_result +${out.auctionResultsInserted}${out.truncated ? " (page cap hit)" : ""}`,
     );
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

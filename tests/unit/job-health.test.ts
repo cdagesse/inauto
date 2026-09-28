@@ -243,6 +243,8 @@ describe("describeRun", () => {
           upserted: 61,
           matchedToCatalog: 14,
           auctionResultsInserted: 14,
+          pages: 3,
+          truncated: false,
           budgetStopped: null,
           skipped: null,
           errors: [],
@@ -251,7 +253,7 @@ describe("describeRun", () => {
       ),
     ).toEqual({
       headline:
-        "pulled 61 closed auctions · 61 added or updated · 14 matched to catalog · 14 results stored",
+        "pulled 61 closed auctions · 61 added or updated · 14 matched to catalog · 14 results stored · 3 pages",
       changed: 75,
     });
     expect(describeRun("ended-auctions", { skipped: "dry run", errors: [] }, null).headline).toBe(
@@ -275,15 +277,18 @@ describe("describeRun", () => {
           eligible: 156,
           due: 12,
           pulled: 1,
-          remaining: 11,
+          failed: 2,
+          remaining: 9,
           overdue: 3,
           cleaned: 5,
+          visorCalls: 40,
+          budgetStopped: false,
         },
       },
       null,
     );
     expect(d.headline).toBe(
-      "1 model · Visor 4 sold, 120 active · 122 new rows written · 1 of 156 models refreshed · time cap hit with 11 models left · 5 re-cleaned",
+      "1 model · Visor 4 sold, 120 active · 122 new rows written · 1 of 156 models refreshed (40 Visor calls) · 2 failed · stopped early with 9 models left · 5 re-cleaned",
     );
     expect(d.changed).toBe(122);
   });
@@ -330,6 +335,9 @@ describe("describeRun", () => {
       headline: "built 41 reports · 1 failed",
       changed: 41,
     });
+    expect(describeRun("snapshots", { built: 100, failed: [], skipped: 56 }, null).headline).toBe(
+      "built 100 reports · 56 skipped at the time cap",
+    );
     expect(
       describeRun("evidence-sweep", { scanned: 12, deleted: 0, skipped: "dry run" }, null).headline,
     ).toBe("scanned 12 files · deleted 0 · skipped: dry run");

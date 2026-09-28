@@ -130,11 +130,19 @@ export async function rebuildAllSnapshots(
   db: Db = defaultDb,
   log: (m: string) => void = () => {},
   now = new Date(),
-): Promise<{ built: number; failed: string[] }> {
+  opts: { deadline?: number } = {},
+): Promise<{ built: number; failed: string[]; skipped: number }> {
   const keys = await listModelsWithData();
   let built = 0;
+  let skipped = 0;
   const failed: string[] = [];
   for (const k of keys) {
+    if (opts.deadline && Date.now() >= opts.deadline) {
+      // The nightly route shares one 300 s function with the pull; a partial rebuild
+      // that reports itself beats a killed function that reports nothing.
+      skipped = keys.length - built - failed.length;
+      break;
+    }
     try {
       if (await rebuildSnapshot(k.makeSlug, k.modelSlug, db, now, { strict: true })) built++;
     } catch (e) {
@@ -142,7 +150,7 @@ export async function rebuildAllSnapshots(
     }
   }
   log(
-    `snapshots: rebuilt ${built} of ${keys.length}${failed.length ? `, ${failed.length} failed` : ""}`,
+    `snapshots: rebuilt ${built} of ${keys.length}${failed.length ? `, ${failed.length} failed` : ""}${skipped ? `, ${skipped} skipped at the time cap` : ""}`,
   );
-  return { built, failed };
+  return { built, failed, skipped };
 }

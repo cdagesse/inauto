@@ -70,12 +70,15 @@ export async function recordRun<T>(
   return result;
 }
 
-/** Start time of the newest run of `name` that finished ok, or null. Sweeps size their window from it. */
+/**
+ * Start time of the newest live (not dry) run of `name` that finished ok, or null. Sweeps
+ * size their window from it, so a run that pulled nothing must not be recorded ok.
+ */
 export async function lastGoodRun(db: Db, name: string): Promise<Date | null> {
   const [row] = await db
     .select({ startedAt: jobRuns.startedAt })
     .from(jobRuns)
-    .where(and(eq(jobRuns.name, name), eq(jobRuns.ok, true)))
+    .where(and(eq(jobRuns.name, name), eq(jobRuns.ok, true), eq(jobRuns.dryRun, false)))
     .orderBy(desc(jobRuns.startedAt))
     .limit(1);
   return row?.startedAt ?? null;

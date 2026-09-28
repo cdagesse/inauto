@@ -22,11 +22,13 @@ async function handle(req: Request) {
       ENDED_SWEEP_JOB,
       { dryRun },
       () => sweepEndedAuctions({ dryRun }),
+      // A budget stop or a missing key did not cover the window, so it must not anchor the
+      // next one (lastGoodRun); a dry run stays ok and is excluded there by its flag.
       (s) => ({
-        ok: s.errors.length === 0,
+        ok: s.errors.length === 0 && !s.budgetStopped && s.skipped !== "OCD_API_KEY not set",
         changed: s.upserted + s.auctionResultsInserted,
         summary: s,
-        error: s.errors[0] ?? null,
+        error: s.errors[0] ?? s.budgetStopped ?? (s.skipped === "dry run" ? null : s.skipped),
       }),
     );
     if (summary.upserted + summary.auctionResultsInserted > 0) revalidatePath("/listings");

@@ -15,14 +15,19 @@ import {
   rawFetches,
 } from "@/db/schema";
 import { env } from "@/env/server";
-import { BudgetExceeded, withBudget } from "@/lib/sources/budget";
+import { BudgetExceeded, callsUsed, withBudget } from "@/lib/sources/budget";
 import { createOcdClient, ocdRowMatches, parseOcdAlias } from "@/lib/sources/ocd";
 import { createVisorClient } from "@/lib/sources/visor";
 import type { NormalizedAuctionRow, NormalizedDealerRow } from "@/lib/sources/types";
 import { classify, groupReclassified, type Reclassified } from "./lib/clean";
 import { runChecks, type CheckInput, type CheckWarning } from "./lib/check";
 import { pruneInBatches, RETENTION_DAYS } from "./lib/retention";
-import { pickRotation, soldWindowDays } from "./lib/schedule";
+import {
+  pickRotation,
+  soldWindowDays,
+  VISOR_ROTATION_SHARE,
+  visorNightAllowance,
+} from "./lib/schedule";
 import {
   assignGeneration,
   detectPackages,
@@ -71,6 +76,13 @@ export interface RotationSummary {
   overdue: number;
   /** Models outside the slice re-cleaned because the sweeps gave them new auction rows. */
   cleaned: number;
+  /** Models whose Visor pull failed (they stay due and are retried). */
+  failed: number;
+  /** Visor calls spent tonight and the allowance they were held to. */
+  visorCalls: number;
+  allowance: number;
+  /** The Visor month share was spent, so pulling stopped. */
+  budgetStopped: boolean;
 }
 
 export interface ModelSummary {
@@ -88,6 +100,8 @@ export interface ModelSummary {
   errors: string[];
   /** Rows actually written; duplicates skipped by ON CONFLICT DO NOTHING are not counted. 0 on dry runs. */
   inserted: { sold: number; active: number; auctions: number };
+  /** Visor API calls this model cost. */
+  visorCalls: number;
 }
 
 /** Rows removed by the retention pass, per table. Absent on dry runs and on-demand report builds. */
@@ -273,6 +287,8 @@ interface PullOptions {
   initialSoldDays: number;
   /** Pull Old Cars Data results for the model. First builds only: the sweeps cover the rest. */
   ocd: boolean;
+  /** Epoch ms after which a Visor page walk stops mid-model (the model stays due). */
+  deadline?: number;
 }
 
 /**
@@ -294,17 +310,33 @@ async function pull(
   const budgetStopped: string[] = [];
   const errors: string[] = [];
   let unmatched = 0;
+  let visorRan = false;
+  let visorCalls = 0;
   const years = yearRange(m);
 
   const visorAliases = m.aliases.filter((a) => a.source === "visor");
   if (env.VISOR_API_KEY && visorAliases.length) {
+    visorRan = true;
     try {
       await withBudget(
         db,
         "visor",
         env.VISOR_MONTHLY_BUDGET,
         async (record) => {
-          const client = createVisorClient({ apiKey: env.VISOR_API_KEY!, record, fetchImpl });
+          const client = createVisorClient({
+            apiKey: env.VISOR_API_KEY!,
+            record: {
+              ...record,
+              reserve: (endpoint, o) => {
+                visorCalls++;
+                return record.reserve(endpoint, o);
+              },
+            },
+            fetchImpl,
+            // A routine refresh wants recent sold rows and a sample of inventory, not every page.
+            maxPages: po.initial ? 50 : 10,
+            deadline: po.deadline,
+          });
           const days = po.initial ? po.initialSoldDays : po.soldWindowDays;
           for (const a of visorAliases) {
             const q = {
@@ -395,7 +427,7 @@ async function pull(
   } else
     log(`ocd: skipped for ${m.slug} (${po.ocd ? "no key or no alias" : "the sweeps cover it"})`);
 
-  return { sold, active, auctions, unmatched, budgetStopped, errors };
+  return { sold, active, auctions, unmatched, budgetStopped, errors, visorRan, visorCalls };
 }
 
 /**
@@ -646,11 +678,14 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<NightlySumm
   const timeBudgetMs = opts.timeBudgetMs ?? PULL_TIME_BUDGET_MS;
   const t0 = Date.now();
   let rotation: RotationSummary | undefined;
+  let perNight = 0;
+  /** A model's Visor walk stops shortly after the pull cap so one big model cannot overrun it. */
+  const deadline = t0 + timeBudgetMs + 30_000;
   /** Sold window per model: the gap since its last pull; never-pulled models get the first-build window. */
   const perModel = (m: CatalogModel): PullOptions => {
     if (po.initial) return po;
     const days = soldWindowDays(m.dealerPulledAt, now, refreshDays);
-    return days ? { ...po, soldWindowDays: days } : { ...po, initial: true };
+    return days ? { ...po, soldWindowDays: days, deadline } : { ...po, initial: true, deadline };
   };
 
   const [run] = await db
@@ -670,32 +705,63 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<NightlySumm
       // The catalog holds hundreds of searchable models. A nightly refresh only spends
       // Visor budget on models that already have a report (or are mid-build), and only on
       // the stalest slice of those, so every model turns over about once per refreshDays.
-      eligible = catalog.filter((m) => m.reportStatus === "ready" || m.reportStatus === "building");
+      eligible = catalog.filter(
+        (m) =>
+          (m.reportStatus === "ready" || m.reportStatus === "building") &&
+          m.aliases.some((a) => a.source === "visor"),
+      );
       const r = pickRotation(eligible, now, refreshDays);
-      catalog = r.slice;
+      perNight = r.perNight;
+      // The rotation keeps to its share of the month and a nightly allowance, so report
+      // builds always have Visor calls left. The queue is walked until perNight pulls succeed.
+      const monthCap = Math.floor(env.VISOR_MONTHLY_BUDGET * VISOR_ROTATION_SHARE);
+      const used = dryRun ? 0 : await callsUsed(db, "visor", now);
+      const allowance = Math.max(
+        0,
+        Math.min(visorNightAllowance(env.VISOR_MONTHLY_BUDGET), monthCap - used),
+      );
       rotation = {
         refreshDays,
         eligible: eligible.length,
-        due: r.slice.length,
+        due: Math.min(perNight, r.queue.length),
         pulled: 0,
         remaining: 0,
         overdue: r.overdue,
         cleaned: 0,
+        failed: 0,
+        visorCalls: 0,
+        allowance,
+        budgetStopped: allowance === 0,
       };
-      log(
-        `rotation: ${r.slice.length} of ${eligible.length} models tonight (every ${refreshDays} days; ${r.overdue} overdue, ${r.fresh} pulled today)`,
-      );
+      catalog = env.VISOR_API_KEY && allowance > 0 ? r.queue : [];
+      if (!env.VISOR_API_KEY) log("rotation: no Visor key; nothing to refresh");
+      else if (allowance === 0)
+        log(`rotation: Visor share of the month spent (${used}/${monthCap}); nothing to refresh`);
+      else
+        log(
+          `rotation: up to ${perNight} of ${eligible.length} models tonight (every ${refreshDays} days; ${r.overdue} overdue, ${r.fresh} pulled today; ${allowance} calls allowed)`,
+        );
     }
     if (catalog.length === 0) log("no models with aliases; nothing to pull");
 
+    const processedIds = new Set<string>();
     for (const m of catalog) {
-      if (rotation && Date.now() - t0 > timeBudgetMs) {
-        rotation.remaining = catalog.length - summaries.length;
-        log(
-          `time cap: ${summaries.length} models done, ${rotation.remaining} left for the next night`,
-        );
-        break;
+      if (rotation) {
+        if (rotation.pulled >= perNight || rotation.budgetStopped) break;
+        if (rotation.visorCalls >= rotation.allowance) {
+          rotation.remaining = perNight - rotation.pulled;
+          log(
+            `call allowance reached (${rotation.visorCalls}); ${rotation.remaining} pulls left for the next night`,
+          );
+          break;
+        }
+        if (Date.now() - t0 > timeBudgetMs) {
+          rotation.remaining = perNight - rotation.pulled;
+          log(`time cap: ${rotation.pulled} pulled, ${rotation.remaining} left for the next night`);
+          break;
+        }
       }
+      processedIds.add(m.id);
       const s: ModelSummary = {
         model: `${m.makeSlug}/${m.slug}`,
         visorSold: 0,
@@ -709,6 +775,7 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<NightlySumm
         budgetStopped: [],
         errors: [],
         inserted: { sold: 0, active: 0, auctions: 0 },
+        visorCalls: 0,
       };
       let visorOk = false;
       try {
@@ -716,9 +783,14 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<NightlySumm
           log(`${s.model}: dry run, skipping API pulls`);
         } else {
           const p = await pull(db, m, log, now, perModel(m), opts.fetchImpl);
-          visorOk =
-            !p.errors.some((e) => e.startsWith("visor")) &&
-            !p.budgetStopped.some((b) => b.includes("visor"));
+          s.visorCalls = p.visorCalls;
+          const visorBudget = p.budgetStopped.some((b) => b.includes("visor"));
+          visorOk = p.visorRan && !visorBudget && !p.errors.some((e) => e.startsWith("visor"));
+          if (rotation) {
+            rotation.visorCalls += p.visorCalls;
+            if (visorBudget) rotation.budgetStopped = true;
+            else if (p.visorRan && !visorOk) rotation.failed++;
+          }
           s.visorSold = p.sold.length;
           s.visorActive = p.active.length;
           s.ocdAuctions = p.auctions.length;
@@ -783,7 +855,7 @@ export async function runNightly(opts: NightlyOptions = {}): Promise<NightlySumm
     // The ended-results sweep writes auction rows for any model without cleaning them;
     // re-clean models that gained rows in the last day and were not in tonight's slice.
     if (rotation && !dryRun) {
-      const pulledIds = new Set(catalog.map((m) => m.id));
+      const pulledIds = processedIds;
       const recent = await db
         .selectDistinct({ modelId: auctionResults.modelId })
         .from(auctionResults)

@@ -22,7 +22,8 @@ export function endedToExternal(r: NormalizedAuctionRow, now: Date): NormalizedL
 }
 
 export function toAuctionInsert(m: CatalogModel, r: NormalizedAuctionRow) {
-  const g = assignGeneration(m.gens, r.year, r.title);
+  // Including the catch-all generation, as the nightly does, so the row is not left ungrouped.
+  const g = assignGeneration(m.allGens, r.year, r.title);
   return {
     source: r.source,
     sourceId: r.sourceId,
@@ -49,9 +50,11 @@ export interface EndedIngest {
 
 /**
  * Ended auctions into external_listing (the Buy page's Past view, with the settled status
- * and hammer) and, for vehicles the catalog knows, into auction_result (market data).
- * Shared by the 6-hourly sweep and the by-hand backfill. Duplicates are skipped on the
- * unique source + id indexes, so overlapping windows are safe.
+ * and hammer) and, for vehicles of models that have or are building a report, into
+ * auction_result (market data). Models without a report get theirs on the first build,
+ * which keeps the snapshot pass bounded to models people asked for. Shared by the 6-hourly
+ * sweep and the by-hand backfill. Duplicates are skipped on the unique source + id indexes,
+ * so overlapping windows are safe.
  */
 export async function ingestEndedAuctions(
   db: Db,
@@ -63,13 +66,14 @@ export async function ingestEndedAuctions(
   const inserts: ReturnType<typeof toAuctionInsert>[] = [];
   const external = new Map<string, NormalizedLiveRow>();
   for (const r of rows) {
-    const modelId = matchOcdRules(rules, {
-      rawMake: r.rawMake,
-      rawModel: r.rawModel,
-      title: r.title,
-    });
+    const modelId = matchOcdRules(
+      rules,
+      { rawMake: r.rawMake, rawModel: r.rawModel, title: r.title, year: r.year },
+      (id) => byId.get(id)?.years,
+    );
     const m = modelId ? byId.get(modelId) : null;
-    if (m) inserts.push(toAuctionInsert(m, r));
+    if (m && (m.reportStatus === "ready" || m.reportStatus === "building"))
+      inserts.push(toAuctionInsert(m, r));
     const ext = endedToExternal(r, now);
     if (ext) external.set(`${ext.source}|${ext.sourceId}`, ext);
   }

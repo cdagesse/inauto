@@ -7,13 +7,23 @@ const MIN = 60_000;
 const HOUR = 60 * MIN;
 const DAY = 24 * HOUR;
 
+/** Sweeps stop at this share of the Old Cars Data plan so report builds keep the rest. */
+export const OCD_SWEEP_SHARE = 0.8;
+/** The nightly rotation stops at this share of the Visor cap so report builds keep the rest. */
+export const VISOR_ROTATION_SHARE = 0.8;
+
+/** Visor calls one night of the rotation may spend: the rotation's share spread over a month. */
+export function visorNightAllowance(monthlyCap: number): number {
+  return Math.max(4, Math.floor((monthlyCap * VISOR_ROTATION_SHARE) / 31));
+}
+
 /**
  * Live sweep: auctions updated since the last good run minus 30 minutes of overlap.
- * Never narrower than 2 hours (a missed cron tick or two costs nothing) and never wider
+ * Never narrower than 45 minutes (one 15-minute cron gap plus the overlap) and never wider
  * than 36 hours (the walk is capped by pages; older gaps are for the backfill job).
  */
 export function liveUpdatedSince(lastOk: Date | null, now: Date): Date {
-  const narrowest = now.getTime() - 2 * HOUR;
+  const narrowest = now.getTime() - 45 * MIN;
   const widest = now.getTime() - 36 * HOUR;
   const wanted = lastOk ? lastOk.getTime() - 30 * MIN : widest;
   return new Date(Math.max(widest, Math.min(narrowest, wanted)));
@@ -21,10 +31,12 @@ export function liveUpdatedSince(lastOk: Date | null, now: Date): Date {
 
 /**
  * Ended-results sweep: auctions that closed since the last good run minus 2 hours of
- * overlap; 12 hours on the first run; never more than 3 days back.
+ * overlap, but always at least 2 days back, because some platforms post the result a day
+ * or more after the auction ends and the walk is keyed on the end time. Never more than 3
+ * days back. Repeats are free: results are inserted on conflict do nothing.
  */
 export function endedSince(lastOk: Date | null, now: Date): Date {
-  const narrowest = now.getTime() - 2 * HOUR;
+  const narrowest = now.getTime() - 2 * DAY;
   const widest = now.getTime() - 3 * DAY;
   const wanted = lastOk ? lastOk.getTime() - 2 * HOUR : now.getTime() - 12 * HOUR;
   return new Date(Math.max(widest, Math.min(narrowest, wanted)));
@@ -38,6 +50,10 @@ export interface RotationModel {
 export interface Rotation<T> {
   /** Models to pull tonight, stalest first. */
   slice: T[];
+  /** Every eligible model, stalest first; a run walks it until perNight pulls succeed. */
+  queue: T[];
+  /** Successful pulls wanted per night. */
+  perNight: number;
   /** Models whose last pull is older than the refresh interval. */
   overdue: number;
   /** Models skipped because they were pulled in the last day. */
@@ -65,6 +81,8 @@ export function pickRotation<T extends RotationModel>(
   const cutoff = now.getTime() - days * DAY;
   return {
     slice: stalest.slice(0, perNight),
+    queue: stalest,
+    perNight,
     overdue: models.filter((m) => !m.dealerPulledAt || m.dealerPulledAt.getTime() < cutoff).length,
     fresh: models.length - eligible.length,
   };
