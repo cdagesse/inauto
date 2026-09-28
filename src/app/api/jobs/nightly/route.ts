@@ -30,11 +30,13 @@ async function handle(req: Request) {
   // Precompute every model's market report once, so pages read stored JSON.
   const snapshots = await rebuildAllSnapshots(undefined, (m) => console.log(`[nightly] ${m}`));
   // Model pages are statically cached for an hour; fresh data must invalidate them.
+  // "layout" covers /markets and every drill-down under it, which render from the same tree.
   revalidatePath("/[make]/[model]", "page");
-  revalidatePath("/markets");
+  revalidatePath("/markets", "layout");
+  revalidatePath("/");
   return NextResponse.json(
     { ...summary, snapshots },
-    { status: summary.errors.length ? 500 : 200 },
+    { status: summary.errors.length || snapshots.failed.length ? 500 : 200 },
   );
 }
 

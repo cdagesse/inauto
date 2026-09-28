@@ -57,3 +57,36 @@ export function classify(modelSlug: string, row: CleanInput): ExcludedReason | n
   }
   return null;
 }
+
+/** Largest id list handed to one `update ... where id in (...)`; keeps bind params well under limits. */
+export const RECLASSIFY_CHUNK = 1000;
+
+export interface Reclassified {
+  id: string;
+  before: ExcludedReason | null;
+  after: ExcludedReason | null;
+}
+
+/**
+ * Groups the rows whose reason changed by their new reason, so the cleaner issues
+ * one `update ... where id in (...)` per distinct reason instead of one per row.
+ * Only changed rows are grouped, so no group is ever empty. Id lists longer than
+ * `chunk` are split so each statement stays bounded.
+ */
+export function groupReclassified(
+  rows: Reclassified[],
+  chunk = RECLASSIFY_CHUNK,
+): { reason: ExcludedReason | null; ids: string[] }[] {
+  const byReason = new Map<ExcludedReason | null, string[]>();
+  for (const r of rows) {
+    if (r.before === r.after) continue;
+    const ids = byReason.get(r.after);
+    if (ids) ids.push(r.id);
+    else byReason.set(r.after, [r.id]);
+  }
+  const out: { reason: ExcludedReason | null; ids: string[] }[] = [];
+  const size = Math.max(1, chunk);
+  for (const [reason, ids] of byReason)
+    for (let i = 0; i < ids.length; i += size) out.push({ reason, ids: ids.slice(i, i + size) });
+  return out;
+}
