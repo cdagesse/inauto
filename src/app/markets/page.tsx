@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { longDate } from "@/components/market/format";
 import { NodeCard } from "@/components/market/market-nodes";
-import { RegionCard, RegionsTable } from "@/components/market/region-nodes";
+import { RegionsTable } from "@/components/market/region-nodes";
 import { SegmentsTable } from "@/components/market/segments-table";
 import { SearchBox } from "@/components/site/search";
 import { getRegions } from "@/lib/market/region-source";
 import { getMarketTree } from "@/lib/market/tree-source";
+import { soft } from "@/server/result";
 
 export const metadata: Metadata = {
   title: "Markets",
@@ -16,7 +18,10 @@ export const metadata: Metadata = {
 export const revalidate = 3600;
 
 export default async function MarketsPage() {
-  const [tree, regions] = await Promise.all([getMarketTree(), getRegions()]);
+  const [tree, regions] = await Promise.all([
+    getMarketTree(),
+    getRegions().catch(soft("markets regions", null)),
+  ]);
   const withData = tree.segments.filter((s) => s.stats);
   const totalSales = withData.reduce((a, s) => a + (s.stats?.dealerSales ?? 0), 0);
   const totalModels = withData.reduce((a, s) => a + (s.stats?.models ?? 0), 0);
@@ -56,15 +61,25 @@ export default async function MarketsPage() {
         <h2 className="sec">By region</h2>
         <p className="sub">
           Dealer sales in the last 90 days for each part of the country, whether prices and volume
-          are up or down against the 90 days before, and which types of car are strongest and
-          softest there. Open a region for its types, makes and states.
+          are up or down against the 90 days before, and which types of car have the best and worst
+          90-day price move there (a type needs 10 weighted sales for a read). Open a region for its
+          types, makes and states.
         </p>
-        <RegionsTable regions={regions.regions} />
-        <div className="node-grid" style={{ marginTop: 18 }}>
-          {regions.regions.map((r) => (
-            <RegionCard key={r.key} region={r} />
-          ))}
-        </div>
+        {regions && regions.national.sales90 > 0 ? (
+          <>
+            <RegionsTable regions={regions.regions} />
+            <p className="hint" style={{ marginTop: 10 }}>
+              <Link href="/markets/regions" className="seg-link-name">
+                All regions →
+              </Link>
+            </p>
+          </>
+        ) : (
+          <p className="note">
+            No dealer sales with a recognisable US state in the last 90 days, so there is no
+            regional read yet.
+          </p>
+        )}
       </section>
 
       <section className="markets-compare">

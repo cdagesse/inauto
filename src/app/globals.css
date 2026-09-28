@@ -2466,6 +2466,13 @@ table.compare td.down {
   border-radius: 999px;
   padding: 6px 12px 6px 8px;
 }
+.make-chip.static {
+  padding: 6px 12px;
+  cursor: default;
+}
+.make-chip.static:hover {
+  border-color: var(--rule);
+}
 .make-chip:hover {
   border-color: var(--ink-3);
 }

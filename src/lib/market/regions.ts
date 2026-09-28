@@ -13,7 +13,9 @@ export interface RegionSaleRow {
   win: SalesWindow;
   n: number;
   median: number;
-  /** Median days on market, when the rows carried one. */
+  /** Rows that carried a days-on-market figure; the median below is over these. */
+  domN: number;
+  /** Median days on market over the rows that carried one. */
   dom: number | null;
 }
 
@@ -107,14 +109,15 @@ function weightedMedian(pairs: { value: number; weight: number }[]): number | nu
 /** Two groups of the same model and window, combined: counts add, medians average by count. */
 function merge(a: RegionSaleRow, b: RegionSaleRow): RegionSaleRow {
   const n = a.n + b.n;
-  const domA = a.dom != null ? a.dom * a.n : null;
-  const domB = b.dom != null ? b.dom * b.n : null;
-  const domN = (a.dom != null ? a.n : 0) + (b.dom != null ? b.n : 0);
+  const domA = a.dom != null ? a.dom * a.domN : 0;
+  const domB = b.dom != null ? b.dom * b.domN : 0;
+  const domN = (a.dom != null ? a.domN : 0) + (b.dom != null ? b.domN : 0);
   return {
     ...a,
     n,
+    domN,
     median: n > 0 ? (a.median * a.n + b.median * b.n) / n : 0,
-    dom: domN > 0 ? ((domA ?? 0) + (domB ?? 0)) / domN : null,
+    dom: domN > 0 ? (domA + domB) / domN : null,
   };
 }
 
@@ -139,9 +142,9 @@ export function movement(rows: RegionSaleRow[]): Movement {
     if (last) {
       sales90 += last.n;
       medians.push({ value: last.median, weight: last.n });
-      if (last.dom != null) {
-        domNum += last.dom * last.n;
-        domDen += last.n;
+      if (last.dom != null && last.domN > 0) {
+        domNum += last.dom * last.domN;
+        domDen += last.domN;
       }
     }
     if (prior) prior90 += prior.n;

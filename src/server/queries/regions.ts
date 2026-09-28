@@ -1,7 +1,9 @@
 import "server-only";
-import { sql } from "drizzle-orm";
+import { sql, type SQLWrapper } from "drizzle-orm";
 import { db } from "@/db";
+import { auctionResults, dealerSales, makes, models } from "@/db/schema";
 import { stateSpellings } from "@/data/regions";
+import { effectiveSoldDate } from "@/lib/market/queries";
 import type { RegionAuctionRow, RegionInput, RegionSaleRow } from "@/lib/market/regions";
 
 /** Both windows the regions compare: the last 90 days against the 90 before. */
@@ -19,6 +21,9 @@ function regionValues() {
   );
 }
 
+/** A stored state the way normalizeState() reads it: trimmed, upper-cased, periods dropped. */
+const stateKey = (col: SQLWrapper) => sql`upper(replace(trim(${col}), '.', ''))`;
+
 interface SaleRow {
   region: string;
   make: string;
@@ -26,6 +31,7 @@ interface SaleRow {
   modelId: string;
   win: "last" | "prior";
   n: number;
+  domN: number;
   median: number | string | null;
   dom: number | string | null;
 }
@@ -41,38 +47,49 @@ const num = (v: number | string | null | undefined): number | null =>
 
 /**
  * Dealer sales of the last 180 days grouped by region, model and window, plus sold
- * auctions per region for the last 90 days. Rows without a recognisable state are left out.
+ * auctions per region for the last 90 days. Sales are dated the way the snapshots date
+ * them (sold date, else listed date plus days on market, else fetch date). Rows without
+ * a recognisable US state are left out, as are auctions outside the US or not in dollars.
  */
 export async function loadRegionInput(): Promise<RegionInput> {
+  const last = sql.raw(String(REGION_WINDOW_DAYS));
+  const span = sql.raw(String(REGION_WINDOW_DAYS * 2));
   const [salesRes, auctionRes, throughRes] = await Promise.all([
     db.execute(sql`
       with region(state, key) as (values ${regionValues()})
-      select r.key as region, mk.slug as make, mk.name as "makeName", s.model_id as "modelId",
-        case when s.sold_date > current_date - ${sql.raw(String(REGION_WINDOW_DAYS))} then 'last' else 'prior' end as win,
+      select r.key as region, ${makes.slug} as make, ${makes.name} as "makeName",
+        ${dealerSales.modelId} as "modelId",
+        case when ${effectiveSoldDate} > current_date - ${last} then 'last' else 'prior' end as win,
         count(*)::int as n,
-        (percentile_cont(0.5) within group (order by s.price))::float8 as median,
-        (percentile_cont(0.5) within group (order by s.days_on_market))::float8 as dom
-      from dealer_sale s
-      join region r on r.state = upper(trim(s.state))
-      join model m on m.id = s.model_id
-      join make mk on mk.id = m.make_id
-      where s.excluded_reason is null and s.price > 0
-        and s.sold_date > current_date - ${sql.raw(String(REGION_WINDOW_DAYS * 2))}
-        and s.sold_date <= current_date
+        count(${dealerSales.daysOnMarket})::int as "domN",
+        (percentile_cont(0.5) within group (order by ${dealerSales.price}))::float8 as median,
+        (percentile_cont(0.5) within group (order by ${dealerSales.daysOnMarket}))::float8 as dom
+      from ${dealerSales}
+      join region r on r.state = ${stateKey(dealerSales.state)}
+      join ${models} on ${models.id} = ${dealerSales.modelId}
+      join ${makes} on ${makes.id} = ${models.makeId}
+      where ${dealerSales.excludedReason} is null and ${dealerSales.price} > 0
+        and ${effectiveSoldDate} > current_date - ${span}
+        and ${effectiveSoldDate} <= current_date
       group by 1, 2, 3, 4, 5
     `),
     db.execute(sql`
       with region(state, key) as (values ${regionValues()})
       select r.key as region, count(*)::int as n,
-        (percentile_cont(0.5) within group (order by a.hammer_price))::float8 as median
-      from auction_result a
-      join region r on r.state = upper(trim(a.raw_json->>'state'))
-      where a.status = 'sold' and a.excluded_reason is null and a.hammer_price > 0
-        and a.ended_at > now() - interval '90 days'
+        (percentile_cont(0.5) within group (order by ${auctionResults.hammerPrice}))::float8 as median
+      from ${auctionResults}
+      join region r on r.state = ${stateKey(sql`${auctionResults.rawJson}->>'state'`)}
+      where ${auctionResults.status} = 'sold' and ${auctionResults.excludedReason} is null
+        and ${auctionResults.hammerPrice} > 0
+        and ${auctionResults.endedAt} > now() - interval '90 days'
+        and coalesce(upper(${auctionResults.rawJson}->>'country_code'), 'US') = 'US'
+        and coalesce(upper(${auctionResults.rawJson}->>'currency'), 'USD') = 'USD'
       group by 1
     `),
     db.execute(sql`
-      select max(sold_date)::text as through from dealer_sale where excluded_reason is null
+      select max(${effectiveSoldDate})::text as through
+      from ${dealerSales}
+      where ${dealerSales.excludedReason} is null and ${effectiveSoldDate} <= current_date
     `),
   ]);
   const sales: RegionSaleRow[] = rowsOf<SaleRow>(salesRes).map((r) => ({
@@ -82,6 +99,7 @@ export async function loadRegionInput(): Promise<RegionInput> {
     modelId: r.modelId,
     win: r.win,
     n: Number(r.n),
+    domN: Number(r.domN),
     median: num(r.median) ?? 0,
     dom: num(r.dom),
   }));

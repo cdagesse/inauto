@@ -2,11 +2,21 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { longDate } from "@/components/market/format";
-import { ChangePill } from "@/components/market/market-nodes";
-import { MakesTable, TypesTable, VolumePill, signedPct } from "@/components/market/region-nodes";
+import { MakesTable, TypesTable, signedPct } from "@/components/market/region-nodes";
 import { REGIONS, regionByKey } from "@/data/regions";
 import { usd, usdK } from "@/lib/format/money";
 import { getRegions } from "@/lib/market/region-source";
+import type { TypeInRegion } from "@/lib/market/regions";
+
+/** One sentence on the types with the best and worst 90-day price move, whatever their sign. */
+function typeRead(best: TypeInRegion | null, worst: TypeInRegion | null): string {
+  if (!best || best.priceChange == null)
+    return "Not enough sales yet for a type-by-type price read.";
+  const b = signedPct(best.priceChange);
+  if (!worst || worst.priceChange == null)
+    return `Only one type has a price read here so far: ${best.name}, ${b} over 90 days.`;
+  return `Best 90-day price move: ${best.name} (${b}). Worst: ${worst.name} (${signedPct(worst.priceChange)}).`;
+}
 
 export const revalidate = 3600;
 
@@ -22,7 +32,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   if (!r) return { title: "Region not found" };
   return {
     title: `${r.name} car market`,
-    description: `${r.blurb} Dealer sales in the last 90 days, whether prices and volume are rising or falling, and which types of car and makes are strongest in the ${r.name}.`,
+    description: `${r.blurb} Dealer sales in the last 90 days, whether prices and volume are rising or falling, and which types of car and makes are strongest there.`,
     alternates: { canonical: `/markets/regions/${r.key}` },
   };
 }
@@ -33,8 +43,8 @@ export default async function RegionPage({ params }: { params: Promise<Params> }
   const o = await getRegions();
   const r = o.regions.find((x) => x.key === region);
   if (!r) notFound();
-  const strongest = r.strongest && r.strongest.priceChange != null ? r.strongest : null;
-  const softest = r.softest && r.softest.priceChange != null ? r.softest : null;
+  const dc = r.states.includes("DC");
+  const stateCount = r.states.filter((s) => s !== "DC").length;
 
   return (
     <>
@@ -56,14 +66,7 @@ export default async function RegionPage({ params }: { params: Promise<Params> }
             {r.name}
           </h1>
           <p className="sub" style={{ maxWidth: "60ch" }}>
-            {r.blurb}{" "}
-            {strongest
-              ? `${strongest.name} is the strongest type here right now (${signedPct(strongest.priceChange ?? 0)} on price over 90 days)${
-                  softest
-                    ? `, ${softest.name.toLowerCase()} the softest (${signedPct(softest.priceChange ?? 0)})`
-                    : ""
-                }.`
-              : "Not enough sales yet for a type-by-type price read."}
+            {r.blurb} {typeRead(r.strongest, r.softest)}
           </p>
         </div>
         <div className="asof">
@@ -73,7 +76,7 @@ export default async function RegionPage({ params }: { params: Promise<Params> }
               <br />
             </>
           ) : null}
-          {r.states.length} states
+          {stateCount} states{dc ? " and DC" : ""}
           <br />
           {Math.round(r.share * 100)}% of US dealer sales
         </div>
@@ -88,18 +91,28 @@ export default async function RegionPage({ params }: { params: Promise<Params> }
           </div>
           <div className="kpi">
             <div className="l">Prices · 90 days</div>
-            <div className="v">
-              <ChangePill change={r.priceChange} n90={r.n90} />
-            </div>
+            {r.priceChange != null ? (
+              <div className={`v chg ${r.priceChange >= 0 ? "up" : "down"}`}>
+                {signedPct(r.priceChange)}
+              </div>
+            ) : (
+              <div className="v">n/a</div>
+            )}
             <div className="s">
-              Sales-weighted across models, {r.n90.toLocaleString("en-US")} sales
+              {r.priceChange != null
+                ? `Sales-weighted across models, ${r.n90.toLocaleString("en-US")} sales`
+                : "Not enough sales to read a change"}
             </div>
           </div>
           <div className="kpi">
             <div className="l">Volume vs prior 90</div>
-            <div className="v">
-              <VolumePill change={r.volumeChange} prior={r.prior90} />
-            </div>
+            {r.volumeChange != null ? (
+              <div className={`v chg ${r.volumeChange >= 0 ? "up" : "down"}`}>
+                {signedPct(r.volumeChange, 0)}
+              </div>
+            ) : (
+              <div className="v">n/a</div>
+            )}
             <div className="s">
               Nationally{" "}
               {o.national.volumeChange != null ? signedPct(o.national.volumeChange, 0) : "n/a"}
@@ -145,14 +158,14 @@ export default async function RegionPage({ params }: { params: Promise<Params> }
       ) : null}
 
       <section className="market-section">
-        <h2 className="sec">States</h2>
+        <h2 className="sec">States{dc ? " and DC" : ""}</h2>
         <p className="sub">
-          Dealer sales count toward the {r.short} when the selling dealer is in one of these states.
+          Dealer sales count toward the {r.short} when the selling dealer is in one of these.
         </p>
         <div className="make-chips">
           {r.states.map((s) => (
-            <span key={s} className="make-chip">
-              <span>{s}</span>
+            <span key={s} className="make-chip static">
+              {s}
             </span>
           ))}
         </div>

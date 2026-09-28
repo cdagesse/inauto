@@ -30,27 +30,26 @@ function TypeRead({ t }: { t: TypeInRegion | null }) {
       <Link href={`/markets/${t.key}`} className="seg-link-name">
         {t.short}
       </Link>{" "}
-      <span className={`pill ${t.priceChange >= 0 ? "up" : "down"}`}>
-        {signedPct(t.priceChange)}
-      </span>
+      <ChangePill change={t.priceChange} n90={t.n90} />
     </>
   );
 }
 
 function typeLine(t: TypeInRegion | null, label: string): string | null {
   if (!t || t.priceChange == null) return null;
-  return `${label}: ${t.short} ${signedPct(t.priceChange)}`;
+  return `${label}: ${t.short} ${signedPct(t.priceChange)} 90d`;
 }
 
 /** One region on the Markets page: sales, typical price, days to sell, and the price and volume moves. */
 export function RegionCard({ region }: { region: RegionStats }) {
-  const reads = [typeLine(region.strongest, "Strongest"), typeLine(region.softest, "Softest")]
+  const reads = [typeLine(region.strongest, "Best price move"), typeLine(region.softest, "Worst")]
     .filter((s): s is string => s != null)
     .join(" · ");
   return (
     <Link href={`/markets/regions/${region.key}`} className="panel node-card link-card">
       <div className="node-head">
         <div>
+          <div className="eyebrow">Region</div>
           <div className="name">{region.name}</div>
           <p className="blurb">{region.blurb}</p>
         </div>
@@ -95,8 +94,8 @@ export function RegionsTable({ regions }: { regions: RegionStats[] }) {
             <th className="n">Prices · 90d</th>
             <th className="n">Volume vs prior 90</th>
             <th className="n">Days to sell</th>
-            <th>Strongest type</th>
-            <th>Softest type</th>
+            <th>Best price move · 90d</th>
+            <th>Worst price move · 90d</th>
           </tr>
         </thead>
         <tbody>

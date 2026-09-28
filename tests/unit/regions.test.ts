@@ -41,7 +41,18 @@ const row = (
   n: number,
   median: number,
   dom: number | null = 30,
-): RegionSaleRow => ({ region, make, makeName: make.toUpperCase(), modelId, win, n, median, dom });
+  domN: number = dom == null ? 0 : n,
+): RegionSaleRow => ({
+  region,
+  make,
+  makeName: make.toUpperCase(),
+  modelId,
+  win,
+  n,
+  domN,
+  median,
+  dom,
+});
 
 describe("movement", () => {
   it("weights price change by last-window sales and needs both windows", () => {
@@ -60,6 +71,21 @@ describe("movement", () => {
     expect(m.n90).toBe(20);
     expect(m.daysToSell).toBe(Math.round((10 * 30 + 10 * 60 + 4 * 30) / 24));
     expect(m.medianPrice).toBe(90_000);
+  });
+
+  it("weights days to sell by the rows that carried one, not the whole group", () => {
+    const m = movement([
+      row("west-coast", "porsche", "p1", "last", 50, 100_000, 210, 2),
+      row("west-coast", "porsche", "p2", "last", 20, 80_000, 30, 20),
+    ]);
+    expect(m.daysToSell).toBe(Math.round((210 * 2 + 30 * 20) / 22));
+    // Merged across regions the same way.
+    const national = movement([
+      row("west-coast", "porsche", "p1", "last", 50, 100_000, 210, 2),
+      row("midwest", "porsche", "p1", "last", 10, 90_000, 30, 10),
+    ]);
+    expect(national.sales90).toBe(60);
+    expect(national.daysToSell).toBe(Math.round((210 * 2 + 30 * 10) / 12));
   });
 
   it("withholds a price change on too few sales and a volume change with no prior", () => {

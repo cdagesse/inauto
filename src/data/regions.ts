@@ -42,7 +42,7 @@ export const REGIONS: Region[] = [
   {
     key: "mountain",
     name: "Mountain West",
-    short: "Mountain",
+    short: "Mountain West",
     blurb: "Arizona, Colorado, Nevada, Utah, New Mexico, Idaho, Montana and Wyoming.",
     states: ["AZ", "CO", "NV", "UT", "NM", "ID", "MT", "WY"],
   },

@@ -51,21 +51,31 @@ export default async function RegionsPage() {
         <h2 className="sec">Regions at a glance</h2>
         <p className="sub">
           Prices compare each model&apos;s median in the last 90 days with the 90 before, weighted
-          by sales; volume compares the sales counts. A type needs at least 10 weighted sales for a
-          price read.
+          by sales; volume compares the sales counts. The best and worst price move name the type
+          that gained most and lost most (or gained least) there; a type needs at least 10 weighted
+          sales for a read.
         </p>
-        <RegionsTable regions={o.regions} />
+        {o.national.sales90 > 0 ? (
+          <RegionsTable regions={o.regions} />
+        ) : (
+          <p className="note">
+            No dealer sales with a recognisable US state in the last 90 days, so there is no
+            regional read yet.
+          </p>
+        )}
       </section>
 
-      <section>
-        <h2 className="sec">Drill in</h2>
-        <p className="sub">Open a region for its types, top makes and states.</p>
-        <div className="node-grid">
-          {o.regions.map((r) => (
-            <RegionCard key={r.key} region={r} />
-          ))}
-        </div>
-      </section>
+      {o.national.sales90 > 0 ? (
+        <section>
+          <h2 className="sec">Drill in</h2>
+          <p className="sub">Open a region for its types, top makes and states.</p>
+          <div className="node-grid">
+            {o.regions.map((r) => (
+              <RegionCard key={r.key} region={r} />
+            ))}
+          </div>
+        </section>
+      ) : null}
     </>
   );
 }

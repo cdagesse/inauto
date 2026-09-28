@@ -2,7 +2,7 @@
 
 Features and fixes as they ship, newest first. One line per change, with the pull request.
 
-## 2026-09-27
+## 2026-09-28
 
 ### Features
 
