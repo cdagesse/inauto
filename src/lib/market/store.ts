@@ -56,12 +56,35 @@ export async function loadStoredSummaries(db: Db = defaultDb): Promise<MarketSum
   return rows.map((r) => r.summary as MarketSummarySnapshot);
 }
 
+/** Thrown by a strict rebuild when the snapshot was built but could not be stored. */
+export class SnapshotStoreError extends Error {
+  constructor(makeSlug: string, modelSlug: string, cause: unknown) {
+    super(`store write failed: ${cause instanceof Error ? cause.message : String(cause)}`);
+    this.name = "SnapshotStoreError";
+    this.makeSlug = makeSlug;
+    this.modelSlug = modelSlug;
+  }
+  readonly makeSlug: string;
+  readonly modelSlug: string;
+}
+
+export interface RebuildOptions {
+  /**
+   * Throw a SnapshotStoreError when the upsert fails instead of returning the built
+   * snapshot as if it were stored. The nightly rebuild sets this so persistent write
+   * failures show up as failed builds; request-path callers stay lenient and render
+   * the fresh build even when it could not be saved.
+   */
+  strict?: boolean;
+}
+
 /** Builds one model's snapshot from the raw rows and stores it. Returns null when it has no data. */
 export async function rebuildSnapshot(
   makeSlug: string,
   modelSlug: string,
   db: Db = defaultDb,
   now = new Date(),
+  opts: RebuildOptions = {},
 ): Promise<MarketSnapshot | null> {
   const input = await loadSnapshotInput(makeSlug, modelSlug, now);
   if (!input) return null;
@@ -88,6 +111,7 @@ export async function rebuildSnapshot(
           },
         });
     } catch (err) {
+      if (opts.strict) throw new SnapshotStoreError(makeSlug, modelSlug, err);
       console.warn(
         `market snapshot: store write failed for ${makeSlug}/${modelSlug}`,
         (err as Error).message,
@@ -97,7 +121,11 @@ export async function rebuildSnapshot(
   return snapshot;
 }
 
-/** Rebuilds every model that has data. Called by the nightly job after the pull. */
+/**
+ * Rebuilds every model that has data. Called by the nightly job after the pull.
+ * Strict: a snapshot that builds but cannot be stored counts as failed, not built,
+ * so the summary never reports "rebuilt N of N" while readers get stale rows.
+ */
 export async function rebuildAllSnapshots(
   db: Db = defaultDb,
   log: (m: string) => void = () => {},
@@ -108,7 +136,7 @@ export async function rebuildAllSnapshots(
   const failed: string[] = [];
   for (const k of keys) {
     try {
-      if (await rebuildSnapshot(k.makeSlug, k.modelSlug, db, now)) built++;
+      if (await rebuildSnapshot(k.makeSlug, k.modelSlug, db, now, { strict: true })) built++;
     } catch (e) {
       failed.push(`${k.makeSlug}/${k.modelSlug}: ${e instanceof Error ? e.message : String(e)}`);
     }
