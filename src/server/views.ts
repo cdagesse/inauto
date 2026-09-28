@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import { carViews } from "@/db/schema";
 
-export type ViewKind = "listing" | "external";
+export type ViewKind = "listing" | "external" | "dealer";
 
 /** Bumps today's view count for a car. Never throws: a failed count must not break a page. */
 export async function recordCarView(kind: ViewKind, refId: string): Promise<void> {

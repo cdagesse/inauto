@@ -9,6 +9,7 @@ import { CAR_FILTER_KEYS, filterChips, keysForChip } from "@/lib/listings/filter
 import { env } from "@/env/server";
 import { PLATFORMS, PLATFORM_KEYS } from "@/lib/sources/platforms";
 import { listingFilterSchema } from "@/server/listings-schema";
+import { countDealerListings, listDealerListings } from "@/server/queries/dealers";
 import { countLiveBySource, listExternalListings } from "@/server/queries/external";
 import { listActiveListings } from "@/server/queries/listings";
 import { listSellMakes } from "@/server/queries/sell-catalog";
@@ -20,8 +21,16 @@ export const metadata: Metadata = {
     "Collector and enthusiast cars listed by their owners, plus live auctions on Bring a Trailer, Cars & Bids and other platforms, all priced against real market data.",
 };
 
-const sourceSchema = z.enum(["all", "inauto", ...PLATFORM_KEYS]).default("all");
+const sourceSchema = z.enum(["all", "inauto", "dealer", ...PLATFORM_KEYS]).default("all");
 const xcursorSchema = z.string().max(160).optional();
+
+/** Human name of a source value for headings and the source menu. */
+function sourceName(source: string): string {
+  if (source === "all") return "All sources";
+  if (source === "inauto") return "UrCar";
+  if (source === "dealer") return "Dealers";
+  return PLATFORMS[source as (typeof PLATFORM_KEYS)[number]]?.name ?? source;
+}
 
 export default async function ListingsPage({
   searchParams,
@@ -50,15 +59,24 @@ export default async function ListingsPage({
   const result = past ? filter.result : undefined;
   const source = sourceSchema.safeParse(sp.source).data ?? "all";
   const xcursor = xcursorSchema.safeParse(sp.xcursor).data;
+  const dcursor = xcursorSchema.safeParse(sp.dcursor).data;
   const session = await auth();
 
   const showOwn = source === "all" || source === "inauto";
-  const showExternal = source !== "inauto" && filter.type !== "classified";
+  const showExternal = source !== "inauto" && source !== "dealer" && filter.type !== "classified";
   const carFilter = Object.fromEntries(
     CAR_FILTER_KEYS.map((k) => [k, filter[k]]).filter(([, v]) => v != null),
   ) as Pick<typeof filter, (typeof CAR_FILTER_KEYS)[number]>;
+  // Dealer inventory (asking prices, no auction) joins the feed when asked for, when the
+  // type is Classifieds, or whenever the visitor narrowed to a car; it never mixes into the
+  // unfiltered live-auction feed, which would bury the auctions.
+  const narrowed = !!(carFilter.make || carFilter.model || carFilter.trim || carFilter.q);
+  const showDealers =
+    !past &&
+    filter.type !== "auction" &&
+    (source === "dealer" || (source === "all" && (filter.type === "classified" || narrowed)));
   const chips = filterChips(carFilter);
-  const [own, external, liveCounts, makes] = await Promise.all([
+  const [own, external, dealers, liveCounts, dealerTotal, makes] = await Promise.all([
     showOwn
       ? listActiveListings(session?.user?.id ?? null, filter)
       : Promise.resolve({ rows: [], nextCursor: null, truncated: false }),
@@ -73,7 +91,15 @@ export default async function ListingsPage({
           limit: filter.q ? 36 : source === "all" ? 12 : 24,
         })
       : Promise.resolve({ rows: [], nextCursor: null, truncated: false }),
+    showDealers
+      ? listDealerListings({
+          ...carFilter,
+          cursor: dcursor,
+          limit: filter.q ? 36 : source === "dealer" ? 24 : 12,
+        }).catch(soft("listings dealers", { rows: [], nextCursor: null }))
+      : Promise.resolve({ rows: [], nextCursor: null }),
     countLiveBySource().catch(soft("listings live counts", {} as Record<string, number>)),
+    countDealerListings().catch(soft("listings dealer count", 0)),
     listSellMakes().catch(soft("listings makes", [])),
   ]);
   const liveTotal = Object.values(liveCounts).reduce((a, b) => a + b, 0);
@@ -188,11 +214,7 @@ export default async function ListingsPage({
         </div>
         <details className="src-menu">
           <summary className="seg-link" aria-label="Choose a source">
-            {source === "all"
-              ? "All sources"
-              : source === "inauto"
-                ? "UrCar"
-                : PLATFORMS[source as (typeof PLATFORM_KEYS)[number]].name}
+            {sourceName(source)}
             <span className="caret" aria-hidden="true">
               ▾
             </span>
@@ -210,6 +232,14 @@ export default async function ListingsPage({
             >
               UrCar
             </Link>
+            {dealerTotal > 0 || source === "dealer" ? (
+              <Link
+                href={qs({ source: "dealer", cursor: undefined, xcursor: undefined })}
+                aria-pressed={source === "dealer"}
+              >
+                Dealers <span className="count">{dealerTotal}</span>
+              </Link>
+            ) : null}
             {platformsWithLive.map((k) => (
               <Link
                 key={k}
@@ -221,9 +251,10 @@ export default async function ListingsPage({
             ))}
             {!platformsWithLive.includes(source as (typeof PLATFORM_KEYS)[number]) &&
             source !== "all" &&
-            source !== "inauto" ? (
+            source !== "inauto" &&
+            source !== "dealer" ? (
               <Link href={qs({ source, cursor: undefined, xcursor: undefined })} aria-pressed>
-                {PLATFORMS[source as (typeof PLATFORM_KEYS)[number]].name}
+                {sourceName(source)}
               </Link>
             ) : null}
           </div>
@@ -281,12 +312,12 @@ export default async function ListingsPage({
                   : "Past auctions and sales"
               : source === "inauto"
                 ? "On UrCar"
-                : source === "all"
-                  ? "All cars"
-                  : `On ${PLATFORMS[source as (typeof PLATFORM_KEYS)[number]].name}`}
-            {past && source !== "all"
-              ? ` · ${source === "inauto" ? "UrCar" : PLATFORMS[source as (typeof PLATFORM_KEYS)[number]].name}`
-              : ""}
+                : source === "dealer"
+                  ? "At dealers"
+                  : source === "all"
+                    ? "All cars"
+                    : `On ${sourceName(source)}`}
+            {past && source !== "all" ? ` · ${sourceName(source)}` : ""}
           </h2>
           <p className="hint feed-hint">
             {past
@@ -295,11 +326,13 @@ export default async function ListingsPage({
                 : result === "unsold"
                   ? "Ended without a sale, newest first, with the high bid."
                   : "Finished auctions and sales, newest first."
-              : liveTotal > 0
-                ? `${liveTotal} live on the platforms · bidding happens there`
-                : showOwn && own.rows.length === 0
-                  ? "No UrCar listings match yet."
-                  : null}
+              : source === "dealer"
+                ? `${dealerTotal.toLocaleString("en-US")} listed at dealers · asking prices, buy from the dealer`
+                : liveTotal > 0
+                  ? `${liveTotal} live on the platforms · bidding happens there${showDealers && dealers.rows.length ? " · dealer listings follow" : ""}`
+                  : showOwn && own.rows.length === 0
+                    ? "No UrCar listings match yet."
+                    : null}
             {!past && showOwn && own.rows.length === 0 ? (
               <>
                 {" "}
@@ -308,7 +341,7 @@ export default async function ListingsPage({
             ) : null}
           </p>
         </div>
-        {!past && showExternal && external.rows.length === 0 ? (
+        {!past && showExternal && external.rows.length === 0 && dealers.rows.length === 0 ? (
           <div className="panel empty-shelf" style={{ marginBottom: 16 }}>
             <b className="display">
               {filter.q
@@ -330,21 +363,29 @@ export default async function ListingsPage({
             </Link>
           </div>
         ) : null}
-        {own.rows.length === 0 && external.rows.length === 0 ? (
+        {own.rows.length === 0 && external.rows.length === 0 && dealers.rows.length === 0 ? (
           past ? (
             <p className="note" style={{ padding: "24px 0" }}>
               No finished auctions match this filter yet.
             </p>
           ) : showExternal ? null : (
             <p className="note" style={{ padding: "24px 0" }}>
-              Nothing matches this filter yet.
+              {source === "dealer"
+                ? "No dealer listings match this filter yet. Dealer inventory refreshes about every two weeks per model."
+                : "Nothing matches this filter yet."}
             </p>
           )
         ) : (
           <ListingsFeed
-            key={`${source}|${filter.when ?? ""}|${result ?? ""}|${filter.type ?? ""}|${JSON.stringify(carFilter)}|${filter.cursor ?? ""}|${xcursor ?? ""}`}
+            key={`${source}|${filter.when ?? ""}|${result ?? ""}|${filter.type ?? ""}|${JSON.stringify(carFilter)}|${filter.cursor ?? ""}|${xcursor ?? ""}|${dcursor ?? ""}`}
             own={own}
             external={external}
+            dealers={dealers}
+            dealerFilter={
+              showDealers
+                ? { ...carFilter, limit: filter.q ? 36 : source === "dealer" ? 24 : 12 }
+                : null
+            }
             searchTruncated={own.truncated || external.truncated}
             ownFilter={
               showOwn ? { type: filter.type, ...carFilter, when: filter.when, result } : null
@@ -366,7 +407,9 @@ export default async function ListingsPage({
                 ? qs({ cursor: own.nextCursor })
                 : external.nextCursor
                   ? qs({ xcursor: external.nextCursor })
-                  : null
+                  : dealers.nextCursor
+                    ? qs({ dcursor: dealers.nextCursor })
+                    : null
             }
           />
         )}

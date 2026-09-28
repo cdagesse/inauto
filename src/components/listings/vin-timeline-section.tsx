@@ -14,7 +14,7 @@ export async function VinTimelineSection({
   vinShown,
 }: {
   vin: string | null | undefined;
-  current: { kind: "external" | "inauto"; id: string };
+  current: { kind: "external" | "inauto" | "dealer"; id: string };
   vinShown: string | null;
 }) {
   const events = await getVinTimeline(vin, current);

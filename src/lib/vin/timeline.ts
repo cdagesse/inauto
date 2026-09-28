@@ -32,6 +32,8 @@ export interface VinEvent {
 }
 
 export interface DealerRow {
+  /** The dealer_active or dealer_sale row id, so a dealer listing page can mark itself. */
+  id?: string;
   sourceListingId: string;
   price: number | null;
   miles: number | null;
@@ -93,7 +95,7 @@ const daysBetween = (a: string, b: string) =>
 
 export function buildVinTimeline(
   rows: VinRows,
-  current?: { kind: "external" | "inauto"; id: string },
+  current?: { kind: "external" | "inauto" | "dealer"; id: string },
 ): VinEvent[] {
   const out: VinEvent[] = [];
 
@@ -129,6 +131,7 @@ export function buildVinTimeline(
     } else {
       const d = seen[seen.length - 1] ?? listed;
       if (!d) continue;
+      const isCurrent = current?.kind === "dealer" && list.some((r) => r.id === current.id);
       out.push({
         date: d,
         from: listed ?? undefined,
@@ -138,6 +141,7 @@ export function buildVinTimeline(
         price: last.price,
         miles: last.miles,
         href: null,
+        current: isCurrent || undefined,
       });
     }
   }

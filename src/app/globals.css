@@ -3672,3 +3672,14 @@ header.site-head {
     padding-left: 0;
   }
 }
+
+/* dealer listings */
+.dealer-shelf {
+  margin-top: 28px;
+}
+.dealer-card .card-meta .meta-side {
+  color: var(--ink-3);
+}
+.dealer-page .price-block .pill {
+  margin-top: 4px;
+}

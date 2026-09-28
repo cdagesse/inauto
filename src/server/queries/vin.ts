@@ -9,7 +9,7 @@ import { buildVinTimeline, isVin, type VinEvent, type VinRows } from "@/lib/vin/
 export const getVinTimeline = cache(
   async (
     vin: string | null | undefined,
-    current?: { kind: "external" | "inauto"; id: string },
+    current?: { kind: "external" | "inauto" | "dealer"; id: string },
   ): Promise<VinEvent[]> => {
     const v = (vin ?? "").trim().toUpperCase();
     if (!isVin(v)) return [];
@@ -18,6 +18,7 @@ export const getVinTimeline = cache(
     const [sales, active, auctions, external, inauto] = await Promise.all([
       db
         .select({
+          id: dealerSales.id,
           sourceListingId: dealerSales.sourceListingId,
           price: dealerSales.price,
           miles: dealerSales.miles,
@@ -38,6 +39,7 @@ export const getVinTimeline = cache(
         .limit(50),
       db
         .select({
+          id: dealerActive.id,
           sourceListingId: dealerActive.sourceListingId,
           price: dealerActive.price,
           miles: dealerActive.miles,

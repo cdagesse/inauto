@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getMarketSnapshot, listMarketModels } from "@/lib/market/source";
+import { DealerListingsSection } from "@/components/market/dealer-listings-section";
 import { ModelMarket } from "@/components/market/model-market";
 import { GenerationGuide } from "@/components/market/tables";
 import { longDate } from "@/components/market/format";
@@ -144,6 +145,13 @@ export default async function ModelPage({ params }: { params: Promise<Params> })
       </div>
 
       <ModelMarket snapshot={s} />
+
+      <DealerListingsSection
+        makeSlug={s.make.slug}
+        modelSlug={s.model.slug}
+        makeName={s.make.name}
+        modelName={s.model.name}
+      />
 
       <div className="market">
         <section>
