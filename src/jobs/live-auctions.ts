@@ -73,8 +73,12 @@ export interface CatalogModel {
   reportStatus: string;
 }
 
-/** Pages per 15-minute live sweep: a 20-minute window is 1 page off-peak and about 4 at peak. */
-export const LIVE_SWEEP_MAX_PAGES = 8;
+/**
+ * Pages per 15-minute live sweep. A 20-minute window is 1 page off-peak and 6 to 7 at peak
+ * (610 changed auctions at 15:45 UTC on a Sunday), so 12 leaves room for a busy burst; the
+ * cost only rises when there is more to read.
+ */
+export const LIVE_SWEEP_MAX_PAGES = 12;
 
 export async function loadCatalog(
   db: Db,
