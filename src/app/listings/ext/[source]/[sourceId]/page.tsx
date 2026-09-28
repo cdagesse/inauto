@@ -22,6 +22,10 @@ import { isVin } from "@/lib/vin/timeline";
 import { after } from "next/server";
 import { recordCarView } from "@/server/views";
 import { maskVin } from "@/lib/sources/live";
+import { carLine, carPreview } from "@/lib/seo/preview";
+import { fmtDate, isUsd, mi, money } from "@/lib/format/money";
+import { placeLine } from "@/lib/geo";
+import { effectiveStatus, outcomeLabel } from "@/lib/sources/status";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +41,41 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const l = await load(params);
   // Third-party content: never indexed under our domain.
   if (!l) return { title: "Listing", robots: { index: false, follow: false } };
-  return { title: `${l.title} on ${l.sourceName}`, robots: { index: false, follow: false } };
+  const title = `${l.title} on ${l.sourceName}`;
+  const status = effectiveStatus(l.status, l.endsAt);
+  const price = status === "live" ? l.currentBid : (l.finalPrice ?? l.currentBid);
+  const amount = price
+    ? `${money(price, l.currency)}${isUsd(l.currency) ? "" : ` ${l.currency}`}`
+    : null;
+  const outcome =
+    status === "live"
+      ? amount
+        ? `Current bid ${amount}`
+        : "Live now"
+      : status === "sold"
+        ? amount
+          ? `Sold for ${amount}`
+          : "Sold"
+        : amount
+          ? `${outcomeLabel(status)}, high bid ${amount}`
+          : outcomeLabel(status);
+  const when = l.endsAt ? `, ${status === "live" ? "closes " : ""}${fmtDate(l.endsAt)}` : "";
+  const car = carLine([
+    [l.year, l.make, l.model].filter(Boolean).join(" "),
+    l.miles != null ? `${mi(l.miles)} mi` : null,
+    placeLine(l.location, l.country),
+  ]);
+  const description = `${car ? `${car}. ` : ""}${outcome} on ${l.sourceName}${when}.`;
+  return {
+    title,
+    robots: { index: false, follow: false },
+    ...carPreview({
+      title: `${title} · UrCar`,
+      description,
+      photos: env.externalPhotos ? l.photoUrls : [],
+      path: `/listings/ext/${l.source}/${encodeURIComponent(l.sourceId)}`,
+    }),
+  };
 }
 
 export default async function ExternalListingPage({ params }: { params: Params }) {
