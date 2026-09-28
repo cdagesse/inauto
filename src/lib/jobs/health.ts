@@ -216,6 +216,11 @@ export function statusLabel(status: JobStatus): string {
 }
 
 /** True when the status needs a person to look at it. */
+/** A scheduled job with no run yet: not a failure, but worth saying out loud. */
+export function notRunYet(status: JobStatus, spec: JobSpec): boolean {
+  return status === "never" && spec.every != null;
+}
+
 export function needsAttention(status: JobStatus): boolean {
   return status === "failed" || status === "overdue" || status === "unfinished";
 }
@@ -254,18 +259,25 @@ export function describeRun(name: string, summary: unknown, error: string | null
       const unmatched = sum("unmatchedRows");
       const review = sum("needsReview");
       const stopped = models.filter((m) => arr(m, "budgetStopped").length).length;
+      // Rows written are recorded since the Health page shipped; older rows only know what was pulled.
+      const hasInserted = models.some((m) => Object.keys(obj(m.inserted)).length > 0);
+      const inserted = models.reduce((a, m) => {
+        const i = obj(m.inserted);
+        return a + num(i, "sold") + num(i, "active") + num(i, "auctions");
+      }, 0);
       parts.push(
         plural(models.length, "model"),
         `Visor ${n(sold)} sold, ${n(active)} active`,
         `Old Cars Data ${plural(auctions, "auction")}`,
       );
+      if (hasInserted) parts.push(`${plural(inserted, "new row")} written`);
       if (unmatched) parts.push(`${n(unmatched)} unmatched`);
       if (review) parts.push(`${n(review)} to review`);
       if (stopped) parts.push(`budget stopped ${plural(stopped, "model")}`);
       const pruned = obj(s.pruned);
       const prunedTotal = num(pruned, "rawFetch") + num(pruned, "carView") + num(pruned, "jobRun");
       if (Object.keys(pruned).length) parts.push(`pruned ${plural(prunedTotal, "old row")}`);
-      changed = sold + active + auctions;
+      changed = hasInserted ? inserted : null;
       break;
     }
     case "live-auctions": {
@@ -285,6 +297,7 @@ export function describeRun(name: string, summary: unknown, error: string | null
       break;
     }
     case "backfill-auctions": {
+      if (!Object.keys(s).length) break;
       const upserted = num(s, "upserted");
       const results = num(s, "auctionResultsInserted");
       const part = str(s, "part");
@@ -330,14 +343,17 @@ export function describeRun(name: string, summary: unknown, error: string | null
       if (skipped) parts.push(`skipped: ${skipped}`);
       else if (!processed.length) parts.push("no orders waiting");
       else {
+        // One entry per step, so an order checked by NMVTIS and MVR appears twice.
+        const orders =
+          new Set(processed.map((p) => str(p, "id")).filter((v): v is string => !!v)).size ||
+          processed.length;
         const steps = new Map<string, number>();
         for (const p of processed) {
           const step = str(p, "step") ?? "step";
           steps.set(step, (steps.get(step) ?? 0) + 1);
         }
         parts.push(
-          `${plural(processed.length, "order")}: ` +
-            [...steps].map(([k, v]) => `${k} ${n(v)}`).join(", "),
+          `${plural(orders, "order")}: ` + [...steps].map(([k, v]) => `${k} ${n(v)}`).join(", "),
         );
       }
       changed = processed.length;

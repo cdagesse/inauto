@@ -5,7 +5,6 @@ import { db } from "@/db";
 import {
   apiBudgets,
   auctionResults,
-  carViews,
   dealerActive,
   dealerSales,
   externalListings,
@@ -161,7 +160,7 @@ export interface SourceHealth {
     dryRun: boolean;
     cron: boolean;
     blob: boolean;
-    vitu: boolean;
+    nmvtis: boolean;
     mvr: boolean;
     assistant: boolean;
   };
@@ -173,7 +172,7 @@ export async function sourceHealth(now = new Date()): Promise<SourceHealth> {
   const month = currentMonth(now);
   const day = new Date(now.getTime() - DAY).toISOString();
   const week = new Date(now.getTime() - 7 * DAY);
-  const [budgets, fetches, failures] = await Promise.all([
+  const [budgets, fetches, lastCalls, failures] = await Promise.all([
     db
       .select({ source: apiBudgets.source, used: apiBudgets.callsUsed })
       .from(apiBudgets)
@@ -186,11 +185,15 @@ export async function sourceHealth(now = new Date()): Promise<SourceHealth> {
         calls7: count(),
         errors7: sql<number>`count(*) filter (where ${rawFetches.status} >= 400)`,
         rows7: sql<number>`coalesce(sum(${rawFetches.rowCount}), 0)`,
-        last: max(rawFetches.fetchedAt),
         lastOk: sql<unknown>`max(${rawFetches.fetchedAt}) filter (where ${rawFetches.status} < 400)`,
       })
       .from(rawFetches)
       .where(gte(rawFetches.fetchedAt, week))
+      .groupBy(rawFetches.source),
+    // Unbounded, so "last call" is the real last call even when a source was quiet all week.
+    db
+      .select({ source: rawFetches.source, last: max(rawFetches.fetchedAt) })
+      .from(rawFetches)
       .groupBy(rawFetches.source),
     db
       .select({
@@ -207,6 +210,7 @@ export async function sourceHealth(now = new Date()): Promise<SourceHealth> {
   ]);
   const used = new Map(budgets.map((b) => [b.source, b.used]));
   const byFetch = new Map(fetches.map((f) => [f.source, f]));
+  const lastAny = new Map(lastCalls.map((r) => [r.source, r.last]));
   const card = (
     source: "visor" | "ocd",
     label: string,
@@ -225,7 +229,7 @@ export async function sourceHealth(now = new Date()): Promise<SourceHealth> {
       calls7: int(f?.calls7),
       errors7: int(f?.errors7),
       rows7: int(f?.rows7),
-      last: toDate(f?.last),
+      last: toDate(lastAny.get(source)),
       lastOk: toDate(f?.lastOk),
     };
   };
@@ -240,7 +244,7 @@ export async function sourceHealth(now = new Date()): Promise<SourceHealth> {
       dryRun: env.jobsDryRun,
       cron: !!env.CRON_SECRET,
       blob: !!env.BLOB_READ_WRITE_TOKEN,
-      vitu: !!env.vitu,
+      nmvtis: !!env.vitu?.nmvtis,
       mvr: !!env.vitu?.mvr,
       assistant: !!env.ANTHROPIC_API_KEY,
     },
@@ -263,8 +267,7 @@ export interface DatasetRow {
 export async function dataFreshness(now = new Date()): Promise<DatasetRow[]> {
   await requireAdmin();
   const day = new Date(now.getTime() - DAY).toISOString();
-  const today = now.toISOString().slice(0, 10);
-  const [[ext], [act], [sold], [auc], [snap], [views]] = await Promise.all([
+  const [[ext], [act], [sold], [auc], [snap]] = await Promise.all([
     db
       .select({
         total: count(),
@@ -301,12 +304,6 @@ export async function dataFreshness(now = new Date()): Promise<DatasetRow[]> {
         newest: max(marketSnapshots.builtAt),
       })
       .from(marketSnapshots),
-    db
-      .select({
-        total: sql<number>`coalesce(sum(${carViews.views}), 0)`,
-        day: sql<number>`coalesce(sum(${carViews.views}) filter (where ${carViews.day} = ${today}), 0)`,
-      })
-      .from(carViews),
   ]);
   return [
     {
@@ -347,14 +344,6 @@ export async function dataFreshness(now = new Date()): Promise<DatasetRow[]> {
       total: int(snap?.total),
       day: int(snap?.day),
       newest: toDate(snap?.newest),
-      newestDay: null,
-    },
-    {
-      label: "Car views",
-      what: "Per-day view counts behind Trending",
-      total: int(views?.total),
-      day: int(views?.day),
-      newest: null,
       newestDay: null,
     },
   ];

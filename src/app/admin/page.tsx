@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { fmtDate } from "@/lib/format/money";
-import { needsAttention } from "@/lib/jobs/health";
+import { needsAttention, notRunYet } from "@/lib/jobs/health";
 import { jobHealth } from "@/server/admin/health";
 import { dashboardStats } from "@/server/admin/queries";
 
@@ -29,6 +29,7 @@ function Card({
 export default async function AdminHome() {
   const [s, jobs] = await Promise.all([dashboardStats(), jobHealth()]);
   const attention = jobs.filter((j) => needsAttention(j.assessment.status));
+  const waiting = jobs.filter((j) => notRunYet(j.assessment.status, j.spec));
   const u = s.users;
   const l = s.listings;
   const m = s.models;
@@ -52,9 +53,11 @@ export default async function AdminHome() {
           label="Job health"
           value={attention.length === 0 ? "OK" : attention.length}
           sub={
-            attention.length === 0
-              ? "every scheduled job ran on time"
-              : `need attention: ${attention.map((j) => j.spec.label).join(", ")}`
+            attention.length
+              ? `need attention: ${attention.map((j) => j.spec.label).join(", ")}`
+              : waiting.length
+                ? `not run yet: ${waiting.map((j) => j.spec.label).join(", ")}`
+                : "every scheduled job ran on time"
           }
           href="/admin/health"
         />

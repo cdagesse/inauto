@@ -1,7 +1,14 @@
 import Link from "next/link";
 import { Pager } from "@/components/admin/pager";
-import { fmtDate } from "@/lib/format/money";
-import { JOBS, needsAttention, statusLabel, statusTone, type JobStatus } from "@/lib/jobs/health";
+import { fmtDateTime } from "@/lib/format/money";
+import {
+  JOBS,
+  needsAttention,
+  notRunYet,
+  statusLabel,
+  statusTone,
+  type JobStatus,
+} from "@/lib/jobs/health";
 import {
   dataFreshness,
   jobHealth,
@@ -53,6 +60,8 @@ export default async function AdminHealth({
     listRuns({ job, status, all, page }),
   ]);
   const attention = jobs.filter((j) => needsAttention(j.assessment.status));
+  const waiting = jobs.filter((j) => notRunYet(j.assessment.status, j.spec));
+  const names = (list: typeof jobs) => list.map((j) => j.spec.label).join(", ");
   const qs = new URLSearchParams();
   if (job) qs.set("job", job);
   if (status) qs.set("status", status);
@@ -62,15 +71,16 @@ export default async function AdminHealth({
   return (
     <div>
       <p className="sub" style={{ marginTop: 4 }}>
-        {attention.length === 0
-          ? `Every job is healthy as of ${fmtDate(now)}.`
-          : `${attention.length === 1 ? "One job needs" : `${attention.length} jobs need`} attention: ${attention
-              .map((j) => j.spec.label)
-              .join(", ")}.`}
+        {attention.length
+          ? `${attention.length === 1 ? "One job needs" : `${attention.length} jobs need`} attention: ${names(attention)}.`
+          : waiting.length
+            ? `No failures. Not run yet: ${names(waiting)}.`
+            : `Every job is healthy as of ${fmtDateTime(now)}.`}
       </p>
       {sources.config.dryRun ? (
         <div className="panel health-warn" role="status">
-          Jobs are in dry-run mode: every run pulls data but writes nothing. Set JOBS_DRY_RUN to
+          Jobs are in dry-run mode: no Visor or Old Cars Data calls are made and nothing new is
+          written, so runs only re-check what is already stored. Set JOBS_DRY_RUN to
           &quot;false&quot; in Vercel to go live.
         </div>
       ) : null}
@@ -140,8 +150,8 @@ export default async function AdminHealth({
                   calls, {num(s.errors7)} errors, {num(s.rows7)} rows
                 </div>
                 <div className="hint mono">
-                  Last call {s.last ? fmtDate(s.last) : "never"} · last success{" "}
-                  {s.lastOk ? fmtDate(s.lastOk) : "none this week"}
+                  Last call {s.last ? fmtDateTime(s.last) : "never"} · last success{" "}
+                  {s.lastOk ? fmtDateTime(s.lastOk) : "none this week"}
                 </div>
               </div>
             );
@@ -157,7 +167,7 @@ export default async function AdminHealth({
             <div className="flags">
               <Flag on={sources.config.cron} label="cron secret" />
               <Flag on={sources.config.blob} label="uploads" />
-              <Flag on={sources.config.vitu} label="vitu nmvtis" />
+              <Flag on={sources.config.nmvtis} label="vitu nmvtis" />
               <Flag on={sources.config.mvr} label="vitu mvr" />
               <Flag on={sources.config.assistant} label="assistant" />
             </div>
@@ -180,7 +190,7 @@ export default async function AdminHealth({
                     <td className="mono">{f.source}</td>
                     <td className="mono">{f.endpoint}</td>
                     <td className="n mono">{f.status}</td>
-                    <td className="mono">{fmtDate(f.at)}</td>
+                    <td className="mono">{fmtDateTime(f.at)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -210,7 +220,7 @@ export default async function AdminHealth({
                   </td>
                   <td className="n mono">{num(d.total)}</td>
                   <td className="n mono">{d.day == null ? "" : num(d.day)}</td>
-                  <td className="mono">{d.newest ? fmtDate(d.newest) : (d.newestDay ?? "")}</td>
+                  <td className="mono">{d.newest ? fmtDateTime(d.newest) : (d.newestDay ?? "")}</td>
                 </tr>
               ))}
             </tbody>
@@ -270,7 +280,7 @@ export default async function AdminHealth({
                 runs.rows.map((r) => (
                   <tr key={r.id}>
                     <td className="mono">
-                      <Link href={`/admin/health/${r.id}`}>{fmtDate(r.startedAt)}</Link>
+                      <Link href={`/admin/health/${r.id}`}>{fmtDateTime(r.startedAt)}</Link>
                     </td>
                     <td className="mono">{r.name}</td>
                     <td>

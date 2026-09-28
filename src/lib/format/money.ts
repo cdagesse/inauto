@@ -30,6 +30,19 @@ export const isUsd = (currency: string | null | undefined) =>
 /** Miles with thousands separators and no unit: 48210 → "48,210"; null → "n/a". */
 export const mi = (v: number | null | undefined) =>
   v == null ? "n/a" : Math.round(v).toLocaleString("en-US");
+/** "Mar 4, 2026, 3:05 PM EDT" style timestamp in New York time, or "" when missing. */
+export const fmtDateTime = (d: Date | string | null | undefined) =>
+  d
+    ? new Date(d).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        timeZone: "America/New_York",
+        timeZoneName: "short",
+      })
+    : "";
 /** "Mar 4, 2026" style date, or "" when missing. */
 export const fmtDate = (d: Date | string | null | undefined) =>
   d

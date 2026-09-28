@@ -9,6 +9,7 @@ import {
   fmtDuration,
   jobSpec,
   needsAttention,
+  notRunYet,
   statusTone,
 } from "@/lib/jobs/health";
 
@@ -102,6 +103,9 @@ describe("assessJob", () => {
     expect(statusTone("running")).toBe("accent");
     expect(needsAttention("unfinished")).toBe(true);
     expect(needsAttention("never")).toBe(false);
+    expect(notRunYet("never", nightly)).toBe(true);
+    expect(notRunYet("never", backfill)).toBe(false);
+    expect(notRunYet("ok", nightly)).toBe(false);
   });
 });
 
@@ -119,7 +123,7 @@ describe("time formatting", () => {
 });
 
 describe("describeRun", () => {
-  it("sums a nightly run across models and derives rows changed", () => {
+  it("sums a nightly run across models; rows written are unknown for older summaries", () => {
     const d = describeRun(
       "nightly",
       {
@@ -148,7 +152,37 @@ describe("describeRun", () => {
     expect(d.headline).toBe(
       "2 models · Visor 50 sold, 500 active · Old Cars Data 42 auctions · 3 unmatched · 1 to review · budget stopped 1 model · pruned 125 old rows · 1 error",
     );
-    expect(d.changed).toBe(592);
+    expect(d.changed).toBeNull();
+  });
+
+  it("counts rows actually written when the summary records them", () => {
+    const d = describeRun(
+      "nightly",
+      {
+        models: [
+          {
+            model: "bmw/m3",
+            visorSold: 40,
+            visorActive: 300,
+            ocdAuctions: 12,
+            inserted: { sold: 3, active: 300, auctions: 0 },
+          },
+          {
+            model: "porsche/911",
+            visorSold: 10,
+            visorActive: 200,
+            ocdAuctions: 30,
+            inserted: { sold: 0, active: 0, auctions: 5 },
+          },
+        ],
+        errors: [],
+      },
+      null,
+    );
+    expect(d.headline).toBe(
+      "2 models · Visor 50 sold, 500 active · Old Cars Data 42 auctions · 308 new rows written",
+    );
+    expect(d.changed).toBe(308);
   });
 
   it("describes live auctions, backfills and closes", () => {
@@ -186,6 +220,10 @@ describe("describeRun", () => {
     ).toBe(
       "past 30 days · pulled 7,789 · 7,789 added or updated · 2,893 matched to catalog · 2,893 auction results stored",
     );
+    expect(describeRun("backfill-auctions:live", null, null)).toEqual({
+      headline: "no details recorded",
+      changed: null,
+    });
     expect(describeRun("close-auctions", { closed: 0, sold: 0, ended: 0, ids: [] }, null)).toEqual({
       headline: "nothing due",
       changed: 0,

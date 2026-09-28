@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { fmtDate } from "@/lib/format/money";
+import { fmtDateTime } from "@/lib/format/money";
 import { baseName, jobSpec, summaryList, summaryObject } from "@/lib/jobs/health";
 import { getRun } from "@/server/admin/health";
 
@@ -11,14 +11,16 @@ const text = (v: unknown) => (typeof v === "string" ? v : "");
 /** Already shown in the run header. */
 const HEADER_KEYS = new Set(["jobRunId", "dryRun", "startedAt", "finishedAt"]);
 
-/** Top-level numbers, strings and booleans of a summary, in a definition list. */
-function KeyValues({ data }: { data: Record<string, unknown> }) {
-  const entries = Object.entries(data).filter(
+/** Top-level numbers, strings and booleans of a summary; arrays and objects are in the raw JSON. */
+function primitiveEntries(data: Record<string, unknown>): [string, unknown][] {
+  return Object.entries(data).filter(
     ([k, v]) =>
       !HEADER_KEYS.has(k) &&
       (typeof v === "number" || typeof v === "string" || typeof v === "boolean" || v === null),
   );
-  if (!entries.length) return null;
+}
+
+function KeyValues({ entries }: { entries: [string, unknown][] }) {
   return (
     <dl className="kv">
       {entries.map(([k, v]) => (
@@ -86,11 +88,14 @@ export default async function AdminRun({ params }: { params: Promise<{ id: strin
   const base = baseName(run.name);
   const s = summaryObject(run.summary);
   const errors = summaryList(s, "errors").map(String);
-  if (run.error && !errors.includes(run.error)) errors.unshift(run.error);
+  // Jobs that keep an errors array also join it into the error column; only fall back when the array is empty.
+  if (run.error && !errors.length) errors.unshift(run.error);
   const models = summaryList(s, "models").map(summaryObject);
   const processed = summaryList(s, "processed").map(summaryObject);
   const ids = summaryList(s, "ids").map(summaryObject);
   const failed = summaryList(s, "failed").map(String);
+  const counts = primitiveEntries(s);
+  const pruned = primitiveEntries(summaryObject(s.pruned));
 
   return (
     <div>
@@ -116,8 +121,8 @@ export default async function AdminRun({ params }: { params: Promise<{ id: strin
         </div>
         <div className="detail">{run.headline}</div>
         <div className="hint mono">
-          Started {fmtDate(run.startedAt)}
-          {run.finishedAt ? ` · finished ${fmtDate(run.finishedAt)}` : " · not finished"}
+          Started {fmtDateTime(run.startedAt)}
+          {run.finishedAt ? ` · finished ${fmtDateTime(run.finishedAt)}` : " · not finished"}
           {run.duration ? ` · took ${run.duration}` : ""}
           {run.changed != null ? ` · ${run.changed.toLocaleString("en-US")} changed` : ""}
         </div>
@@ -200,18 +205,20 @@ export default async function AdminRun({ params }: { params: Promise<{ id: strin
         </section>
       ) : null}
 
-      <section style={{ paddingTop: 20 }}>
-        <h2 className="sec">Counts</h2>
-        <KeyValues data={s} />
-        {Object.keys(summaryObject(s.pruned)).length ? (
-          <>
-            <h3 className="sec" style={{ fontSize: 15, marginTop: 14 }}>
-              Retention
-            </h3>
-            <KeyValues data={summaryObject(s.pruned)} />
-          </>
-        ) : null}
-      </section>
+      {counts.length || pruned.length ? (
+        <section style={{ paddingTop: 20 }}>
+          <h2 className="sec">Counts</h2>
+          {counts.length ? <KeyValues entries={counts} /> : null}
+          {pruned.length ? (
+            <>
+              <h3 className="sec" style={{ fontSize: 15, marginTop: 14 }}>
+                Retention
+              </h3>
+              <KeyValues entries={pruned} />
+            </>
+          ) : null}
+        </section>
+      ) : null}
 
       <section style={{ paddingTop: 20 }}>
         <details>
