@@ -62,7 +62,7 @@ export default async function HomePage() {
           <div className="search" role="search">
             <SearchBox size="hero" placeholder="Search a make or model, e.g. Mercedes S63" />
           </div>
-          <p className="note" style={{ marginTop: 8 }}>
+          <p className="note hero-hint" style={{ marginTop: 8 }}>
             Start with the make. Pick a model and we build its market report from dealer sales and
             auction results.
           </p>
