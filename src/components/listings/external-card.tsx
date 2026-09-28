@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { isUsd, mi, money } from "@/components/account/money";
+import { isUsd, mi, money } from "@/lib/format/money";
 import { BrandLogo } from "@/components/site/brand-logo";
 import { placeLine } from "@/lib/geo";
 import { effectiveStatus, outcomeLabel, priceLabel } from "@/lib/sources/status";

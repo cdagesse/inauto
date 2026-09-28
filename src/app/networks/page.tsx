@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireSignedIn } from "@/components/account/require-signin";
-import { fmtDate } from "@/components/account/money";
+import { fmtDate } from "@/lib/format/money";
 import { CreateNetworkForm } from "@/components/networks/create-network-form";
 import { listMyNetworks } from "@/server/queries/networks";
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { mi, usd } from "@/components/account/money";
+import { mi, usd } from "@/lib/format/money";
 import { ADDONS, buildCart, ONLINE_STEPS, type PurchaseOptions } from "@/lib/purchase/pricing";
 import { createPurchase } from "@/server/purchases";
 import { DocUpload } from "./doc-upload";

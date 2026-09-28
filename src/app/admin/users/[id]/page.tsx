@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
-import { fmtDate, mi, usd } from "@/components/account/money";
+import { fmtDate, mi, usd } from "@/lib/format/money";
 import { Flash } from "@/components/admin/flash";
 import { StatusPill } from "@/components/admin/status-pill";
 import { setUserRoleForm, setUserStatusForm, adminDeleteListingForm } from "@/server/admin/actions";

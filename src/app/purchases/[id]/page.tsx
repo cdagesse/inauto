@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { fmtDate, mi, usd } from "@/components/account/money";
+import { fmtDate, mi, usd } from "@/lib/format/money";
 import { requireSignedIn } from "@/components/account/require-signin";
 import { PurchaseResponse } from "@/components/listings/purchase-response";
 import { ADDONS, ONLINE_STEPS } from "@/lib/purchase/pricing";

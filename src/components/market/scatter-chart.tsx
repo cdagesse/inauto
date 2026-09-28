@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import type { MarketSnapshot } from "@/lib/market/types";
-import { mi, niceTicks, seriesVar, usd, usdK } from "./format";
+import { niceTicks, seriesVar } from "./format";
+import { mi, usd, usdK } from "@/lib/format/money";
 import { useWidth } from "./use-width";
 
 type Tip = { x: number; y: number; html: React.ReactNode };

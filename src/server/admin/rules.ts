@@ -16,7 +16,7 @@ export interface TargetUser {
   status: Status;
 }
 
-export const STATUS_LABEL: Record<Status, string> = {
+const STATUS_LABEL: Record<Status, string> = {
   active: "Active",
   disabled: "Disabled",
   blocked: "Blocked",

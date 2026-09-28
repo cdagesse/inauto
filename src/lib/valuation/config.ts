@@ -75,7 +75,7 @@ export interface YearOverride {
   note: string;
 }
 
-export const yearOverrides: Record<string, YearOverride> = {
+const yearOverrides: Record<string, YearOverride> = {
   "997.2:2011": {
     useYear: 2010,
     note: "This estimate is for the 3.8 L car. A 2011 RS 4.0 (600 built) trades at $600,000 and up and needs a specialist appraisal.",

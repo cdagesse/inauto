@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { mi, usd } from "@/components/account/money";
+import { mi, usd } from "@/lib/format/money";
 import { BrandLogo } from "@/components/site/brand-logo";
 import { CardPhoto } from "./card-photo";
 import { Countdown } from "./countdown";

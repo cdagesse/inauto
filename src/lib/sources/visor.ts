@@ -229,4 +229,3 @@ export function createVisorClient(o: VisorClientOptions) {
     },
   };
 }
-export type VisorClient = ReturnType<typeof createVisorClient>;

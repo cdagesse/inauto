@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { mi, usd } from "@/components/account/money";
+import { mi, usd } from "@/lib/format/money";
 import { Flash } from "@/components/admin/flash";
 import { Pager } from "@/components/admin/pager";
 import { reassignGenerationForm, reviewRowsForm } from "@/server/admin/actions";

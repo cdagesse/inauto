@@ -1,6 +1,7 @@
 import type { MarketSnapshot } from "@/lib/market/types";
 import type { ValuationConfig } from "./config";
-import { median, round500, usd, valuate } from "./engine";
+import { usd } from "@/lib/format/money";
+import { median, round500, valuate } from "./engine";
 import type { PriceGuidance, PriceVerdict, ValuationInputs } from "./types";
 
 export const VERDICT_THRESHOLDS = { tooLow: -0.12, low: -0.04, fair: 0.06, high: 0.15 } as const;

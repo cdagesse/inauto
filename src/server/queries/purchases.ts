@@ -112,16 +112,3 @@ export async function listInquiriesForSeller(sellerId: string) {
     .orderBy(desc(inquiries.createdAt))
     .limit(100);
 }
-
-/** Counts for the owner bar. */
-export async function countOpenForListing(listingId: string) {
-  const [p] = await db
-    .select({ n: sql<number>`count(*)::int` })
-    .from(purchases)
-    .where(and(eq(purchases.listingId, listingId), eq(purchases.status, "submitted")));
-  const [q] = await db
-    .select({ n: sql<number>`count(*)::int` })
-    .from(inquiries)
-    .where(and(eq(inquiries.listingId, listingId), sql`${inquiries.readAt} is null`));
-  return { purchases: Number(p?.n ?? 0), inquiries: Number(q?.n ?? 0) };
-}

@@ -37,10 +37,3 @@ export const purchaseSchema = z.object({
   /** The buyer confirms they read the online safeguards. */
   acknowledged: z.boolean(),
 });
-export type PurchaseInput = z.infer<typeof purchaseSchema>;
-
-export const sellerDetailsSchema = z.object({
-  legalName: z.string().trim().max(120).optional(),
-  address: z.string().trim().max(300).optional(),
-  phone: z.string().trim().max(40).optional(),
-});

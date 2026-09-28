@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { fmtDate } from "@/components/account/money";
+import { fmtDate } from "@/lib/format/money";
 import { Flash } from "@/components/admin/flash";
 import { StatusPill } from "@/components/admin/status-pill";
 import { createModelForm } from "@/server/admin/actions";

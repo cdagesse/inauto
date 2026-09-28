@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useSyncExternalStore } from "react";
-import { money } from "@/components/account/money";
+import { money } from "@/lib/format/money";
 import { CardPhoto } from "@/components/listings/card-photo";
 
 const KEY = "inauto-recent";

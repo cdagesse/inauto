@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { fmtDate } from "@/components/account/money";
+import { fmtDate } from "@/lib/format/money";
 import { Pager } from "@/components/admin/pager";
 import { listAudit } from "@/server/admin/queries";
 import { normalizeQuery, parsePage } from "@/server/admin/rules";

@@ -1,5 +1,3 @@
-import type { MarketSnapshot } from "@/lib/market/types";
-
 export type ColorClass = "std" | "spec" | "pts";
 export type Condition = "ex" | "good" | "fair";
 export type History = "clean" | "acc";
@@ -94,5 +92,3 @@ export interface PriceGuidance {
   comps: CompRow[];
   thin: boolean;
 }
-
-export type Snapshot = MarketSnapshot;
