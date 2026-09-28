@@ -3657,7 +3657,6 @@ header.site-head {
   padding: 10px 16px;
 }
 .buy-search input:focus {
-  outline: none;
   border-color: var(--ink-3);
 }
 .buy-search input::-webkit-search-cancel-button {

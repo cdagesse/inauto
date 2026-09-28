@@ -1,0 +1,3 @@
+-- Trigram indexes for the Buy page search (`<<%` on the same immutable expression the queries use).
+CREATE INDEX IF NOT EXISTS "external_listing_search_trgm_idx" ON "external_listing" USING gin (lower(coalesce("year"::text, '') || ' ' || coalesce("make", '') || ' ' || coalesce("model", '') || ' ' || coalesce("trim", '') || ' ' || coalesce("title", '')) gin_trgm_ops);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "listing_search_trgm_idx" ON "listing" USING gin (lower(coalesce("year"::text, '') || ' ' || coalesce("make", '') || ' ' || coalesce("model", '') || ' ' || coalesce("trim", '') || ' ' || coalesce("title", '')) gin_trgm_ops);
