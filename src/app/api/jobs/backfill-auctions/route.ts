@@ -1,7 +1,6 @@
-import { timingSafeEqual } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
-import { env } from "@/env/server";
+import { requireCron } from "@/lib/cron-auth";
 import { backfillAuctions } from "@/jobs/backfill-auctions";
 
 export const runtime = "nodejs";
@@ -13,18 +12,9 @@ export const dynamic = "force-dynamic";
  *   POST /api/jobs/backfill-auctions?part=live
  *   POST /api/jobs/backfill-auctions?part=past&days=30
  */
-function authorized(req: Request): boolean {
-  const secret = env.CRON_SECRET;
-  if (!secret) return false;
-  const a = Buffer.from(req.headers.get("authorization") ?? "");
-  const b = Buffer.from(`Bearer ${secret}`);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
-
 export async function POST(req: Request) {
-  if (!env.CRON_SECRET)
-    return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 503 });
-  if (!authorized(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const denied = requireCron(req);
+  if (denied) return denied;
   const url = new URL(req.url);
   const part = url.searchParams.get("part") === "past" ? "past" : "live";
   const days = Number(url.searchParams.get("days") ?? 30);
