@@ -20,6 +20,7 @@ export function BuySearch({
   const [value, setValue] = useState(initial);
   const [pending, start] = useTransition();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const input = useRef<HTMLInputElement>(null);
   /** The query this box last sent to the URL. */
   const [applied, setApplied] = useState(initial);
   // A navigation that changed q elsewhere (a chip, Clear all) updates the box; one this
@@ -34,8 +35,23 @@ export function BuySearch({
     }
   }
 
+  // The debounce timer fires after later renders; it reads the newest params and applied
+  // query through refs (written in effects, never during render) so a navigation that
+  // landed meanwhile is carried along rather than overwritten.
+  const latest = useRef({ params, applied });
+  useEffect(() => {
+    latest.current = { params, applied };
+  }, [params, applied]);
+  // A query changed elsewhere cancels a pending debounce for the old text.
+  useEffect(() => {
+    if (initial.trim() !== latest.current.applied.trim() && timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
+  }, [initial]);
+
   const href = (q: string) => {
-    const p = new URLSearchParams(params);
+    const p = new URLSearchParams(latest.current.params);
     const trimmed = q.trim();
     if (trimmed) p.set("q", trimmed);
     else p.delete("q");
@@ -43,7 +59,8 @@ export function BuySearch({
     return s ? `/listings?${s}` : "/listings";
   };
   const go = (q: string) => {
-    if (q.trim() === applied.trim()) return;
+    if (q.trim() === latest.current.applied.trim()) return;
+    latest.current = { ...latest.current, applied: q };
     setApplied(q);
     start(() => router.replace(href(q), { scroll: false }));
   };
@@ -74,6 +91,7 @@ export function BuySearch({
       </label>
       <input
         id="buy-q"
+        ref={input}
         type="search"
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -90,6 +108,7 @@ export function BuySearch({
             setValue("");
             if (timer.current) clearTimeout(timer.current);
             go("");
+            input.current?.focus();
           }}
           aria-label="Clear search"
         >
@@ -97,8 +116,9 @@ export function BuySearch({
         </button>
       ) : null}
       <span className="hint" aria-live="polite">
-        {pending ? "Searching…" : "Typos are fine."}
+        {pending ? "Searching…" : ""}
       </span>
+      <span className="hint">Typos are fine.</span>
     </form>
   );
 }

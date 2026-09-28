@@ -24,7 +24,7 @@ import {
   encodeExternalCursor,
   type ExternalPhase,
 } from "@/lib/listings/external-cursor";
-import { SEARCH_MIN_SIMILARITY, searchTokens } from "@/lib/listings/search";
+import { searchTokens } from "@/lib/listings/search";
 import { isPlatformKey, type PlatformKey } from "@/lib/sources/platforms";
 
 export const EXTERNAL_PAGE_SIZE = 24;
@@ -126,18 +126,12 @@ export async function listExternalListings(filter: ExternalFilter = {}) {
   const decoded = tokens.length ? null : decodeExternalCursor(filter.cursor);
   const cur = decoded?.phase === phase ? decoded : null;
   const conds = [] as ReturnType<typeof eq>[];
-  const haystack = sql`lower(concat_ws(' ', ${externalListings.year}, ${externalListings.make}, ${externalListings.model}, ${externalListings.trim}, ${externalListings.title}))`;
-  const esc = (s: string) => s.replace(/[%_\\]/g, (c) => `\\${c}`);
-  for (const t of tokens)
-    conds.push(
-      or(
-        sql`${haystack} like ${`%${esc(t)}%`}`,
-        sql`word_similarity(${t}, ${haystack}) >= ${SEARCH_MIN_SIMILARITY}`,
-      )!,
-    );
+  // Same immutable expression as external_listing_search_trgm_idx (migration 0014), so `<<%` uses it.
+  const haystack = sql`lower(coalesce(${externalListings.year}::text, '') || ' ' || coalesce(${externalListings.make}, '') || ' ' || coalesce(${externalListings.model}, '') || ' ' || coalesce(${externalListings.trim}, '') || ' ' || coalesce(${externalListings.title}, ''))`;
+  for (const t of tokens) conds.push(sql`${t} <<% ${haystack}`);
   const relevance = tokens.length
     ? sql`(${sql.join(
-        tokens.map((t) => sql`word_similarity(${t}, ${haystack})`),
+        tokens.map((t) => sql`strict_word_similarity(${t}, ${haystack})`),
         sql` + `,
       )}) desc`
     : null;
@@ -211,6 +205,8 @@ export async function listExternalListings(filter: ExternalFilter = {}) {
     rows: page.map(asCard),
     nextCursor:
       rows.length > limit && !relevance ? encodeExternalCursor(phase, page[page.length - 1]) : null,
+    /** A search shows its best matches only; true when more matched than fit the page. */
+    truncated: !!relevance && rows.length > limit,
   };
 }
 

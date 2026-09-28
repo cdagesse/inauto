@@ -15,7 +15,7 @@ import {
   serviceOrders,
   users,
 } from "@/db/schema";
-import { SEARCH_MIN_SIMILARITY, searchTokens } from "@/lib/listings/search";
+import { searchTokens } from "@/lib/listings/search";
 import { type ListingFilter, minimumIncrement, PAGE_SIZE } from "../listings-schema";
 import { type ActionResult, fail, toError } from "../result";
 
@@ -145,17 +145,12 @@ export async function listActiveListings(
   >`coalesce(${listings.askingPrice}, (select max(${bids.amount}) from ${bids} where ${bids.listingId} = ${listings.id}))`;
   if (filter.priceMin != null) conds.push(sql`${priceExpr} >= ${filter.priceMin}`);
   if (filter.priceMax != null) conds.push(sql`${priceExpr} <= ${filter.priceMax}`);
-  const haystack = sql`lower(concat_ws(' ', ${listings.year}, ${listings.make}, ${listings.model}, ${listings.trim}, ${listings.title}))`;
-  for (const t of tokens)
-    conds.push(
-      or(
-        sql`${haystack} like ${`%${escapeLike(t)}%`}`,
-        sql`word_similarity(${t}, ${haystack}) >= ${SEARCH_MIN_SIMILARITY}`,
-      )!,
-    );
+  // Same immutable expression as listing_search_trgm_idx (migration 0014), so `<<%` uses it.
+  const haystack = sql`lower(coalesce(${listings.year}::text, '') || ' ' || coalesce(${listings.make}, '') || ' ' || coalesce(${listings.model}, '') || ' ' || coalesce(${listings.trim}, '') || ' ' || coalesce(${listings.title}, ''))`;
+  for (const t of tokens) conds.push(sql`${t} <<% ${haystack}`);
   const relevance = tokens.length
     ? sql`(${sql.join(
-        tokens.map((t) => sql`word_similarity(${t}, ${haystack})`),
+        tokens.map((t) => sql`strict_word_similarity(${t}, ${haystack})`),
         sql` + `,
       )}) desc`
     : null;
@@ -196,9 +191,10 @@ export async function listActiveListings(
     )
     .limit(size + 1);
   const hasMore = rows.length > size && !relevance;
+  const truncated = !!relevance && rows.length > size;
   const page = hasMore ? rows.slice(0, size) : rows;
   const last = page[page.length - 1];
-  return { rows: page, nextCursor: hasMore && last ? encodeCursor(last) : null };
+  return { rows: page, nextCursor: hasMore && last ? encodeCursor(last) : null, truncated };
 }
 
 /** Full listing for a viewer, or null when it does not exist or is not visible to them. */

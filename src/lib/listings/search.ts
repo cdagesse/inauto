@@ -4,7 +4,12 @@
  * within trigram word-similarity distance, so "porshe gt3" still finds a Porsche 911 GT3.
  */
 
-/** Trigram word similarity below which a token does not match (pg_trgm word_similarity). */
+/**
+ * Strict trigram word similarity below which a token does not match. The queries use the
+ * `<<%` operator, whose threshold is pg_trgm.strict_word_similarity_threshold (0.5 by
+ * default, the same value), so a GIN trigram index can serve the predicate. Strict scoring
+ * credits whole-word extents only: "porshe" vs "porsche" scores 0.5, "gt3" vs "gt4" 0.33.
+ */
 export const SEARCH_MIN_SIMILARITY = 0.5;
 
 /** At most this many words are matched; the rest of a long query is ignored. */

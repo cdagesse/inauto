@@ -2,7 +2,7 @@ import "server-only";
 import { and, asc, count, eq, isNotNull, sql } from "drizzle-orm";
 import { cache } from "react";
 import { db } from "@/db";
-import { externalListings, generations, listings, makes, models } from "@/db/schema";
+import { externalListings, generations, listings, makes, models, users } from "@/db/schema";
 
 export interface SellMake {
   name: string;
@@ -114,11 +114,15 @@ export async function listTrims(makeSlug: string, modelSlug: string): Promise<Tr
     db
       .select({ name: listings.trim, n: count() })
       .from(listings)
+      // Only cars the public Buy page shows: active, not private-network, seller in good standing.
       .where(
         and(
           sql`lower(${listings.make}) = ${m.makeName.toLowerCase()}`,
           sql`lower(${listings.model}) = ${m.name.toLowerCase()}`,
           isNotNull(listings.trim),
+          eq(listings.status, "active"),
+          sql`${listings.type} <> 'private'`,
+          sql`${listings.sellerId} in (select ${users.id} from ${users} where ${users.status} = 'active')`,
         ),
       )
       .groupBy(listings.trim),

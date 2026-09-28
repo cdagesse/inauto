@@ -26,6 +26,7 @@ export function ListingsFeed({
   externalFilter,
   showPhotos,
   fallbackHref,
+  searchTruncated = false,
 }: {
   own: Page<ListingFeedRow>;
   external: Page<ExternalCardData>;
@@ -46,6 +47,8 @@ export function ListingsFeed({
     | null;
   showPhotos: boolean;
   fallbackHref: string | null;
+  /** A search that matched more than it shows; the footer says so instead of "every car". */
+  searchTruncated?: boolean;
 }) {
   const [items, setItems] = useState<Item[]>(() => [
     ...own.rows.map((row): Item => ({ kind: "own", row })),
@@ -131,7 +134,11 @@ export function ListingsFeed({
             </a>
           </noscript>
         ) : items.length > 0 ? (
-          <span className="hint">That is every car that matches.</span>
+          <span className="hint">
+            {searchTruncated
+              ? "Showing the best matches. Add a year, make or trim to narrow it down."
+              : "That is every car that matches."}
+          </span>
         ) : null}
       </div>
     </>

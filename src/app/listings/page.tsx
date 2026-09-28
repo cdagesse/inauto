@@ -61,7 +61,7 @@ export default async function ListingsPage({
   const [own, external, liveCounts, makes] = await Promise.all([
     showOwn
       ? listActiveListings(session?.user?.id ?? null, filter)
-      : Promise.resolve({ rows: [], nextCursor: null }),
+      : Promise.resolve({ rows: [], nextCursor: null, truncated: false }),
     showExternal
       ? listExternalListings({
           source: source === "all" ? undefined : source,
@@ -72,7 +72,7 @@ export default async function ListingsPage({
           // A search is one page of best matches, so it gets more room.
           limit: filter.q ? 36 : source === "all" ? 12 : 24,
         })
-      : Promise.resolve({ rows: [], nextCursor: null }),
+      : Promise.resolve({ rows: [], nextCursor: null, truncated: false }),
     countLiveBySource().catch(soft("listings live counts", {} as Record<string, number>)),
     listSellMakes().catch(soft("listings makes", [])),
   ]);
@@ -310,7 +310,13 @@ export default async function ListingsPage({
         </div>
         {!past && showExternal && external.rows.length === 0 ? (
           <div className="panel empty-shelf" style={{ marginBottom: 16 }}>
-            <b className="display">No live platform auctions right now.</b>
+            <b className="display">
+              {filter.q
+                ? `Nothing matches “${filter.q}”`
+                : chips.length && liveTotal > 0
+                  ? "Nothing live matches these filters"
+                  : "No live platform auctions right now."}
+            </b>
             <p className="note" style={{ margin: "4px 0 10px" }}>
               {liveTotal === 0
                 ? "Auctions that have ended move to Past as soon as they close. The platform feed refreshes hourly while its data budget allows."
@@ -339,6 +345,7 @@ export default async function ListingsPage({
             key={`${source}|${filter.when ?? ""}|${result ?? ""}|${filter.type ?? ""}|${JSON.stringify(carFilter)}|${filter.cursor ?? ""}|${xcursor ?? ""}`}
             own={own}
             external={external}
+            searchTruncated={own.truncated || external.truncated}
             ownFilter={
               showOwn ? { type: filter.type, ...carFilter, when: filter.when, result } : null
             }

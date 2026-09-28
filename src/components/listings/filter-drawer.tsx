@@ -83,7 +83,10 @@ export function FilterDrawer({
   // Trims seen on the market, keyed by make/model slug.
   const [trimsByKey, setTrimsByKey] = useState<Record<string, TrimOption[]>>({});
   const [form, setForm] = useState<Form>(() => ({
-    make: s(current.make),
+    // Older links may carry a make in another case; use the catalog's spelling when it is one.
+    make:
+      makes.find((m) => m.name.toLowerCase() === s(current.make).toLowerCase())?.name ??
+      s(current.make),
     model: s(current.model),
     trim: s(current.trim),
     yearMin: s(current.yearMin),
@@ -110,8 +113,9 @@ export function FilterDrawer({
   const trims = (trimKey && trimsByKey[trimKey]) || [];
   const loadingTrims = !!trimKey && !(trimKey in trimsByKey);
   // A value from an older link that is not in the list stays selectable so it is not lost.
-  const extra = (list: string[], v: string) =>
-    v && !list.some((x) => x.toLowerCase() === v.toLowerCase()) ? [v] : [];
+  // <select> matches its value exactly, so anything not spelled as the list has it gets
+  // its own option rather than falling back to the placeholder.
+  const extra = (list: string[], v: string) => (v && !list.includes(v) ? [v] : []);
 
   // Models for the chosen make (catalog makes only; free text still works).
   // Only while the drawer is open: /listings?make=… must not cost a server
@@ -351,7 +355,7 @@ export function FilterDrawer({
               <option value="">
                 {!form.model
                   ? "Pick a model first"
-                  : loadingTrims
+                  : loadingTrims || loadingModels
                     ? "Loading trims…"
                     : trims.length
                       ? "Any trim"
