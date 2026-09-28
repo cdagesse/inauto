@@ -16,12 +16,12 @@ describe("liveUpdatedSince", () => {
   it("looks back 36 hours when there is no good run yet", () => {
     expect(liveUpdatedSince(null, now)).toEqual(ago(36 * HOUR));
   });
-  it("never narrows below 45 minutes (one cron gap plus the overlap) even right after a run", () => {
-    expect(liveUpdatedSince(ago(15 * 60_000), now)).toEqual(ago(45 * 60_000));
-    expect(liveUpdatedSince(ago(30 * 60_000), now)).toEqual(ago(60 * 60_000));
+  it("never narrows below 20 minutes (one cron gap plus the overlap) even right after a run", () => {
+    expect(liveUpdatedSince(ago(15 * 60_000), now)).toEqual(ago(20 * 60_000));
+    expect(liveUpdatedSince(ago(30 * 60_000), now)).toEqual(ago(35 * 60_000));
   });
-  it("covers a gap with 30 minutes of overlap", () => {
-    expect(liveUpdatedSince(ago(5 * HOUR), now)).toEqual(ago(5.5 * HOUR));
+  it("covers a gap with 5 minutes of overlap", () => {
+    expect(liveUpdatedSince(ago(5 * HOUR), now)).toEqual(ago(5 * HOUR + 5 * 60_000));
   });
   it("caps a long outage at 36 hours", () => {
     expect(liveUpdatedSince(ago(4 * DAY), now)).toEqual(ago(36 * HOUR));

@@ -73,8 +73,8 @@ export interface CatalogModel {
   reportStatus: string;
 }
 
-/** Pages per 15-minute live sweep; a routine 45-minute window is 1 to 2 pages. */
-export const LIVE_SWEEP_MAX_PAGES = 5;
+/** Pages per 15-minute live sweep: a 20-minute window is 1 page off-peak and about 4 at peak. */
+export const LIVE_SWEEP_MAX_PAGES = 8;
 
 export async function loadCatalog(
   db: Db,
@@ -290,7 +290,7 @@ async function pull(
           maxPages: scope === "all" ? LIVE_SWEEP_MAX_PAGES : undefined,
         });
         if (scope === "all") {
-          // Everything that changed since the last good sweep (45 minutes to 36 hours back).
+          // Everything that changed since the last good sweep (20 minutes to 36 hours back).
           const updatedSince = liveUpdatedSince(await lastGoodRun(db, "live-auctions"), now);
           log(`live: updated since ${updatedSince.toISOString()}`);
           try {
