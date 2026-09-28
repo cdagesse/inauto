@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useState } from "react";
+import { useUser } from "@clerk/nextjs";
 import { SearchBox } from "./search";
+import { ThemeToggle } from "./theme-toggle";
 
 const LINKS = [
   ["/listings", "Buy"],
@@ -17,6 +19,8 @@ const LINKS = [
 export function MobileMenu() {
   const pathname = usePathname();
   const id = useId();
+  const { user } = useUser();
+  const isAdmin = user?.publicMetadata?.role === "admin";
   // The menu is "open" only for the path it was opened on, so a route change closes it
   // without an effect.
   const [openAt, setOpenAt] = useState<string | null>(null);
@@ -71,6 +75,17 @@ export function MobileMenu() {
             </Link>
           ))}
         </nav>
+        <div className="mobile-menu-foot">
+          <ThemeToggle withLabel />
+          {isAdmin ? (
+            <Link
+              href="/admin"
+              className={`btn sm${pathname.startsWith("/admin") ? " primary" : ""}`}
+            >
+              Admin
+            </Link>
+          ) : null}
+        </div>
       </div>
     </>
   );

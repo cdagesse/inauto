@@ -9,7 +9,7 @@ function subscribe(cb: () => void) {
 }
 const isLight = () => document.documentElement.getAttribute("data-theme") === "light";
 
-export function ThemeToggle() {
+export function ThemeToggle({ withLabel = false }: { withLabel?: boolean }) {
   const light = useSyncExternalStore(subscribe, isLight, () => false);
   function toggle() {
     const next = !light;
@@ -22,7 +22,7 @@ export function ThemeToggle() {
   return (
     <button
       type="button"
-      className="btn sm icon-btn"
+      className={withLabel ? "btn sm with-icon theme-toggle" : "btn sm icon-btn theme-toggle"}
       onClick={toggle}
       aria-label={light ? "Switch to dark theme" : "Switch to light theme"}
       title={light ? "Dark theme" : "Light theme"}
@@ -47,6 +47,7 @@ export function ThemeToggle() {
           />
         </svg>
       )}
+      {withLabel ? <span className="btn-text">{light ? "Dark mode" : "Light mode"}</span> : null}
     </button>
   );
 }

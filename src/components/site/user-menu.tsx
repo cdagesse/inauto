@@ -44,7 +44,7 @@ export function UserMenu() {
   return (
     <div className="user-menu">
       {isAdmin ? (
-        <Link href="/admin" className="btn sm with-icon" aria-label="Admin">
+        <Link href="/admin" className="btn sm with-icon admin-link" aria-label="Admin">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path
               d="M12 3 4 6v5c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10V6l-8-3Z"

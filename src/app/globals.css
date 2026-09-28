@@ -3565,3 +3565,24 @@ header.site-head {
     gap: 6px;
   }
 }
+
+/* phones: theme toggle and Admin live in the menu panel */
+@media (max-width: 760px) {
+  .bar-right > .theme-toggle,
+  .bar-right .admin-link {
+    display: none;
+  }
+  .mobile-menu-foot {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding-top: 4px;
+  }
+  .bar-right .mobile-menu-foot .btn.with-icon .btn-text {
+    display: inline;
+  }
+  .bar-right .mobile-menu-foot .btn.with-icon {
+    width: auto;
+    padding-inline: 12px;
+  }
+}
