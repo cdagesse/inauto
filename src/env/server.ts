@@ -27,6 +27,10 @@ const schema = z.object({
   CRON_SECRET: optionalString,
   JOBS_DRY_RUN: optionalString,
   VISOR_API_KEY: optionalString,
+  /**
+   * Visor calls per calendar month. Refreshing the whole catalog every 14 days needs about
+   * 5,000; the first pull of a model is about 12 more. The rotation stops at 80% of this.
+   */
   VISOR_MONTHLY_BUDGET: z.coerce.number().int().positive().default(2000),
   /** Every catalog model gets a Visor refresh about this often; the nightly pulls 1/N of them. */
   VISOR_REFRESH_DAYS: z.coerce.number().int().min(1).max(90).default(14),
