@@ -109,9 +109,11 @@ class RespondAbort extends Error {}
 /**
  * Seller accepts, declines or completes a request. Completing marks the
  * listing sold and declines the listing's other open requests. Everything runs
- * in one transaction with the purchase row locked, and each write is
- * conditional on the state it expects, so two overlapping responses (or a
- * completion on a listing that already sold) cannot leave a half-applied sale.
+ * in one transaction with the listing row locked first and then the purchase
+ * row (the same order for every response, so two completions on one listing
+ * queue instead of deadlocking), and each write is conditional on the state it
+ * expects, so two overlapping responses (or a completion on a listing that
+ * already sold) cannot leave a half-applied sale.
  */
 export async function respondToPurchase(raw: unknown): Promise<ActionResult> {
   try {
@@ -121,6 +123,20 @@ export async function respondToPurchase(raw: unknown): Promise<ActionResult> {
     const d = parsed.data;
     const now = new Date();
     const listingId = await db.transaction(async (tx) => {
+      // A purchase never changes listing, so this unlocked read only finds
+      // which listing row to lock before the purchase row.
+      const [ref] = await tx
+        .select({ listingId: purchases.listingId })
+        .from(purchases)
+        .where(and(eq(purchases.id, d.id), eq(purchases.sellerId, user.id)))
+        .limit(1);
+      if (!ref) throw new RespondAbort("Request not found.");
+      const [l] = await tx
+        .select({ id: listings.id, status: listings.status })
+        .from(listings)
+        .where(and(eq(listings.id, ref.listingId), eq(listings.sellerId, user.id)))
+        .for("update");
+      if (!l) throw new RespondAbort("Request not found.");
       const [p] = await tx
         .select({
           id: purchases.id,
@@ -134,6 +150,8 @@ export async function respondToPurchase(raw: unknown): Promise<ActionResult> {
       if (!p) throw new RespondAbort("Request not found.");
       if (p.status !== "submitted" && p.status !== "accepted")
         throw new RespondAbort("This request is already closed.");
+      if (d.decision === "completed" && l.status === "sold")
+        throw new RespondAbort("This listing has already been sold.");
       const updated = await tx
         .update(purchases)
         .set({ status: d.decision, sellerNote: d.note || null, respondedAt: now })

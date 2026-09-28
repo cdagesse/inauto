@@ -48,6 +48,38 @@ export function isLegacyEvidenceUrl(s: string): boolean {
   }
 }
 
+/**
+ * The blob pathname a legacy public URL points at, so the sweep can tell that
+ * an older row still references the blob. Null for anything that is not a
+ * legacy URL to a purchases/ blob.
+ */
+export function legacyEvidencePathname(s: string): string | null {
+  if (!isLegacyEvidenceUrl(s)) return null;
+  let pathname: string;
+  try {
+    pathname = decodeURIComponent(new URL(s).pathname.slice(1));
+  } catch {
+    return null;
+  }
+  return isEvidencePathname(pathname) ? pathname : null;
+}
+
+/**
+ * Every pathname the stored upload values keep alive. A pathname references
+ * itself; a legacy public URL references the pathname it points at, since
+ * Blob listings return pathnames and would otherwise never match it.
+ */
+export function referencedEvidence(values: Iterable<string | null | undefined>): Set<string> {
+  const referenced = new Set<string>();
+  for (const v of values) {
+    if (!v) continue;
+    referenced.add(v);
+    const legacy = legacyEvidencePathname(v);
+    if (legacy) referenced.add(legacy);
+  }
+  return referenced;
+}
+
 /** The authenticated route that streams one evidence file. */
 export const evidenceHref = (purchaseId: string, slot: EvidenceSlot) =>
   `/api/purchases/${purchaseId}/evidence/${slot}`;

@@ -4,7 +4,7 @@ import { sql } from "drizzle-orm";
 import { db as defaultDb, type Db } from "@/db";
 import { purchases } from "@/db/schema";
 import { env } from "@/env/server";
-import { EVIDENCE_PREFIX, orphanedEvidence } from "@/lib/purchase/evidence";
+import { EVIDENCE_PREFIX, orphanedEvidence, referencedEvidence } from "@/lib/purchase/evidence";
 
 /** A buyer may upload evidence, leave the form and come back; keep files this long. */
 export const EVIDENCE_GRACE_MS = 2 * 86_400_000;
@@ -43,8 +43,9 @@ export async function sweepPurchaseEvidence(
     })
     .from(purchases)
     .where(sql`${purchases.uploads} <> '{}'::jsonb`);
-  const referenced = new Set<string>();
-  for (const row of rows) for (const v of [row.p, row.q, row.r]) if (v) referenced.add(v);
+  // Rows written before uploads went private hold the public URL; list()
+  // returns pathnames, so a legacy URL counts as a reference to its pathname.
+  const referenced = referencedEvidence(rows.flatMap((row) => [row.p, row.q, row.r]));
 
   let scanned = 0;
   const orphans: string[] = [];

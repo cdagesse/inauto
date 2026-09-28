@@ -5,8 +5,10 @@ import {
   isEvidencePathname,
   isEvidenceSlot,
   isLegacyEvidenceUrl,
+  legacyEvidencePathname,
   orphanedEvidence,
   ownsEvidencePathname,
+  referencedEvidence,
 } from "@/lib/purchase/evidence";
 import { purchaseSchemaFor } from "@/server/purchases-schema";
 
@@ -37,6 +39,23 @@ describe("evidence pathnames", () => {
     expect(isLegacyEvidenceUrl("http://abc.public.blob.vercel-storage.com/x.jpg")).toBe(false);
     expect(isLegacyEvidenceUrl("https://evil.example.com/x.jpg")).toBe(false);
     expect(isLegacyEvidenceUrl("purchases/u/x.jpg")).toBe(false);
+  });
+  it("recovers the pathname a legacy URL points at", () => {
+    expect(
+      legacyEvidencePathname(
+        "https://abc.public.blob.vercel-storage.com/purchases/user_1/title-front-Xy12.jpg",
+      ),
+    ).toBe("purchases/user_1/title-front-Xy12.jpg");
+    expect(
+      legacyEvidencePathname(
+        "https://abc.public.blob.vercel-storage.com/purchases/user_1/my%20title.jpg",
+      ),
+    ).toBe(null);
+    expect(
+      legacyEvidencePathname("https://abc.public.blob.vercel-storage.com/listings/user_1/x.jpg"),
+    ).toBe(null);
+    expect(legacyEvidencePathname("https://evil.example.com/purchases/user_1/x.jpg")).toBe(null);
+    expect(legacyEvidencePathname("purchases/user_1/x.jpg")).toBe(null);
   });
   it("maps slots to the streaming route", () => {
     expect(isEvidenceSlot("title-front")).toBe(true);
@@ -101,5 +120,26 @@ describe("orphanedEvidence", () => {
       2 * day,
     );
     expect(out).toEqual(["purchases/u1/title-back-b.jpg"]);
+  });
+  it("keeps a blob that only a legacy public URL references", () => {
+    const referenced = referencedEvidence([
+      "https://abc.public.blob.vercel-storage.com/purchases/u1/title-front-a.jpg",
+      "purchases/u1/title-back-b.jpg",
+      null,
+      undefined,
+    ]);
+    expect(referenced.has("purchases/u1/title-front-a.jpg")).toBe(true);
+    expect(referenced.has("purchases/u1/title-back-b.jpg")).toBe(true);
+    const out = orphanedEvidence(
+      [
+        { pathname: "purchases/u1/title-front-a.jpg", uploadedAt: old },
+        { pathname: "purchases/u1/title-back-b.jpg", uploadedAt: old },
+        { pathname: "purchases/u1/ownership-c.mp4", uploadedAt: old },
+      ],
+      referenced,
+      now,
+      2 * day,
+    );
+    expect(out).toEqual(["purchases/u1/ownership-c.mp4"]);
   });
 });

@@ -92,7 +92,12 @@ export function isPriceGuidance(v: unknown): v is PriceGuidance {
     Number.isFinite(r.lo) &&
     Number.isFinite(r.hi) &&
     (g.auctionMedian == null || Number.isFinite(g.auctionMedian)) &&
+    Number.isFinite(g.suggestedAsking) &&
+    Number.isFinite(g.askingPrice) &&
+    Number.isFinite(g.deltaPct) &&
     typeof g.verdict === "string" &&
-    typeof g.message === "string"
+    typeof g.message === "string" &&
+    Array.isArray(g.comps) &&
+    typeof g.thin === "boolean"
   );
 }

@@ -94,4 +94,12 @@ describe("isPriceGuidance", () => {
       }),
     ).toBe(false);
   });
+  it("rejects a partial row missing the fields the page does not read yet", () => {
+    const g: Record<string, unknown> = {
+      ...priceGuidance(snapshot, { ...base, askingPrice: 300_000 }),
+    };
+    expect(isPriceGuidance({ ...g, comps: undefined })).toBe(false);
+    expect(isPriceGuidance({ ...g, deltaPct: undefined })).toBe(false);
+    expect(isPriceGuidance({ ...g, thin: "no" })).toBe(false);
+  });
 });
