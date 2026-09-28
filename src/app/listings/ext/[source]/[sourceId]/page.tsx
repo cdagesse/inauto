@@ -59,11 +59,12 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
           ? `${outcomeLabel(status)}, high bid ${amount}`
           : outcomeLabel(status);
   const when = l.endsAt ? `, ${status === "live" ? "closes " : ""}${fmtDate(l.endsAt)}` : "";
-  const description = `${carLine([
+  const car = carLine([
     [l.year, l.make, l.model].filter(Boolean).join(" "),
     l.miles != null ? `${mi(l.miles)} mi` : null,
     placeLine(l.location, l.country),
-  ])}. ${outcome} on ${l.sourceName}${when}.`;
+  ]);
+  const description = `${car ? `${car}. ` : ""}${outcome} on ${l.sourceName}${when}.`;
   return {
     title,
     robots: { index: false, follow: false },

@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
 
+/** The site's own 1200×630 card, served by src/app/opengraph-image.tsx. */
+export const SITE_PREVIEW_IMAGE = { url: "/opengraph-image", width: 1200, height: 630 };
+
 /**
  * Open Graph and Twitter tags for a page that stands for one car, so a link shared in
  * iMessage, Slack or a social post shows the car's photo and a one-line summary rather
- * than the site's generic card. Only an https photo is offered; previews are fetched by
- * the other side, so a dead or hotlink-protected photo simply leaves the card without one.
+ * than the site's generic card. Only an https photo is offered; without one the site's
+ * own card stands in, since a page-level openGraph block replaces the root's images.
+ * Previews are fetched by the other side, so a dead or hotlink-protected photo simply
+ * leaves the card without one.
  */
 export function carPreview(input: {
   title: string;
@@ -14,20 +19,24 @@ export function carPreview(input: {
   path: string;
 }): Pick<Metadata, "description" | "openGraph" | "twitter"> {
   const photo = input.photos.find((p): p is string => !!p && /^https:\/\//i.test(p)) ?? null;
+  const image = photo
+    ? { url: photo, alt: input.title }
+    : { ...SITE_PREVIEW_IMAGE, alt: input.title };
   return {
     description: input.description,
     openGraph: {
+      siteName: "UrCar",
       title: input.title,
       description: input.description,
       type: "website",
       url: input.path,
-      ...(photo ? { images: [{ url: photo, alt: input.title }] } : {}),
+      images: [image],
     },
     twitter: {
-      card: photo ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       title: input.title,
       description: input.description,
-      ...(photo ? { images: [photo] } : {}),
+      images: [image.url],
     },
   };
 }

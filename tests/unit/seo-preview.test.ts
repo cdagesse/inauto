@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { carLine, carPreview } from "@/lib/seo/preview";
+import { SITE_PREVIEW_IMAGE, carLine, carPreview } from "@/lib/seo/preview";
 
 describe("carPreview", () => {
   it("offers the first https photo as the large preview image", () => {
@@ -15,6 +15,7 @@ describe("carPreview", () => {
       path: "/listings/ext/bat/14910716",
     });
     expect(m.openGraph).toMatchObject({
+      siteName: "UrCar",
       title: "2000 Porsche 911 Carrera · UrCar",
       url: "/listings/ext/bat/14910716",
       images: [{ url: "https://cdn.example/b.jpg" }],
@@ -26,10 +27,10 @@ describe("carPreview", () => {
     expect(m.description).toContain("Sold for $37,500");
   });
 
-  it("leaves the image out, and the card small, when there is no usable photo", () => {
+  it("falls back to the site card when there is no usable photo", () => {
     const m = carPreview({ title: "t", description: "d", photos: [], path: "/listings/x" });
-    expect(m.openGraph).not.toHaveProperty("images");
-    expect(m.twitter).toMatchObject({ card: "summary" });
+    expect(m.openGraph).toMatchObject({ siteName: "UrCar", images: [SITE_PREVIEW_IMAGE] });
+    expect(m.twitter).toMatchObject({ card: "summary_large_image", images: ["/opengraph-image"] });
   });
 });
 
