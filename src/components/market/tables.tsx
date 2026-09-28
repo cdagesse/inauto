@@ -1,4 +1,5 @@
 import type { MarketSnapshot } from "@/lib/market/types";
+import { headlineFigures } from "@/lib/market/figures";
 import { dayLabel, longDate, median } from "./format";
 import { mi, usd } from "@/lib/format/money";
 
@@ -65,8 +66,9 @@ export function AuctionTables({
         n: s.length,
         aucMed: median(s.map((r) => r.price)),
         aucMiles: median(s.map((r) => r.miles)),
-        dealerMed: g.median,
-        dealerMiles: g.medianMiles,
+        // No dealer sales: nothing to compare the hammer against.
+        dealerMed: g.sold > 0 ? g.median : null,
+        dealerMiles: g.sold > 0 ? g.medianMiles : null,
       };
     })
     .filter((r) => r.n > 0);
@@ -87,7 +89,10 @@ export function AuctionTables({
           </thead>
           <tbody>
             {rows.map((r) => {
-              const gap = ((r.aucMed ?? 0) - r.dealerMed) / r.dealerMed;
+              const gap =
+                r.aucMed != null && r.dealerMed != null && r.dealerMed > 0
+                  ? (r.aucMed - r.dealerMed) / r.dealerMed
+                  : null;
               return (
                 <tr key={r.code} className={r.code === selected ? "sel" : undefined}>
                   <td>{r.code}</td>
@@ -96,10 +101,19 @@ export function AuctionTables({
                   <td className="n">{mi(r.aucMiles)}</td>
                   <td className="n">{usd(r.dealerMed)}</td>
                   <td className="n">{mi(r.dealerMiles)}</td>
-                  <td className="n mono" style={{ color: gap >= 0 ? "var(--up)" : "var(--down)" }}>
-                    {gap >= 0 ? "+" : ""}
-                    {(gap * 100).toFixed(0)}%
-                  </td>
+                  {gap == null ? (
+                    <td className="n mono" style={{ color: "var(--ink-3)" }}>
+                      n/a
+                    </td>
+                  ) : (
+                    <td
+                      className="n mono"
+                      style={{ color: gap >= 0 ? "var(--up)" : "var(--down)" }}
+                    >
+                      {gap >= 0 ? "+" : ""}
+                      {(gap * 100).toFixed(0)}%
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -107,11 +121,22 @@ export function AuctionTables({
         </table>
       </div>
       <p className="note">
-        Read the gap with care: most of the {snapshot.order[0]} auction cars were Weissach-package
-        cars, and a few auction results per generation is a small sample. The 991 cars come in 5 to
-        7 percent under dealer asks at similar miles, roughly the room you&apos;d expect between a
-        dealer&apos;s asking price and a hammer price. The 997.1 figure is a single 33,780-mile car
-        and says little about the generation.
+        {snapshot.model.slug === "911-gt3-rs" ? (
+          <>
+            Read the gap with care: most of the {snapshot.order[0]} auction cars were
+            Weissach-package cars, and a few auction results per generation is a small sample. The
+            991 cars come in 5 to 7 percent under dealer asks at similar miles, roughly the room
+            you&apos;d expect between a dealer&apos;s asking price and a hammer price. The 997.1
+            figure is a single 33,780-mile car and says little about the generation.
+          </>
+        ) : (
+          <>
+            Read the gap with care: a few auction results per generation is a small sample, and
+            auction cars often differ in spec, mileage and condition from the dealer median. A
+            hammer price typically lands a little under a dealer&apos;s asking price for a similar
+            car.
+          </>
+        )}
       </p>
       <div className="tw" style={{ marginTop: 18 }}>
         <table>
@@ -200,6 +225,7 @@ export function GenerationGuide({ snapshot }: { snapshot: MarketSnapshot }) {
     <div className="guide">
       {[...snapshot.order].reverse().map((code) => {
         const g = snapshot.generations[code];
+        const f = headlineFigures(g);
         return (
           <div className="g" key={code}>
             <h3>{g.name}</h3>
@@ -213,12 +239,12 @@ export function GenerationGuide({ snapshot }: { snapshot: MarketSnapshot }) {
               <dd>{g.gearbox}</dd>
               <dt>Sticker</dt>
               <dd>{usd(g.msrp)}</dd>
-              <dt>Sells for</dt>
+              <dt>{f.viaAuctions ? "Hammers at" : "Sells for"}</dt>
               <dd>
-                <b>{usd(g.median)}</b>
+                <b>{f.median > 0 ? usd(f.median) : "n/a"}</b>
               </dd>
               <dt>Multiple</dt>
-              <dd>{g.multiple.toFixed(2)}×</dd>
+              <dd>{f.multiple ? `${f.multiple.toFixed(2)}×` : "n/a"}</dd>
             </dl>
             {g.extra && (
               <div className="note" style={{ fontSize: 12 }}>

@@ -75,6 +75,10 @@ function auctionGap(
   }
   const m = median(sold.map((r) => r.price)) as number;
   const dealerMedian = snapshot.generations[generation].median;
+  // No dealer sales to measure the gap against: keep the default rather than divide by zero.
+  if (!(dealerMedian > 0)) {
+    return { gap: cfg["auction.gap_default"], n: sold.length, estimated: true };
+  }
   return { gap: (m - dealerMedian) / dealerMedian, n: sold.length, estimated: false };
 }
 
@@ -153,12 +157,23 @@ export function valuate(
       (r) => r.year === useYear && r.generation === inputs.generation,
     );
     const y = yearRow && yearRow.n >= cfg["thin.year_min_sales"] ? yearRow : null;
-    const med = y ? y.median : gen.median;
-    const medMiles = y ? y.medianMiles : gen.medianMiles;
+    // A generation with no dealer sales yet is valued from its hammer prices, lifted to a
+    // retail-equivalent by the default auction gap. Its by-year rows are hammer prices too.
+    const auctionsOnly = gen.sold === 0 && (gen.auctionMedian ?? 0) > 0;
+    const lift = auctionsOnly ? 1 / (1 + cfg["auction.gap_default"]) : 1;
+    const med = (y ? y.median : auctionsOnly ? (gen.auctionMedian ?? 0) : gen.median) * lift;
+    let medMiles = y
+      ? y.medianMiles
+      : auctionsOnly
+        ? (gen.auctionMedianMiles ?? 0)
+        : gen.medianMiles;
+    if (auctionsOnly && !(medMiles > 0)) medMiles = miles; // no mileage read: no mileage adjustment
     base = med * Math.pow((miles + offset) / (medMiles + offset), cfg["thin.miles_elasticity"]);
     loMul = cfg["thin.lo"];
     hiMul = cfg["thin.hi"];
-    basis = `${y ? y.n : gen.sold} dealer sales (thin)`;
+    basis = auctionsOnly
+      ? `${y ? y.n : gen.auctionSold} auction sales (thin)`
+      : `${y ? y.n : gen.sold} dealer sales (thin)`;
     thin = true;
   }
 

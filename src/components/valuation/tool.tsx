@@ -170,7 +170,11 @@ export function ValuationTool({
   const override = yearOverride(gen, form.year);
   const best = v.recommendation.channel;
   const gapTxt = v.auction.gapEstimated
-    ? `no recent ${G.name} auctions to measure against, so we assume ${Math.round(-v.auction.gap * 100)}% under dealer`
+    ? `${
+        G.sold === 0 && v.auction.gapSampleSize > 0
+          ? `no ${G.name} dealer sales to measure the gap against`
+          : `no recent ${G.name} auctions to measure against`
+      }, so we assume ${Math.round(-v.auction.gap * 100)}% under dealer`
     : `${G.name} auctions have run ${Math.abs(Math.round(v.auction.gap * 100))}% ${v.auction.gap < 0 ? "under" : "over"} dealer prices (${v.auction.gapSampleSize} sales)`;
   const conf = v.thin
     ? `Only a handful of recent ${G.name} sales, so treat this as a starting point and get an appraisal.`
@@ -359,8 +363,8 @@ export function ValuationTool({
               <dd className="tot">{usd(v.dealer.net)}</dd>
             </dl>
             <div className="cap">
-              Paid in a day or two, no fees. Dealers are sharpest when a generation turns fast;{" "}
-              {G.name} cars sell in a median {G.daysToSell} days.
+              Paid in a day or two, no fees. Dealers are sharpest when a generation turns fast
+              {G.daysToSell > 0 ? `; ${G.name} cars sell in a median ${G.daysToSell} days.` : "."}
             </div>
             {sell ? (
               <a className="btn sm chan-cta" href={`${listHref}&type=classified`}>

@@ -86,6 +86,75 @@ describe("worked example (prototype data as of Sep 19, 2026)", () => {
   });
 });
 
+describe("auction-only generation", () => {
+  const code = snapshot.order[0];
+  const g = snapshot.generations[code];
+  const only: MarketSnapshot = {
+    ...snapshot,
+    generations: {
+      ...snapshot.generations,
+      [code]: {
+        ...g,
+        sold: 0,
+        median: 0,
+        lo: 0,
+        hi: 0,
+        medianMiles: 0,
+        daysToSell: 0,
+        auctionSold: 9,
+        auctionMedian: 184_000,
+        auctionMedianMiles: 4_000,
+      },
+    },
+    dealerSales: { ...snapshot.dealerSales, [code]: [] },
+    byYear: snapshot.byYear.filter((r) => r.generation !== code),
+  };
+  const inputs: ValuationInputs = {
+    generation: code,
+    year: snapshot.years[code][0],
+    miles: 4_000,
+    packages: [],
+    colorClass: "std",
+    condition: "ex",
+    history: "clean",
+  };
+
+  it("values from hammer prices lifted by the default gap, with finite channel figures", () => {
+    const v = valuate(only, inputs);
+    expect(v.thin).toBe(true);
+    expect(v.basis).toBe("9 auction sales (thin)");
+    expect(v.marketValue).toBe(round500(184_000 / (1 + DEFAULT_CONFIG["auction.gap_default"])));
+    for (const n of [
+      v.range.lo,
+      v.range.hi,
+      v.auction.expectedHammer,
+      v.auction.net,
+      v.dealer.offer,
+      v.privateSale.asking,
+      v.recommendation.edgeOverDealer,
+    ])
+      expect(Number.isFinite(n)).toBe(true);
+    expect(v.recommendation.reason).not.toMatch(/NaN|Infinity/);
+  });
+
+  it("still applies the mileage curve when the auction cars carry a mileage read", () => {
+    const high = valuate(only, { ...inputs, miles: 40_000 });
+    const low = valuate(only, inputs);
+    expect(high.marketValue).toBeLessThan(low.marketValue);
+    const noMiles = valuate(
+      {
+        ...only,
+        generations: {
+          ...only.generations,
+          [code]: { ...only.generations[code], auctionMedianMiles: 0 },
+        },
+      },
+      { ...inputs, miles: 40_000 },
+    );
+    expect(noMiles.marketValue).toBe(low.marketValue);
+  });
+});
+
 describe("adjustments", () => {
   it("Weissach applies only where offered", () => {
     const w992 = valuate(snapshot, { ...car992, packages: ["weissach"] });

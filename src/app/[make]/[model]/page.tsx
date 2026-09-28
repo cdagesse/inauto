@@ -5,7 +5,8 @@ import { getMarketSnapshot, listMarketModels } from "@/lib/market/source";
 import { DealerListingsSection } from "@/components/market/dealer-listings-section";
 import { ModelMarket } from "@/components/market/model-market";
 import { GenerationGuide } from "@/components/market/tables";
-import { longDate } from "@/components/market/format";
+import { longDate, monthYear } from "@/components/market/format";
+import { headlineFigures } from "@/lib/market/figures";
 import { usd } from "@/lib/format/money";
 import { BrandLogo } from "@/components/site/brand-logo";
 import { getCatalogModel } from "@/server/queries/catalog";
@@ -34,8 +35,9 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
     };
   }
   const top = s.generations[s.order[0]];
+  const head = headlineFigures(top);
   const title = `${s.make.name} ${s.model.name} prices and market report`;
-  const description = `${s.totals.dealerSales} dealer sales and ${s.totals.auctionSales} auction results. ${top.name} median ${usd(top.median)}, ${s.totals.activeNow} for sale now. Data through ${longDate(s.dataThrough)}. Value your ${s.model.shortName} and see whether to auction it, sell to a dealer, or list it yourself.`;
+  const description = `${s.totals.dealerSales} dealer sales and ${s.totals.auctionSales} auction results. ${top.name} median ${head.viaAuctions ? "hammer price " : ""}${usd(head.median)}, ${s.totals.activeNow} for sale now. Data through ${longDate(s.dataThrough)}. Value your ${s.model.shortName} and see whether to auction it, sell to a dealer, or list it yourself.`;
   return {
     title,
     description,
@@ -90,11 +92,12 @@ export default async function ModelPage({ params }: { params: Promise<Params> })
     );
   }
   const top = s.generations[s.order[0]];
+  const head = headlineFigures(top);
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Dataset",
     name: `${s.make.name} ${s.model.name} market data`,
-    description: `Dealer sale prices, active listings and auction results for the ${s.make.name} ${s.model.name}, aggregated by generation. ${top.name} median sold price ${usd(top.median)}.`,
+    description: `Dealer sale prices, active listings and auction results for the ${s.make.name} ${s.model.name}, aggregated by generation. ${top.name} median ${head.viaAuctions ? "hammer" : "sold"} price ${usd(head.median)}.`,
     url: `/${s.make.slug}/${s.model.slug}`,
     temporalCoverage: `${s.dealerSince}/${s.dataThrough}`,
     spatialCoverage: "United States",
@@ -201,11 +204,6 @@ export default async function ModelPage({ params }: { params: Promise<Params> })
       </footer>
     </>
   );
-}
-
-function monthYear(d: string) {
-  const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  return `${MON[+d.slice(5, 7) - 1]} ${d.slice(0, 4)}`;
 }
 
 function ninetyDayWindow(through: string) {

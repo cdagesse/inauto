@@ -15,6 +15,7 @@ export const MON = [
 export const monthLabel = (m: string) => MON[+m.slice(5, 7) - 1];
 export const dayLabel = (d: string) => `${MON[+d.slice(5, 7) - 1]} ${+d.slice(8, 10)}`;
 export const longDate = (d: string) => `${dayLabel(d)}, ${d.slice(0, 4)}`;
+export const monthYear = (d: string) => `${MON[+d.slice(5, 7) - 1]} ${d.slice(0, 4)}`;
 
 export function niceTicks(lo: number, hi: number, n: number): number[] {
   const span = hi - lo;

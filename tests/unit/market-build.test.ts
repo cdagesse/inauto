@@ -149,6 +149,95 @@ describe("buildSnapshot", () => {
     expect(b2.generations["991.2"].sold).toBe(built.generations["991.2"].sold);
   });
 
+  const auction = (
+    i: number,
+    year: number,
+    price: number | null,
+    status: "sold" | "rnm",
+    endedAt = new Date(Date.UTC(2026, 8 - (i % 5), 10)),
+  ) => ({
+    source: "bat",
+    sourceId: `a${i}`,
+    url: null,
+    year,
+    miles: 40_000 + i * 1000,
+    hammerPrice: price,
+    status,
+    endedAt,
+    packages: [],
+    generationId: "g1",
+    excludedReason: null,
+  });
+  const datsun = (auctions: ReturnType<typeof auction>[]): SnapshotInput => ({
+    make: { name: "Datsun", slug: "datsun" },
+    model: { name: "240Z", slug: "240z", shortName: null, parentLine: null },
+    generations: [
+      {
+        id: "g1",
+        code: "S30",
+        name: "S30",
+        yearStart: 1970,
+        yearEnd: 1973,
+        originalMsrp: 3600,
+        engine: null,
+        hp: null,
+        gearbox: null,
+        notes: null,
+        packages: [],
+        sortOrder: 0,
+      },
+    ],
+    dealerSales: [],
+    dealerActive: [],
+    auctions,
+    now: new Date("2026-09-25T00:00:00Z"),
+  });
+
+  it("reads hammer prices for a model with auctions and no dealer sales", () => {
+    const s = buildSnapshot(
+      datsun([
+        ...Array.from({ length: 12 }, (_, i) =>
+          auction(i, 1970 + (i % 4), 50_000 + i * 2000, "sold"),
+        ),
+        auction(90, 1971, 30_000, "rnm"),
+      ]),
+    );
+    const g = s.generations.S30;
+    expect(g.sold).toBe(0);
+    expect(g.median).toBe(0);
+    expect(g.auctionSold).toBe(12);
+    expect(g.auctionOffered).toBe(13);
+    expect(g.auctionMedian).toBe(61_000);
+    expect(g.auctionLo).toBe(55_500);
+    expect(g.auctionHi).toBe(66_500);
+    expect(g.auctionMedianMiles).toBe(45_500);
+    expect(g.auctionN90).toBeGreaterThan(0);
+    expect(s.byYearBasis).toBe("auction");
+    expect(s.byYear.map((r) => r.year)).toEqual([1973, 1972, 1971, 1970]);
+    expect(s.byYear.reduce((n, r) => n + r.n, 0)).toBe(12);
+    expect(s.byYear.every((r) => r.generation === "S30")).toBe(true);
+    expect(s.totals).toEqual({ dealerSales: 0, auctionSales: 12, activeNow: 0 });
+    const sept = s.monthly.find((m) => m.month === "2026-09");
+    expect(sept?.auctionSeries?.S30?.n).toBe(3);
+    expect(sept?.series.S30).toBeUndefined();
+    // Auctions start in May, inside the trend's oldest month? No: the window runs Feb to Sep,
+    // and the first auction is in May, so the oldest month is only partially covered.
+    expect(s.monthly[0]!.partial).toBe(true);
+  });
+
+  it("marks the oldest trend month whole when auctions cover it", () => {
+    const s = buildSnapshot(
+      datsun(
+        Array.from({ length: 10 }, (_, i) =>
+          auction(i, 1971, 50_000, "sold", new Date(Date.UTC(2025, 11 + i, 15))),
+        ),
+      ),
+    );
+    expect(s.monthly[0]!.month).toBe("2026-02");
+    expect(s.monthly[0]!.partial).toBe(false);
+    expect(s.monthly.every((m) => m.auctionSeries?.S30?.n === 1)).toBe(true);
+  });
+
   it("handles an empty model without throwing", () => {
     const empty = buildSnapshot({
       make: { name: "Mercedes-Benz", slug: "mercedes-benz" },
@@ -180,6 +269,8 @@ describe("buildSnapshot", () => {
     expect(empty.totals).toEqual({ dealerSales: 0, auctionSales: 0, activeNow: 0 });
     expect(empty.monthly).toHaveLength(8);
     expect(empty.chartSeries).toEqual([]);
+    expect(empty.byYearBasis).toBe("dealer");
+    expect(empty.generations.all.auctionSold).toBe(0);
     expect(empty.model.shortName).toBe("S63 AMG");
     expect(empty.model.parentLine).toBe("Mercedes-Benz");
     expect(empty.dataThrough).toBe("2026-09-25");

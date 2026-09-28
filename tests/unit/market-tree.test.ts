@@ -103,6 +103,43 @@ describe("aggregate", () => {
     expect(s.trend[1]!.index).toBe(97.5);
   });
 
+  it("reads from auctions when a model has no dealer sales yet", () => {
+    const only = snap(
+      ["Datsun", "datsun"],
+      "240Z",
+      [{ code: "S30", median: 0, last90: 0, prior90: 0, n90: 0 }],
+      [
+        { month: "2026-08", series: {} },
+        { month: "2026-09", series: {} },
+      ],
+      { dealerSales: 0, auctionSales: 40, activeNow: 0 },
+    );
+    const g = only.generations["S30"]!;
+    Object.assign(g, {
+      auctionSold: 40,
+      auctionMedian: 60_000,
+      auctionLast90: 66_000,
+      auctionPrior90: 60_000,
+      auctionN90: 12,
+    });
+    only.monthly[0]!.auctionSeries = { S30: { n: 5, median: 60_000 } };
+    only.monthly[1]!.auctionSeries = { S30: { n: 7, median: 66_000 } };
+    const s = aggregate([only], ["2026-08", "2026-09"]);
+    expect(s.auctionModels).toBe(1);
+    expect(s.medianPrice).toBe(60_000);
+    expect(s.change90).toBeCloseTo(0.1, 6);
+    expect(s.n90).toBe(12);
+    expect(s.trend.map((t) => t.n)).toEqual([5, 7]);
+    expect(s.trend[1]!.index).toBe(110);
+    // Mixed with a dealer-backed model, the dealer one keeps its own reading.
+    const mixed = aggregate([only, miata], ["2026-08", "2026-09"]);
+    expect(mixed.auctionModels).toBe(1);
+    expect(mixed.medianPrice).toBe(45_000);
+    // Volume bars stay dealer-only in a mix so they match the "Dealer sales" column.
+    const miataOnly = aggregate([miata], ["2026-08", "2026-09"]);
+    expect(mixed.trend.map((t) => t.n)).toEqual(miataOnly.trend.map((t) => t.n));
+  });
+
   it("leaves the index null for months without sales", () => {
     const s = aggregate([ferrari], ["2026-07", "2026-08"]);
     expect(s.trend[0]!.index).toBeNull();

@@ -4,6 +4,7 @@ import type { MarketSnapshot } from "./types";
 import { listModelsWithData } from "./queries";
 import { loadStoredSnapshot, loadStoredSummaries, rebuildSnapshot } from "./store";
 import gt3rs from "@/data/fixtures/porsche-911-gt3-rs.json";
+import { headlineOf } from "./tree";
 
 /**
  * Market snapshot source. Postgres first (dealer_sale, dealer_active,
@@ -59,8 +60,7 @@ export interface MarketModelSummary {
 function summarize(
   s: Pick<MarketSnapshot, "make" | "model" | "totals" | "order" | "generations">,
 ): MarketModelSummary {
-  const first = s.order.map((c) => s.generations[c]).find((g) => g && g.median > 0);
-  return { make: s.make, model: s.model, totals: s.totals, headline: first?.median ?? 0 };
+  return { make: s.make, model: s.model, totals: s.totals, headline: headlineOf(s) };
 }
 
 /** Every model snapshot with data (plus the fixture fallback), in catalog order. */

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { longDate } from "@/components/market/format";
-import { NodeCard, NodeKpis, TrendPair } from "@/components/market/market-nodes";
+import { NodeCard, NodeKpis, TrendPair, salesNoun } from "@/components/market/market-nodes";
 import { BrandLogo } from "@/components/site/brand-logo";
 import { SEGMENTS, segmentByKey } from "@/data/segments";
 import { getMarketTree } from "@/lib/market/tree-source";
@@ -72,8 +72,8 @@ export default async function SegmentPage({ params }: { params: Promise<Params> 
           <section>
             <h2 className="sec">Volume and price trend</h2>
             <p className="sub">
-              Monthly dealer sales across every reported {node.short} model, and a sales-weighted
-              price index where 100 is each generation&apos;s normal price.
+              Monthly {salesNoun(node.stats)} across every reported {node.short} model, and a
+              sales-weighted price index where 100 is each generation&apos;s normal price.
             </p>
             <TrendPair stats={node.stats} wide />
           </section>

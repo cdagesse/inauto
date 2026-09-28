@@ -9,6 +9,7 @@ import { valuate } from "@/lib/valuation/engine";
 import type { ValuationResult } from "@/lib/valuation/types";
 import { mi, usd, usdK } from "@/lib/format/money";
 import { priceDelta } from "./market-summary-lib";
+import { headlineFigures } from "@/lib/market/figures";
 import { ScatterChart } from "./scatter-chart";
 import { TrendChart } from "./trend-chart";
 
@@ -41,8 +42,10 @@ export function MarketSummary({
   const initial = snapshot.generations[generation] ? generation : snapshot.order[0];
   const [sel, setSel] = useState(initial);
   const g = snapshot.generations[sel];
-  const ch = g.prior90 > 0 ? (g.last90 - g.prior90) / g.prior90 : 0;
-  const up = ch >= 0;
+  // Dealer figures, or hammer figures for a generation with no dealer sales yet.
+  const f = headlineFigures(g);
+  const ch = f.change;
+  const up = ch != null && ch >= 0;
   const dealerSinceLabel = fmtShort(snapshot.dealerSince);
   const bands = snapshot.milesBands[sel];
   const bandMax = bands ? Math.max(...bands.map((b) => b.median)) : 0;
@@ -111,48 +114,70 @@ export function MarketSummary({
       <div className="kpis">
         <div className="kpi">
           <div className="l">
-            Median sold price · {g.name}
-            {g.thin && (
+            {f.viaAuctions ? "Median hammer price" : "Median sold price"} · {g.name}
+            {f.thin && (
               <>
                 {" "}
                 <span className="pill">Thin sample</span>
               </>
             )}
           </div>
-          <div className="v">{usd(g.median)}</div>
+          <div className="v">{usd(f.median)}</div>
           <div className="s">
-            Typical range {usd(g.lo)} to {usd(g.hi)}
+            Typical range {usd(f.lo)} to {usd(f.hi)}
           </div>
         </div>
         <div className="kpi">
           <div className="l">90-day change</div>
-          <div className={`v chg ${up ? "up" : "down"}`}>
-            {up ? "+" : ""}
-            {(ch * 100).toFixed(1)}%
-          </div>
+          {ch == null ? (
+            <div className="v">n/a</div>
+          ) : (
+            <div className={`v chg ${up ? "up" : "down"}`}>
+              {up ? "+" : ""}
+              {(ch * 100).toFixed(1)}%
+            </div>
+          )}
           <div className="s">
-            {usdK(g.prior90)} to {usdK(g.last90)} median, {g.n90} sales in last 90 days
+            {ch == null
+              ? "Not enough sales to read a change"
+              : `${usdK(f.prior90)} to ${usdK(f.last90)} median, ${f.n90} ${
+                  f.viaAuctions ? "auction " : ""
+                }sales in last 90 days`}
           </div>
         </div>
-        <div className="kpi">
-          <div className="l">Sales since {dealerSinceLabel}</div>
-          <div className="v">{g.sold}</div>
-          <div className="s">Median {g.daysToSell} days to sell</div>
-        </div>
+        {f.viaAuctions ? (
+          <div className="kpi">
+            <div className="l">Auction sales</div>
+            <div className="v">{f.sold}</div>
+            <div className="s">No dealer sales pulled yet</div>
+          </div>
+        ) : (
+          <div className="kpi">
+            <div className="l">Sales since {dealerSinceLabel}</div>
+            <div className="v">{g.sold}</div>
+            <div className="s">Median {g.daysToSell} days to sell</div>
+          </div>
+        )}
         <div className="kpi">
           <div className="l">For sale now</div>
           <div className="v">{g.active}</div>
-          <div className="s">Asking {usdK(g.activeMedian)} median</div>
+          <div className="s">
+            {g.active > 0 ? `Asking ${usdK(g.activeMedian)} median` : "No dealer listings pulled"}
+          </div>
         </div>
         <div className="kpi">
           <div className="l">Median miles</div>
-          <div className="v">{mi(g.medianMiles)}</div>
-          <div className="s">Listed now {mi(g.activeMedianMiles)}</div>
+          <div className="v">{mi(f.miles)}</div>
+          <div className="s">
+            {f.viaAuctions ? "On sold auction cars" : `Listed now ${mi(g.activeMedianMiles)}`}
+          </div>
         </div>
         <div className="kpi">
           <div className="l">vs. original sticker</div>
-          <div className="v">{g.multiple.toFixed(2)}×</div>
-          <div className="s">MSRP {usdK(g.msrp)} median</div>
+          <div className="v">{f.multiple ? `${f.multiple.toFixed(2)}×` : "n/a"}</div>
+          <div className="s">
+            {g.msrp ? `MSRP ${usdK(g.msrp)} median` : "No original MSRP on file"}
+          </div>
         </div>
       </div>
 
