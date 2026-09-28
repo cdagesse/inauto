@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchOcdRules } from "@/lib/sources/ocd";
+import { matchOcdRules, ocdLinesFor } from "@/lib/sources/ocd";
 
 // Two catalog models share one Old Cars Data alias and differ only by years.
 const rules = [
@@ -41,5 +41,125 @@ describe("matchOcdRules with model years", () => {
     expect(matchOcdRules(rules, row(null), (id) => years[id])).toBe("c8");
     expect(matchOcdRules(rules, row(1965))).toBe("c8");
     expect(matchOcdRules(rules, row(1965), () => undefined)).toBe("c8");
+  });
+});
+
+describe("matchOcdRules chassis-code fallback", () => {
+  const rules = [
+    {
+      modelId: "carrera",
+      source: "ocd",
+      rawMake: "Porsche",
+      rawModel: "911",
+      rawTrimPattern: "Carrera",
+    },
+    { modelId: "gt3", source: "ocd", rawMake: "Porsche", rawModel: "911", rawTrimPattern: "GT3" },
+    { modelId: "g964", source: "ocd", rawMake: "Porsche", rawModel: "964", rawTrimPattern: null },
+  ];
+  const years: Record<string, { start: number | null; end: number | null }> = {
+    carrera: { start: 1984, end: null },
+    gt3: { start: 2004, end: null },
+    g964: { start: 1989, end: 1994 },
+  };
+  const yf = (id: string) => years[id];
+
+  it("retries a chassis-coded line under the family line", () => {
+    const row = {
+      rawMake: "Porsche",
+      rawModel: "996",
+      title: "41k-Mile 2000 Porsche 911 Carrera Cabriolet 6-Speed",
+      year: 2000,
+    };
+    expect(matchOcdRules(rules, row, yf)).toBe("carrera");
+    expect(
+      matchOcdRules(
+        rules,
+        { ...row, rawModel: "992", title: "2024 Porsche 911 GT3", year: 2024 },
+        yf,
+      ),
+    ).toBe("gt3");
+  });
+
+  it("prefers a rule keyed on the code itself, and leaves other makes alone", () => {
+    expect(
+      matchOcdRules(
+        rules,
+        { rawMake: "Porsche", rawModel: "964", title: "1991 Porsche 911 Carrera 2", year: 1991 },
+        yf,
+      ),
+    ).toBe("g964");
+    expect(
+      matchOcdRules(
+        rules,
+        { rawMake: "BMW", rawModel: "996", title: "2000 BMW 996 Carrera", year: 2000 },
+        yf,
+      ),
+    ).toBeNull();
+    expect(
+      matchOcdRules(
+        rules,
+        { rawMake: "Porsche", rawModel: "996", title: "2001 Porsche 911 Targa", year: 2001 },
+        yf,
+      ),
+    ).toBeNull();
+  });
+});
+
+describe("matchOcdRules keeps GTS cars off the plain Carrera", () => {
+  // Real pair in loadCatalog order: the longer pattern sorts first.
+  const rules = [
+    {
+      modelId: "carrera",
+      source: "ocd",
+      rawMake: "Porsche",
+      rawModel: "911",
+      rawTrimPattern: "Carrera !~ GTS",
+    },
+    { modelId: "gts", source: "ocd", rawMake: "Porsche", rawModel: "911", rawTrimPattern: "GTS" },
+  ];
+  const years: Record<string, { start: number | null; end: number | null }> = {
+    carrera: { start: 1984, end: null },
+    gts: { start: 2011, end: null },
+  };
+  const yf = (id: string) => years[id];
+  it("routes a chassis-coded Carrera GTS to the GTS model and a Carrera to Carrera", () => {
+    expect(
+      matchOcdRules(
+        rules,
+        {
+          rawMake: "Porsche",
+          rawModel: "991",
+          title: "2012 Porsche 911 Carrera GTS Coupe",
+          year: 2012,
+        },
+        yf,
+      ),
+    ).toBe("gts");
+    expect(
+      matchOcdRules(
+        rules,
+        {
+          rawMake: "Porsche",
+          rawModel: "996",
+          title: "2000 Porsche 911 Carrera Cabriolet",
+          year: 2000,
+        },
+        yf,
+      ),
+    ).toBe("carrera");
+  });
+});
+
+describe("ocdLinesFor", () => {
+  it("lists the family line and every code that maps to it", () => {
+    expect(
+      ocdLinesFor({ make: "Porsche", model: "911", keyword: "Carrera", excludeKeyword: null }),
+    ).toEqual(["911", "930", "964", "991", "992", "996", "997"]);
+    expect(
+      ocdLinesFor({ make: "Porsche", model: "Cayman", keyword: "GTS", excludeKeyword: null }),
+    ).toEqual(["Cayman"]);
+    expect(ocdLinesFor({ make: "BMW", model: "M3", keyword: null, excludeKeyword: null })).toEqual([
+      "M3",
+    ]);
   });
 });

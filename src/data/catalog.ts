@@ -66,7 +66,7 @@ const OCD_MAP: Record<string, OcdOverride> = {
   "Porsche|911 Turbo S": { line: "911", kw: "Turbo S" },
   "Porsche|911 Turbo": { line: "911", kw: "Turbo", not: "Turbo S" },
   "Porsche|911 Carrera GTS": { line: "911", kw: "GTS" },
-  "Porsche|911 Carrera": { line: "911", kw: "Carrera" },
+  "Porsche|911 Carrera": { line: "911", kw: "Carrera", not: "GTS" },
   "Porsche|911 S/T": { line: "911", kw: "S/T" },
   "Porsche|911 Dakar": { line: "911", kw: "Dakar" },
   "Porsche|911 R": { line: "911", kw: "911 R" },

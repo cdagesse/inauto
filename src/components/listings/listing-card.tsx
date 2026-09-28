@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { mi, usd } from "@/lib/format/money";
+import { fmtDay, mi, usd } from "@/lib/format/money";
 import { BrandLogo } from "@/components/site/brand-logo";
 import { CardPhoto } from "./card-photo";
 import { Countdown } from "./countdown";
@@ -21,12 +21,27 @@ export interface ListingCardData {
   /** Present for past listings; active listings may omit it. */
   status?: "draft" | "active" | "ended" | "sold" | "withdrawn";
   soldPrice?: number | null;
+  /** When a past listing settled; auctions fall back to their end time. */
+  closedAt?: Date | null;
 }
 
 /**
  * "2d 4h left" beyond a day, "3h 12m left" beyond an hour, "4m 09s left"
  * inside the hour, "42s left" inside the minute, "Ended" at zero.
  */
+/**
+ * When a past UrCar listing closed: the stamped close time, else an auction's end time once
+ * it has passed. Rows closed by their owner before the stamp existed show no date.
+ */
+export function closedOn(
+  l: Pick<ListingCardData, "status" | "closedAt" | "auctionEndsAt">,
+  now: number = Date.now(),
+): Date | null {
+  if (l.status !== "sold" && l.status !== "ended" && l.status !== "withdrawn") return null;
+  if (l.closedAt) return l.closedAt;
+  return l.auctionEndsAt && l.auctionEndsAt.getTime() <= now ? l.auctionEndsAt : null;
+}
+
 export function timeLeft(endsAt: Date | null, now: number = Date.now()) {
   if (!endsAt) return null;
   const ms = endsAt.getTime() - now;
@@ -44,6 +59,8 @@ export function timeLeft(endsAt: Date | null, now: number = Date.now()) {
 export function ListingCard({ l, highlight = false }: { l: ListingCardData; highlight?: boolean }) {
   const photo = l.photos[0];
   const past = l.status === "sold" || l.status === "ended" || l.status === "withdrawn";
+  const closed = closedOn(l);
+  const when = closed ? <span className="hint"> · {fmtDay(closed)}</span> : null;
   return (
     <Link
       href={`/listings/${l.id}`}
@@ -68,11 +85,17 @@ export function ListingCard({ l, highlight = false }: { l: ListingCardData; high
         </span>
         <span className="meta-side">
           {l.status === "sold" ? (
-            <span className="up">Sold</span>
+            <>
+              <span className="up">Sold</span>
+              {when}
+            </>
           ) : l.status === "ended" ? (
-            <span className="down">Not sold</span>
+            <>
+              <span className="down">Not sold</span>
+              {when}
+            </>
           ) : l.status === "withdrawn" ? (
-            "Withdrawn"
+            <>Withdrawn{when}</>
           ) : l.type === "auction" && l.auctionEndsAt ? (
             <Countdown endsAt={l.auctionEndsAt} />
           ) : null}

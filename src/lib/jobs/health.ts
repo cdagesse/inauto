@@ -98,6 +98,14 @@ export const JOBS: readonly JobSpec[] = [
     schedule: "Every 10 minutes",
   },
   {
+    name: "rematch-listings",
+    label: "Re-match listings",
+    what: "Links platform listings that had no catalog model, after an alias or matcher change; run by hand",
+    every: null,
+    grace: 0,
+    schedule: "By hand",
+  },
+  {
     name: "backfill-auctions",
     label: "Auction backfill",
     what: "One-off bulk pull of live or past auctions from Old Cars Data",
@@ -342,6 +350,16 @@ export function describeRun(name: string, summary: unknown, error: string | null
       const stop = str(s, "budgetStopped");
       if (stop) parts.push(`budget stopped: ${stop}`);
       changed = upserted + results;
+      break;
+    }
+    case "rematch-listings": {
+      const updated = num(s, "updated");
+      parts.push(
+        `${n(num(s, "scanned"))} unmatched scanned`,
+        `${n(num(s, "matched"))} now match`,
+        `${n(updated)} linked`,
+      );
+      changed = updated;
       break;
     }
     case "ended-auctions": {

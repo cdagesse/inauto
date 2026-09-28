@@ -18,6 +18,21 @@ export function effectiveStatus(
 }
 
 /** Short outcome label for a settled auction. */
+/**
+ * When a past listing ended, for a card. A platform's scheduled end can outlive an early
+ * sale, so an end time still in the future is withheld rather than shown as a sale date.
+ */
+export function endedOn(
+  status: ExternalStatus,
+  endsAt: Date | string | null,
+  now: number = Date.now(),
+): Date | null {
+  if (status === "live" || !endsAt) return null;
+  const d = new Date(endsAt);
+  const t = d.getTime();
+  return Number.isFinite(t) && t <= now ? d : null;
+}
+
 export function outcomeLabel(status: Exclude<ExternalStatus, "live">): string {
   switch (status) {
     case "sold":

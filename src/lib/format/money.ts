@@ -44,7 +44,28 @@ export const fmtDateTime = (d: Date | string | null | undefined) =>
       })
     : "";
 /** "Mar 4, 2026" style date, or "" when missing. */
+/** "Sep 28, 2026" in New York time, so server and browser print the same day. */
 export const fmtDate = (d: Date | string | null | undefined) =>
   d
-    ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    ? new Date(d).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        timeZone: "America/New_York",
+      })
     : "";
+
+/** "Sep 28" within the current year, "Sep 28, 2025" otherwise; New York time, for cards. */
+export function fmtDay(d: Date | string | null | undefined, now: Date = new Date()): string {
+  if (!d) return "";
+  const date = new Date(d);
+  const sameYear =
+    date.toLocaleDateString("en-US", { year: "numeric", timeZone: "America/New_York" }) ===
+    now.toLocaleDateString("en-US", { year: "numeric", timeZone: "America/New_York" });
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    ...(sameYear ? {} : { year: "numeric" }),
+    timeZone: "America/New_York",
+  });
+}
