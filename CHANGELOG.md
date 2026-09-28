@@ -6,9 +6,8 @@ Features and fixes as they ship, newest first. One line per change, with the pul
 
 ### Features
 
-### Fixes
-
-- Live auction sweeps were re-reading the same 500 most recently changed auctions every 15 minutes and never reaching new listings: the window is now one cron gap plus 5 minutes (was 45 minutes) with an 8-page cap, so each sweep finishes (#73)
+- Buy page search box: type a year, make, model, trim or keyword and the list narrows as you type, best match first; typos are tolerated (trigram matching in Postgres) (#72)
+- Buy page filters: Make, Model and Trim are dropdowns that follow each other, with trims taken from what is actually on the market for that model; the filter drawer no longer hides under the sticky header on phones or desktop (#72)
 
 - Market reports for the whole catalog: the nightly Visor rotation now covers every published model, not only those with a report, and a model's report goes live after its first successful pull (a year of sales, capped at 2,000 rows per query); the Health headline counts new reports (#70)
 
@@ -74,6 +73,7 @@ Features and fixes as they ship, newest first. One line per change, with the pul
 
 ### Fixes
 
+- Live auction sweeps were re-reading the same 500 most recently changed auctions every 15 minutes and never reaching new listings: the window is now one cron gap plus 5 minutes (was 45 minutes) with an 8-page cap, so each sweep finishes (#73)
 - Build broke after the dead-export prune removed a type the purchase guidance change still used (#65)
 - Outbound dealer link clicks were never recorded: the click logger called Clerk on a route outside its middleware (#57)
 - Filter drawer "Show cars" did nothing: its form was nested inside the page's filter form (#36)

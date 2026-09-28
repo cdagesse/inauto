@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { z } from "zod";
 import { auth } from "@/auth";
+import { BuySearch } from "@/components/listings/buy-search";
 import { FilterDrawer } from "@/components/listings/filter-drawer";
 import { ListingsFeed } from "@/components/listings/infinite-feed";
 import { CAR_FILTER_KEYS, filterChips, keysForChip } from "@/lib/listings/filters";
@@ -30,6 +31,7 @@ export default async function ListingsPage({
   const sp = await searchParams;
   const parsed = listingFilterSchema.safeParse({
     type: sp.type,
+    q: sp.q,
     make: sp.make,
     model: sp.model,
     trim: sp.trim,
@@ -59,7 +61,7 @@ export default async function ListingsPage({
   const [own, external, liveCounts, makes] = await Promise.all([
     showOwn
       ? listActiveListings(session?.user?.id ?? null, filter)
-      : Promise.resolve({ rows: [], nextCursor: null }),
+      : Promise.resolve({ rows: [], nextCursor: null, truncated: false }),
     showExternal
       ? listExternalListings({
           source: source === "all" ? undefined : source,
@@ -67,9 +69,10 @@ export default async function ListingsPage({
           cursor: xcursor,
           phase: past ? "past" : "live",
           result,
-          limit: source === "all" ? 12 : 24,
+          // A search is one page of best matches, so it gets more room.
+          limit: filter.q ? 36 : source === "all" ? 12 : 24,
         })
-      : Promise.resolve({ rows: [], nextCursor: null }),
+      : Promise.resolve({ rows: [], nextCursor: null, truncated: false }),
     countLiveBySource().catch(soft("listings live counts", {} as Record<string, number>)),
     listSellMakes().catch(soft("listings makes", [])),
   ]);
@@ -102,6 +105,22 @@ export default async function ListingsPage({
           Sell yours
         </Link>
       </div>
+      <BuySearch
+        initial={filter.q ?? ""}
+        params={Object.fromEntries(
+          Object.entries({
+            when: past ? "past" : undefined,
+            result,
+            type: filter.type,
+            source: source === "all" ? undefined : source,
+            ...Object.fromEntries(
+              Object.entries(carFilter)
+                .filter(([k]) => k !== "q")
+                .map(([k, v]) => [k, String(v)]),
+            ),
+          }).filter((e): e is [string, string] => !!e[1]),
+        )}
+      />
       <div className="filters">
         <div className="seg" role="group" aria-label="Live or past">
           <Link
@@ -217,6 +236,7 @@ export default async function ListingsPage({
             result,
             type: filter.type,
             source: source === "all" ? undefined : source,
+            q: filter.q,
           }}
         />
       </div>
@@ -290,7 +310,13 @@ export default async function ListingsPage({
         </div>
         {!past && showExternal && external.rows.length === 0 ? (
           <div className="panel empty-shelf" style={{ marginBottom: 16 }}>
-            <b className="display">No live platform auctions right now.</b>
+            <b className="display">
+              {filter.q
+                ? `Nothing matches “${filter.q}”`
+                : chips.length && liveTotal > 0
+                  ? "Nothing live matches these filters"
+                  : "No live platform auctions right now."}
+            </b>
             <p className="note" style={{ margin: "4px 0 10px" }}>
               {liveTotal === 0
                 ? "Auctions that have ended move to Past as soon as they close. The platform feed refreshes hourly while its data budget allows."
@@ -319,6 +345,7 @@ export default async function ListingsPage({
             key={`${source}|${filter.when ?? ""}|${result ?? ""}|${filter.type ?? ""}|${JSON.stringify(carFilter)}|${filter.cursor ?? ""}|${xcursor ?? ""}`}
             own={own}
             external={external}
+            searchTruncated={own.truncated || external.truncated}
             ownFilter={
               showOwn ? { type: filter.type, ...carFilter, when: filter.when, result } : null
             }
@@ -327,7 +354,7 @@ export default async function ListingsPage({
                 ? {
                     source: source === "all" ? undefined : source,
                     ...carFilter,
-                    limit: source === "all" ? 12 : 24,
+                    limit: filter.q ? 36 : source === "all" ? 12 : 24,
                     when: filter.when,
                     result,
                   }

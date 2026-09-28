@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { type CarFilter, countActive } from "@/lib/listings/filters";
 import { PLATFORM_KEYS, PLATFORMS } from "@/lib/sources/platforms";
-import type { SellMake, SellModel } from "@/server/queries/sell-catalog";
-import { getSellModels } from "@/server/sell-catalog";
+import type { SellMake, SellModel, TrimOption } from "@/server/queries/sell-catalog";
+import { getSellModels, getTrimOptions } from "@/server/sell-catalog";
 
 type Form = {
   make: string;
@@ -80,8 +80,13 @@ export function FilterDrawer({
   const [pending, start] = useTransition();
   // Models fetched so far, keyed by make slug, so reopening or switching back is free.
   const [modelsBySlug, setModelsBySlug] = useState<Record<string, SellModel[]>>({});
+  // Trims seen on the market, keyed by make/model slug.
+  const [trimsByKey, setTrimsByKey] = useState<Record<string, TrimOption[]>>({});
   const [form, setForm] = useState<Form>(() => ({
-    make: s(current.make),
+    // Older links may carry a make in another case; use the catalog's spelling when it is one.
+    make:
+      makes.find((m) => m.name.toLowerCase() === s(current.make).toLowerCase())?.name ??
+      s(current.make),
     model: s(current.model),
     trim: s(current.trim),
     yearMin: s(current.yearMin),
@@ -103,6 +108,14 @@ export function FilterDrawer({
   const makeSlug = makes.find((m) => m.name.toLowerCase() === form.make.toLowerCase())?.slug;
   const models = (makeSlug && modelsBySlug[makeSlug]) || [];
   const loadingModels = !!makeSlug && !(makeSlug in modelsBySlug);
+  const modelSlug = models.find((m) => m.name.toLowerCase() === form.model.toLowerCase())?.slug;
+  const trimKey = makeSlug && modelSlug ? `${makeSlug}/${modelSlug}` : null;
+  const trims = (trimKey && trimsByKey[trimKey]) || [];
+  const loadingTrims = !!trimKey && !(trimKey in trimsByKey);
+  // A value from an older link that is not in the list stays selectable so it is not lost.
+  // <select> matches its value exactly, so anything not spelled as the list has it gets
+  // its own option rather than falling back to the placeholder.
+  const extra = (list: string[], v: string) => (v && !list.includes(v) ? [v] : []);
 
   // Models for the chosen make (catalog makes only; free text still works).
   // Only while the drawer is open: /listings?make=… must not cost a server
@@ -122,6 +135,20 @@ export function FilterDrawer({
       .finally(() => inflight.current.delete(makeSlug));
   }, [open, makeSlug, modelsBySlug]);
 
+  // Trims for the chosen model, fetched the same way once a model is picked.
+  useEffect(() => {
+    if (!open || !trimKey || !makeSlug || !modelSlug) return;
+    if (trimKey in trimsByKey || inflight.current.has(trimKey)) return;
+    inflight.current.add(trimKey);
+    getTrimOptions({ makeSlug, modelSlug })
+      .then(
+        (r) => (r.ok ? r.data : []),
+        () => [] as TrimOption[],
+      )
+      .then((list) => setTrimsByKey((t) => ({ ...t, [trimKey]: list })))
+      .finally(() => inflight.current.delete(trimKey));
+  }, [open, trimKey, makeSlug, modelSlug, trimsByKey]);
+
   // Escape closes; focus moves into the panel when it opens.
   useEffect(() => {
     if (!open) return;
@@ -137,7 +164,10 @@ export function FilterDrawer({
     setForm((f) => ({ ...f, [k]: v }));
   }
   function changeMake(v: string) {
-    setForm((f) => ({ ...f, make: v, model: "" }));
+    setForm((f) => ({ ...f, make: v, model: "", trim: "" }));
+  }
+  function changeModel(v: string) {
+    setForm((f) => ({ ...f, model: v, trim: "" }));
   }
 
   function apply(next: Form, sc: Scope = scope) {
@@ -271,48 +301,81 @@ export function FilterDrawer({
 
           <div className="fld">
             <label htmlFor="f-make">Make</label>
-            <input
-              id="f-make"
-              list="f-make-list"
-              value={form.make}
-              onChange={(e) => changeMake(e.target.value)}
-              placeholder="Any make"
-              maxLength={60}
-              autoComplete="off"
-            />
-            <datalist id="f-make-list">
-              {makes.map((m) => (
-                <option key={m.slug} value={m.name} />
+            <select id="f-make" value={form.make} onChange={(e) => changeMake(e.target.value)}>
+              <option value="">Any make</option>
+              {extra(
+                makes.map((m) => m.name),
+                form.make,
+              ).map((v) => (
+                <option key={`x-${v}`} value={v}>
+                  {v}
+                </option>
               ))}
-            </datalist>
+              {makes.map((m) => (
+                <option key={m.slug} value={m.name}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="fld">
             <label htmlFor="f-model">Model</label>
-            <input
+            <select
               id="f-model"
-              list="f-model-list"
               value={form.model}
-              onChange={(e) => set("model", e.target.value)}
-              placeholder={loadingModels ? "Loading models…" : "Any model"}
-              maxLength={80}
-              autoComplete="off"
-            />
-            <datalist id="f-model-list">
-              {models.map((m) => (
-                <option key={m.slug} value={m.name} />
+              onChange={(e) => changeModel(e.target.value)}
+              disabled={!form.make}
+            >
+              <option value="">
+                {!form.make ? "Pick a make first" : loadingModels ? "Loading models…" : "Any model"}
+              </option>
+              {extra(
+                models.map((m) => m.name),
+                form.model,
+              ).map((v) => (
+                <option key={`x-${v}`} value={v}>
+                  {v}
+                </option>
               ))}
-            </datalist>
+              {models.map((m) => (
+                <option key={m.slug} value={m.name}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="fld">
             <label htmlFor="f-trim">Trim</label>
-            <input
+            <select
               id="f-trim"
               value={form.trim}
               onChange={(e) => set("trim", e.target.value)}
-              placeholder="e.g. GT3, Competition, Weissach"
-              maxLength={80}
-            />
-            <span className="hint">Matches the trim or the listing title.</span>
+              disabled={!form.model}
+            >
+              <option value="">
+                {!form.model
+                  ? "Pick a model first"
+                  : loadingTrims || loadingModels
+                    ? "Loading trims…"
+                    : trims.length
+                      ? "Any trim"
+                      : "No trims on the market yet"}
+              </option>
+              {extra(
+                trims.map((t) => t.name),
+                form.trim,
+              ).map((v) => (
+                <option key={`x-${v}`} value={v}>
+                  {v}
+                </option>
+              ))}
+              {trims.map((t) => (
+                <option key={t.name} value={t.name}>
+                  {t.name} ({t.count})
+                </option>
+              ))}
+            </select>
+            <span className="hint">Trims seen on the market for this model.</span>
           </div>
 
           <div className="fld">

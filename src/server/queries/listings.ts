@@ -15,6 +15,7 @@ import {
   serviceOrders,
   users,
 } from "@/db/schema";
+import { searchTokens } from "@/lib/listings/search";
 import { type ListingFilter, minimumIncrement, PAGE_SIZE } from "../listings-schema";
 import { type ActionResult, fail, toError } from "../result";
 
@@ -112,7 +113,9 @@ export async function listActiveListings(
   limit: number = PAGE_SIZE,
 ) {
   const size = Math.max(1, Math.min(limit, PAGE_SIZE));
-  const cur = decodeCursor(filter.cursor);
+  const tokens = searchTokens(filter.q);
+  // Relevance ordering has no stable key to page on, so a search is a single page.
+  const cur = tokens.length ? null : decodeCursor(filter.cursor);
   const past = filter.when === "past";
   const statusCond = !past
     ? eq(listings.status, "active")
@@ -142,6 +145,15 @@ export async function listActiveListings(
   >`coalesce(${listings.askingPrice}, (select max(${bids.amount}) from ${bids} where ${bids.listingId} = ${listings.id}))`;
   if (filter.priceMin != null) conds.push(sql`${priceExpr} >= ${filter.priceMin}`);
   if (filter.priceMax != null) conds.push(sql`${priceExpr} <= ${filter.priceMax}`);
+  // Same immutable expression as listing_search_trgm_idx (migration 0014), so `<<%` uses it.
+  const haystack = sql`lower(coalesce(${listings.year}::text, '') || ' ' || coalesce(${listings.make}, '') || ' ' || coalesce(${listings.model}, '') || ' ' || coalesce(${listings.trim}, '') || ' ' || coalesce(${listings.title}, ''))`;
+  for (const t of tokens) conds.push(sql`${t} <<% ${haystack}`);
+  const relevance = tokens.length
+    ? sql`(${sql.join(
+        tokens.map((t) => sql`strict_word_similarity(${t}, ${haystack})`),
+        sql` + `,
+      )}) desc`
+    : null;
   if (cur)
     conds.push(
       or(
@@ -172,12 +184,17 @@ export async function listActiveListings(
     })
     .from(listings)
     .where(and(...conds))
-    .orderBy(desc(listings.createdAt), desc(listings.id))
+    .orderBy(
+      ...(relevance
+        ? [relevance, desc(listings.createdAt), desc(listings.id)]
+        : [desc(listings.createdAt), desc(listings.id)]),
+    )
     .limit(size + 1);
-  const hasMore = rows.length > size;
+  const hasMore = rows.length > size && !relevance;
+  const truncated = !!relevance && rows.length > size;
   const page = hasMore ? rows.slice(0, size) : rows;
   const last = page[page.length - 1];
-  return { rows: page, nextCursor: hasMore && last ? encodeCursor(last) : null };
+  return { rows: page, nextCursor: hasMore && last ? encodeCursor(last) : null, truncated };
 }
 
 /** Full listing for a viewer, or null when it does not exist or is not visible to them. */
