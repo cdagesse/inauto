@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { type CarFilter, countActive } from "@/lib/listings/filters";
+import { PLATFORM_KEYS, PLATFORMS } from "@/lib/sources/platforms";
 import type { SellMake, SellModel } from "@/server/queries/sell-catalog";
 import { getSellModels } from "@/server/sell-catalog";
 
@@ -18,7 +19,41 @@ type Form = {
   milesMax: string;
 };
 
+/** Live/past, result, type and source: shown as page pills on desktop, inside the drawer on phones. */
+type Scope = { when: string; result: string; type: string; source: string };
+
 const THIS_YEAR = new Date().getFullYear();
+
+function ScopePills({
+  label,
+  value,
+  options,
+  onPick,
+}: {
+  label: string;
+  value: string;
+  options: [string, string][];
+  onPick: (v: string) => void;
+}) {
+  return (
+    <div className="scope-row" role="group" aria-label={label}>
+      <span className="lab">{label}</span>
+      <div className="seg">
+        {options.map(([v, text]) => (
+          <button
+            key={v || "all"}
+            type="button"
+            aria-pressed={value === v}
+            onClick={() => onPick(v)}
+          >
+            {text}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const s = (v: string | number | undefined | null) => (v == null ? "" : String(v));
 
 /**
@@ -52,6 +87,12 @@ export function FilterDrawer({
     priceMax: s(current.priceMax),
     milesMin: s(current.milesMin),
     milesMax: s(current.milesMax),
+  }));
+  const [scope, setScope] = useState<Scope>(() => ({
+    when: keep.when ?? "",
+    result: keep.result ?? "",
+    type: keep.type ?? "",
+    source: keep.source ?? "",
   }));
   const titleId = useId();
   const panel = useRef<HTMLDivElement>(null);
@@ -92,9 +133,13 @@ export function FilterDrawer({
     setLoadingModels(!!makes.find((m) => m.name.toLowerCase() === v.toLowerCase()));
   }
 
-  function apply(next: Form) {
+  function apply(next: Form, sc: Scope = scope) {
     const p = new URLSearchParams();
-    for (const [k, v] of Object.entries(keep)) if (v) p.set(k, v);
+    for (const [k, v] of Object.entries(keep)) if (v && !(k in sc)) p.set(k, v);
+    if (sc.when === "past") p.set("when", "past");
+    if (sc.when === "past" && sc.result) p.set("result", sc.result);
+    if (sc.type) p.set("type", sc.type);
+    if (sc.source) p.set("source", sc.source);
     for (const [k, v] of Object.entries(next)) if (v.trim()) p.set(k, v.trim());
     const qs = p.toString();
     start(() => {
@@ -115,7 +160,9 @@ export function FilterDrawer({
       milesMax: "",
     };
     setForm(empty);
-    apply(empty);
+    const plain: Scope = { when: "", result: "", type: "", source: "" };
+    setScope(plain);
+    apply(empty, plain);
   }
 
   const years: number[] = [];
@@ -166,6 +213,56 @@ export function FilterDrawer({
             >
               Close
             </button>
+          </div>
+
+          <div className="drawer-scope">
+            <ScopePills
+              label="Show"
+              value={scope.when === "past" ? "past" : ""}
+              options={[
+                ["", "Live"],
+                ["past", "Past"],
+              ]}
+              onPick={(v) => setScope((x) => ({ ...x, when: v, result: v ? x.result : "" }))}
+            />
+            {scope.when === "past" ? (
+              <ScopePills
+                label="Result"
+                value={scope.result}
+                options={[
+                  ["", "All results"],
+                  ["sold", "Sold"],
+                  ["unsold", "Not sold"],
+                ]}
+                onPick={(v) => setScope((x) => ({ ...x, result: v }))}
+              />
+            ) : null}
+            <ScopePills
+              label="Type"
+              value={scope.type}
+              options={[
+                ["", "All"],
+                ["classified", "Classifieds"],
+                ["auction", "Auctions"],
+              ]}
+              onPick={(v) => setScope((x) => ({ ...x, type: v }))}
+            />
+            <div className="fld">
+              <label htmlFor="f-source">Source</label>
+              <select
+                id="f-source"
+                value={scope.source}
+                onChange={(e) => setScope((x) => ({ ...x, source: e.target.value }))}
+              >
+                <option value="">All sources</option>
+                <option value="inauto">InAuto</option>
+                {PLATFORM_KEYS.map((k) => (
+                  <option key={k} value={k}>
+                    {PLATFORMS[k].name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="fld">
