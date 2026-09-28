@@ -25,6 +25,14 @@ describe("safeBack", () => {
     expect(safeBack("//evil.example/admin", "/admin")).toBe("/admin");
     expect(safeBack("/\\evil.example", "/admin")).toBe("/admin");
   });
+
+  it("rejects control characters the URL parser would strip", () => {
+    expect(safeBack("/\t//evil.example", "/admin")).toBe("/admin");
+    expect(safeBack("/\n//evil.example", "/admin")).toBe("/admin");
+    expect(safeBack("/\r//evil.example", "/admin")).toBe("/admin");
+    expect(safeBack("/admin/review\u0000", "/admin")).toBe("/admin");
+    expect(safeBack("/admin review", "/admin")).toBe("/admin");
+  });
 });
 
 describe("signInHref", () => {

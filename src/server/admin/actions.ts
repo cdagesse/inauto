@@ -390,7 +390,11 @@ export async function reviewRows(fd: FormData): Promise<ActionResult<{ count: nu
   }
 }
 export async function reviewRowsForm(fd: FormData) {
-  await run(str(fd, "back") || "/admin/review", reviewRows(fd), (d) => `${d.count} rows updated.`);
+  await run(
+    safeBack(str(fd, "back"), "/admin/review"),
+    reviewRows(fd),
+    (d) => `${d.count} rows updated.`,
+  );
 }
 
 export async function reassignGeneration(fd: FormData): Promise<ActionResult> {
@@ -417,7 +421,11 @@ export async function reassignGeneration(fd: FormData): Promise<ActionResult> {
   }
 }
 export async function reassignGenerationForm(fd: FormData) {
-  await run(str(fd, "back") || "/admin/review", reassignGeneration(fd), "Generation reassigned.");
+  await run(
+    safeBack(str(fd, "back"), "/admin/review"),
+    reassignGeneration(fd),
+    "Generation reassigned.",
+  );
 }
 
 /* ---------------- service orders ---------------- */
@@ -457,5 +465,5 @@ export async function serviceOrderAction(fd: FormData): Promise<ActionResult> {
   }
 }
 export async function serviceOrderActionForm(fd: FormData) {
-  await run(str(fd, "back") || "/admin/vetting", serviceOrderAction(fd), "Order updated.");
+  await run(safeBack(str(fd, "back"), "/admin/vetting"), serviceOrderAction(fd), "Order updated.");
 }

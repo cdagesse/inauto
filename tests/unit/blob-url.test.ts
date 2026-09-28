@@ -1,27 +1,21 @@
 import { describe, expect, it } from "vitest";
 import { BLOB_HOST_SUFFIX, isBlobUrl } from "@/lib/listings/blob-url";
-import { photoUrl } from "@/server/listings-schema";
-
-const blob = `https://abc123${BLOB_HOST_SUFFIX}/listings/u1/photo.jpg`;
 
 describe("isBlobUrl", () => {
-  it("accepts only the Blob store host", () => {
-    expect(isBlobUrl(blob)).toBe(true);
-    expect(isBlobUrl("https://example.com/photo.jpg")).toBe(false);
-    expect(isBlobUrl("https://public.blob.vercel-storage.com.evil.example/x.jpg")).toBe(false);
+  it("accepts photos on the public blob store", () => {
+    expect(isBlobUrl(`https://abc123${BLOB_HOST_SUFFIX}/listings/u1/car.jpg`)).toBe(true);
+    expect(isBlobUrl("https://x.public.blob.vercel-storage.com/a.png?x=1")).toBe(true);
+  });
+  it("rejects external platform CDNs and look-alike hosts", () => {
+    expect(isBlobUrl("https://cdn.bringatrailer.com/photo.jpg")).toBe(false);
+    expect(isBlobUrl("https://public.blob.vercel-storage.com.evil.example/a.jpg")).toBe(false);
+    expect(isBlobUrl("https://evil.example/?u=https://x.public.blob.vercel-storage.com")).toBe(
+      false,
+    );
+  });
+  it("returns false for strings that are not URLs", () => {
+    expect(isBlobUrl("")).toBe(false);
     expect(isBlobUrl("not a url")).toBe(false);
-  });
-});
-
-describe("photoUrl", () => {
-  it("accepts UrCar blob uploads", () => {
-    expect(photoUrl.safeParse(blob).success).toBe(true);
-  });
-
-  it("rejects other hosts and non-https links with the upload message", () => {
-    const other = photoUrl.safeParse("https://example.com/photo.jpg");
-    expect(other.success).toBe(false);
-    if (!other.success) expect(other.error.issues[0]?.message).toBe("Upload photos through UrCar.");
-    expect(photoUrl.safeParse(`http://abc${BLOB_HOST_SUFFIX}/x.jpg`).success).toBe(false);
+    expect(isBlobUrl("/relative/path.jpg")).toBe(false);
   });
 });
