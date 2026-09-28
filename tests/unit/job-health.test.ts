@@ -233,6 +233,67 @@ describe("describeRun", () => {
     );
   });
 
+  it("describes the ended-results sweep and a nightly rotation", () => {
+    expect(
+      describeRun(
+        "ended-auctions",
+        {
+          since: "2026-09-28T02:05:00Z",
+          pulled: 61,
+          upserted: 61,
+          matchedToCatalog: 14,
+          auctionResultsInserted: 14,
+          pages: 3,
+          truncated: false,
+          budgetStopped: null,
+          skipped: null,
+          errors: [],
+        },
+        null,
+      ),
+    ).toEqual({
+      headline:
+        "pulled 61 closed auctions · 61 added or updated · 14 matched to catalog · 14 results stored · 3 pages",
+      changed: 75,
+    });
+    expect(describeRun("ended-auctions", { skipped: "dry run", errors: [] }, null).headline).toBe(
+      "skipped: dry run",
+    );
+    const d = describeRun(
+      "nightly",
+      {
+        models: [
+          {
+            model: "bmw/m3",
+            visorSold: 4,
+            visorActive: 120,
+            ocdAuctions: 0,
+            inserted: { sold: 2, active: 120, auctions: 0 },
+          },
+        ],
+        errors: [],
+        rotation: {
+          refreshDays: 14,
+          eligible: 156,
+          due: 12,
+          pulled: 1,
+          failed: 2,
+          remaining: 9,
+          overdue: 3,
+          cleaned: 5,
+          visorCalls: 40,
+          budgetStopped: false,
+          stoppedBy: "time",
+        },
+      },
+      null,
+    );
+    expect(d.headline).toBe(
+      "1 model · Visor 4 sold, 120 active · 122 new rows written · 1 of 156 models refreshed (40 Visor calls) · 2 failed · time cap hit, 9 models left · 5 re-cleaned",
+    );
+    expect(d.changed).toBe(122);
+  });
+
   it("describes report passes, title vetting, snapshots and the evidence sweep", () => {
     expect(
       describeRun(
@@ -275,6 +336,9 @@ describe("describeRun", () => {
       headline: "built 41 reports · 1 failed",
       changed: 41,
     });
+    expect(describeRun("snapshots", { built: 100, failed: [], skipped: 56 }, null).headline).toBe(
+      "built 100 reports · 56 skipped at the time cap",
+    );
     expect(
       describeRun("evidence-sweep", { scanned: 12, deleted: 0, skipped: "dry run" }, null).headline,
     ).toBe("scanned 12 files · deleted 0 · skipped: dry run");

@@ -10,8 +10,10 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Shape-valid build-time placeholders. src/env/server.ts validates at boot, so the
-  # build needs syntactically valid values. Never real credentials.
+  # Build-time values. src/env/server.ts validates at boot, so the build needs
+  # syntactically valid values; the database ones point at the throwaway Postgres
+  # service each job starts (the home page is prerendered from real queries).
+  # Never real credentials.
   DATABASE_URL: postgres://postgres:ci-throwaway-not-a-secret@localhost:5432/inauto_ci
   DATABASE_URL_UNPOOLED: postgres://postgres:ci-throwaway-not-a-secret@localhost:5432/inauto_ci
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_Y2xlcmsuaW5hdXRvLmxvY2FsJA
@@ -23,6 +25,20 @@ jobs:
   verify:
     name: Typecheck, lint, unit tests, build
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci-throwaway-not-a-secret
+          POSTGRES_DB: inauto_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -37,6 +53,12 @@ jobs:
         run: pnpm lint
       - name: Unit tests
         run: pnpm test
+      # `next build` prerenders the home and market pages from the database (an outage
+      # there fails the build on purpose), so the build runs against a migrated, seeded copy.
+      - name: Apply migrations
+        run: pnpm db:migrate
+      - name: Seed catalog and fixture data
+        run: pnpm db:seed
       - name: Production build
         run: pnpm build
 

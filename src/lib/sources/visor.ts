@@ -38,6 +38,16 @@ export interface VisorClientOptions {
   fetchImpl?: typeof fetch;
   /** Hard stop on pages per query so a runaway pagination cannot drain the budget. */
   maxPages?: number;
+  /** Epoch ms; a page walk that reaches it throws VisorDeadline so a job can stop mid-model. */
+  deadline?: number;
+}
+
+/** Thrown by a page walk that hit the caller's deadline; the model stays due for the next run. */
+export class VisorDeadline extends Error {
+  constructor() {
+    super("pull stopped at the job's time cap");
+    this.name = "VisorDeadline";
+  }
 }
 
 export interface VisorQuery {
@@ -203,6 +213,7 @@ export function createVisorClient(o: VisorClientOptions) {
 
     let offset = 0;
     for (let page = 0; page < maxPages; page++) {
+      if (o.deadline && Date.now() >= o.deadline) throw new VisorDeadline();
       const res = await call("/v1/listings", { ...params, offset });
       for (const r of rows(res.body)) {
         const n = normalizeVisorRow(r);

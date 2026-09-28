@@ -153,7 +153,12 @@ export function ocdRowMatches(
   return true;
 }
 
-/** Resolve a row to the first matching OCD alias rule's model id. */
+/**
+ * Resolve a row to the first matching OCD alias rule's model id. With `yearsFor`, a rule
+ * whose model years exclude the row's year falls through to the next rule, so sibling
+ * models that share an alias and differ only by years (Corvette C1 to C8, M3 and M3 E46)
+ * each get their own cars.
+ */
 export function matchOcdRules(
   rules: {
     modelId: string;
@@ -162,11 +167,17 @@ export function matchOcdRules(
     rawModel: string | null;
     rawTrimPattern: string | null;
   }[],
-  row: { rawMake: string | null; rawModel: string | null; title: string | null },
+  row: {
+    rawMake: string | null;
+    rawModel: string | null;
+    title: string | null;
+    year?: number | null;
+  },
+  yearsFor?: (modelId: string) => { start: number | null; end: number | null } | undefined,
 ): string | null {
   for (const r of rules) {
     if (r.source !== "ocd") continue;
-    if (ocdRowMatches(parseOcdAlias(r), row)) return r.modelId;
+    if (ocdRowMatches(parseOcdAlias(r), row, yearsFor?.(r.modelId))) return r.modelId;
   }
   return null;
 }
@@ -387,6 +398,8 @@ export function createOcdClient(o: OcdClientOptions) {
    * `sort: Invalid option`, so start with it off and never spend a budgeted call to find out.
    */
   let sortSupported = false;
+  /** Pages fetched by the last auctions()/live() walk and whether the page cap cut it short. */
+  let lastWalk = { pages: 0, truncated: false };
 
   async function call(path: string, params: Params, free = false) {
     const qs = new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)]));
@@ -403,7 +416,7 @@ export function createOcdClient(o: OcdClientOptions) {
       body: res.body,
     });
     if (!res.ok) throw new OcdApiError(path, res.status, errorDetail(res.body));
-    // OCD's own quota (1,000 calls per plan month, resetting on their cycle, not the
+    // OCD's own quota (per plan month, 10,000 on the current plan, resetting on their cycle, not the
     // calendar month) is the real limit: stop the run when it reports nothing left.
     const remaining = Number(res.rateLimit?.["x-ratelimit-remaining"] ?? NaN);
     if (Number.isFinite(remaining) && remaining <= 0) {
@@ -417,9 +430,11 @@ export function createOcdClient(o: OcdClientOptions) {
   }
 
   /**
-   * Cursor-paged walk over /auctions. `since` (ISO) stops the walk once a page's newest row is
-   * older than it, which only works when the API honours newest-first sorting; otherwise the
-   * walk relies on the page cap.
+   * Cursor-paged walk over /auctions. `since` (ISO) stops the walk once a page is entirely
+   * older than it. The API rejects an explicit sort, but its default order is newest ended
+   * first (checked against stored pages on 2026-09-27: every page and every page boundary
+   * was in descending auction_end_at order), so an unsorted walk still stops at `since`;
+   * the page cap remains the backstop.
    */
   async function walkAuctions(
     baseParams: Params,
@@ -428,7 +443,8 @@ export function createOcdClient(o: OcdClientOptions) {
     seen: Set<string>,
   ) {
     let cursor: string | null = null;
-    for (let page = 0; page < maxPages; page++) {
+    let page = 0;
+    for (; page < maxPages; page++) {
       const sorted = sortSupported;
       const params: Params = { ...baseParams, pagination: "cursor", limit: perPage };
       if (sorted) {
@@ -447,21 +463,33 @@ export function createOcdClient(o: OcdClientOptions) {
         }
         throw e;
       }
+      lastWalk.pages++;
       let oldest: number | null = null;
+      let newest: number | null = null;
       for (const r of result.rs) {
         const n = normalizeOcdRow(r);
         if (!n || seen.has(n.sourceId)) continue;
         seen.add(n.sourceId);
         const t = n.endedAt ? new Date(n.endedAt).getTime() : null;
-        if (t != null) oldest = oldest == null ? t : Math.min(oldest, t);
+        if (t != null) {
+          oldest = oldest == null ? t : Math.min(oldest, t);
+          newest = newest == null ? t : Math.max(newest, t);
+        }
         if (since && t != null && t < new Date(since).getTime()) continue;
         out.push(n);
       }
       const m = meta(result.res.body);
-      if (sorted && since && oldest != null && oldest < new Date(since).getTime()) break;
+      const sinceMs = since ? new Date(since).getTime() : null;
+      if (sinceMs != null) {
+        // Sorted: the tail of this page is the newest of the next. Unsorted: only trust a
+        // page that is older from top to bottom, which costs at most one extra page.
+        if (sorted && oldest != null && oldest < sinceMs) break;
+        if (!sorted && newest != null && newest < sinceMs) break;
+      }
       if (m.hasMore !== true || !m.nextCursor) break;
       cursor = m.nextCursor;
     }
+    if (page >= maxPages) lastWalk.truncated = true;
   }
 
   return {
@@ -469,8 +497,13 @@ export function createOcdClient(o: OcdClientOptions) {
      * Ended auctions (sold and reserve-not-met, plus withdrawn) for a query, newest first, back to
      * `since` (ISO) or the page cap. One budget unit per page.
      */
-    async auctions(q: OcdAuctionQuery, since: string | null): Promise<NormalizedAuctionRow[]> {
-      const out: NormalizedAuctionRow[] = [];
+    async auctions(
+      q: OcdAuctionQuery,
+      since: string | null,
+      /** Caller-owned so pages already paid for survive a budget stop mid-walk. */
+      out: NormalizedAuctionRow[] = [],
+    ): Promise<NormalizedAuctionRow[]> {
+      lastWalk = { pages: 0, truncated: false };
       const seen = new Set<string>();
       // Two status-scoped walks keep each one short; unknown statuses are dropped by the normalizer.
       for (const status of ["sold", "reserve not met"]) {
@@ -479,13 +512,19 @@ export function createOcdClient(o: OcdClientOptions) {
       return out;
     },
     /** In-progress auctions. One budget unit per page. */
-    async live(q: LiveAuctionParams = {}, now = new Date()): Promise<NormalizedLiveRow[]> {
-      const out: NormalizedLiveRow[] = [];
+    async live(
+      q: LiveAuctionParams = {},
+      now = new Date(),
+      out: NormalizedLiveRow[] = [],
+    ): Promise<NormalizedLiveRow[]> {
+      lastWalk = { pages: 0, truncated: false };
       const params: Params = { ...queryParams(q), limit: perPage };
       if (q.updatedSince) params.updated_since = q.updatedSince;
       if (q.source) params.source = q.source;
-      for (let page = 1; page <= maxPages; page++) {
+      let page = 1;
+      for (; page <= maxPages; page++) {
         const { res, rs } = await call("/auctions/live", { ...params, page });
+        lastWalk.pages++;
         for (const r of rs) {
           const n = normalizeLiveRow(r, now);
           if (n) out.push(n);
@@ -495,8 +534,11 @@ export function createOcdClient(o: OcdClientOptions) {
         if (m.totalPages != null && page >= m.totalPages) break;
         if (m.hasMore === false) break;
       }
+      if (page > maxPages) lastWalk.truncated = true;
       return out;
     },
+    /** Pages fetched by the last walk and whether the page cap cut it short. */
+    lastWalk: () => ({ ...lastWalk }),
     /** Bid history for one auction (integer id). One budget unit. */
     async bids(id: string | number): Promise<{ amount: number | null; placedAt: string | null }[]> {
       const safe = encodeURIComponent(String(id));

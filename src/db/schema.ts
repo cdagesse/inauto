@@ -87,6 +87,8 @@ export const models = pgTable(
     reportRequestedAt: timestamp("report_requested_at", { withTimezone: true }),
     reportBuiltAt: timestamp("report_built_at", { withTimezone: true }),
     reportError: text("report_error"),
+    /** Last Visor pull for this model; the nightly refreshes the stalest models first. */
+    dealerPulledAt: timestamp("dealer_pulled_at", { withTimezone: true }),
     searchText: text("search_text"),
   },
   (t) => [

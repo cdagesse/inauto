@@ -1,19 +1,13 @@
 import "server-only";
 import { eq } from "drizzle-orm";
 import { db as defaultDb, type Db } from "@/db";
-import { auctionResults, jobRuns } from "@/db/schema";
+import { jobRuns } from "@/db/schema";
 import { env } from "@/env/server";
 import { BudgetExceeded, withBudget } from "@/lib/sources/budget";
-import {
-  createOcdClient,
-  matchOcdRules,
-  normalizeLiveRow,
-  type NormalizedLiveRow,
-  type OcdAuctionQuery,
-} from "@/lib/sources/ocd";
+import { createOcdClient, type NormalizedLiveRow, type OcdAuctionQuery } from "@/lib/sources/ocd";
 import type { NormalizedAuctionRow } from "@/lib/sources/types";
-import { assignGeneration, detectPackages } from "./lib/normalize";
-import { type CatalogModel, loadCatalog, upsertExternalRows } from "./live-auctions";
+import { ingestEndedAuctions } from "./ended-ingest";
+import { loadCatalog, upsertExternalRows } from "./live-auctions";
 
 /**
  * One-time bulk pull from Old Cars Data, run by hand through /api/jobs/backfill-auctions:
@@ -45,41 +39,6 @@ export interface BackfillSummary {
   auctionResultsInserted: number;
   budgetStopped: string | null;
   errors: string[];
-}
-
-/** An ended /auctions row re-read as an external listing row, with the settled status and hammer. */
-function endedToExternal(r: NormalizedAuctionRow, now: Date): NormalizedLiveRow | null {
-  const live = normalizeLiveRow(r.raw, now);
-  if (!live) return null;
-  return {
-    ...live,
-    status: r.status,
-    currentBid: r.hammerPrice ?? live.currentBid,
-    endsAt: r.endedAt ?? live.endsAt,
-    vin: r.vin ?? live.vin,
-    year: r.year ?? live.year,
-    miles: r.miles ?? live.miles,
-  };
-}
-
-function toAuctionInsert(m: CatalogModel, r: NormalizedAuctionRow) {
-  const g = assignGeneration(m.gens, r.year, r.title);
-  return {
-    source: r.source,
-    sourceId: r.sourceId,
-    url: r.url,
-    vin: r.vin,
-    generationId: g.generationId,
-    modelId: m.id,
-    year: r.year,
-    miles: r.miles,
-    hammerPrice: r.hammerPrice,
-    status: r.status,
-    endedAt: r.endedAt ? new Date(r.endedAt) : null,
-    packages: detectPackages(r.title),
-    needsReview: g.needsReview || r.needsReview,
-    rawJson: r.raw as object,
-  };
 }
 
 export async function backfillAuctions(opts: BackfillOptions): Promise<BackfillSummary> {
@@ -146,40 +105,23 @@ export async function backfillAuctions(opts: BackfillOptions): Promise<BackfillS
       } else throw e;
     }
 
-    // Past: rows the catalog recognises also feed auction_result for market data.
     if (opts.part === "past") {
-      const inserts: ReturnType<typeof toAuctionInsert>[] = [];
-      for (const r of endedRows) {
-        const modelId = matchOcdRules(rules, {
-          rawMake: r.rawMake,
-          rawModel: r.rawModel,
-          title: r.title,
-        });
-        const m = modelId ? byId.get(modelId) : null;
-        if (m) inserts.push(toAuctionInsert(m, r));
-        const ext = endedToExternal(r, now);
-        if (ext) liveRows.push(ext);
-      }
-      for (let i = 0; i < inserts.length; i += 200) {
-        const chunk = inserts.slice(i, i + 200);
-        const res = await db
-          .insert(auctionResults)
-          .values(chunk)
-          .onConflictDoNothing({ target: [auctionResults.source, auctionResults.sourceId] })
-          .returning({ id: auctionResults.id });
-        out.auctionResultsInserted += res.length;
-      }
+      // Ended rows feed external_listing (Past view) and, for catalog vehicles, auction_result.
+      out.pulled = endedRows.length;
+      const ing = await ingestEndedAuctions(db, endedRows, rules, byId, now);
+      out.upserted = ing.upserted;
+      out.matchedToCatalog = ing.matched;
+      out.auctionResultsInserted = ing.auctionResultsInserted;
+    } else {
+      // Dedupe on source+id (paging overlap; also required by the multi-row upsert).
+      const uniq = new Map<string, NormalizedLiveRow>();
+      for (const r of liveRows) uniq.set(`${r.source}|${r.sourceId}`, r);
+      const rows = [...uniq.values()];
+      out.pulled = rows.length;
+      const u = await upsertExternalRows(db, rows, rules, byId);
+      out.upserted = u.upserted;
+      out.matchedToCatalog = u.matched;
     }
-
-    // Dedupe on source+id (paging overlap; also required by the multi-row upsert), then
-    // upsert the whole set in chunks.
-    const uniq = new Map<string, NormalizedLiveRow>();
-    for (const r of liveRows) uniq.set(`${r.source}|${r.sourceId}`, r);
-    const rows = [...uniq.values()];
-    out.pulled = rows.length;
-    const u = await upsertExternalRows(db, rows, rules, byId);
-    out.upserted = u.upserted;
-    out.matchedToCatalog = u.matched;
     log(
       `${opts.part}: pulled ${out.pulled}, upserted ${out.upserted}, matched ${out.matchedToCatalog}, auction_result +${out.auctionResultsInserted}`,
     );

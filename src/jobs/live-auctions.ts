@@ -20,6 +20,8 @@ import {
   type NormalizedLiveRow,
 } from "@/lib/sources/ocd";
 import { chunk, UPSERT_CHUNK } from "./lib/batch";
+import { lastGoodRun } from "./lib/run";
+import { liveUpdatedSince, OCD_SWEEP_SHARE } from "./lib/schedule";
 import { assignGeneration, type AliasRule, type GenerationRange } from "./lib/normalize";
 
 /**
@@ -51,20 +53,39 @@ export interface LiveAuctionsSummary {
   matchedToCatalog: number;
   markedEnded: number;
   reconciled: number;
+  /** Old Cars Data pages fetched and whether the page cap cut the walk short. */
+  pages: number;
+  truncated: boolean;
   budgetStopped: string | null;
+  /** Why no API walk happened (no key, or a catalog-scoped hand run). */
+  skipped: string | null;
   errors: string[];
 }
 
 export interface CatalogModel {
   id: string;
+  /** Curated generations (code "all" left out) for external listings. */
   gens: GenerationRange[];
+  /** Every generation including the catch-all, for auction results. */
+  allGens: GenerationRange[];
+  /** Model years, from the model or its generations; rows outside them belong to a sibling. */
+  years: { start: number | null; end: number | null };
+  reportStatus: string;
 }
+
+/** Pages per 15-minute live sweep; a routine 45-minute window is 1 to 2 pages. */
+export const LIVE_SWEEP_MAX_PAGES = 5;
 
 export async function loadCatalog(
   db: Db,
 ): Promise<{ rules: AliasRule[]; byId: Map<string, CatalogModel> }> {
   const rows = await db
-    .select({ id: models.id })
+    .select({
+      id: models.id,
+      yearStart: models.yearStart,
+      yearEnd: models.yearEnd,
+      reportStatus: models.reportStatus,
+    })
     .from(models)
     .innerJoin(makes, eq(makes.id, models.makeId));
   const ids = rows.map((r) => r.id);
@@ -77,24 +98,37 @@ export async function loadCatalog(
       .where(and(inArray(modelAliases.modelId, ids), eq(modelAliases.source, "ocd"))),
   ]);
   const byId = new Map<string, CatalogModel>();
-  for (const id of ids) {
-    byId.set(id, {
-      id,
-      gens: gens
-        .filter((g) => g.modelId === id && g.code !== "all")
-        .map((g) => ({
-          id: g.id,
-          code: g.code,
-          yearStart: g.yearStart,
-          yearEnd: g.yearEnd,
-          disambiguate: g.notes?.startsWith("match:")
-            ? new RegExp(g.notes.slice(6), "i")
-            : undefined,
-        })),
+  for (const m of rows) {
+    const allGens = gens
+      .filter((g) => g.modelId === m.id)
+      .map((g) => ({
+        id: g.id,
+        code: g.code,
+        yearStart: g.yearStart,
+        yearEnd: g.yearEnd,
+        disambiguate: g.notes?.startsWith("match:") ? new RegExp(g.notes.slice(6), "i") : undefined,
+      }));
+    const curated = allGens.filter((g) => g.code !== "all");
+    byId.set(m.id, {
+      id: m.id,
+      gens: curated,
+      allGens,
+      years: {
+        start:
+          m.yearStart ?? (allGens.length ? Math.min(...allGens.map((g) => g.yearStart)) : null),
+        // The seeded catch-all generation ends at the seed year, so an open-ended model stays open.
+        end: m.yearEnd ?? (curated.length ? Math.max(...curated.map((g) => g.yearEnd)) : null),
+      },
+      reportStatus: m.reportStatus,
     });
   }
-  // Most specific first: keyworded aliases (S63) before bare lines (S-Class) so a row lands on
-  // the narrow model when both would match.
+  // Most specific first: keyworded aliases (S63) before bare lines (S-Class), then the
+  // narrower year span (M3 E46 before the open-ended M3) so a row lands on the narrow model
+  // when both would match. matchOcdRules skips rules whose years exclude the row.
+  const span = (id: string) => {
+    const y = byId.get(id)?.years;
+    return (y?.end ?? 9999) - (y?.start ?? 0);
+  };
   const rules: AliasRule[] = aliases
     .map((a) => ({
       modelId: a.modelId,
@@ -103,7 +137,11 @@ export async function loadCatalog(
       rawModel: a.rawModel,
       rawTrimPattern: a.rawTrimPattern,
     }))
-    .sort((x, y) => (y.rawTrimPattern?.length ?? 0) - (x.rawTrimPattern?.length ?? 0));
+    .sort(
+      (x, y) =>
+        (y.rawTrimPattern?.length ?? 0) - (x.rawTrimPattern?.length ?? 0) ||
+        span(x.modelId) - span(y.modelId),
+    );
   return { rules, byId };
 }
 
@@ -158,7 +196,11 @@ export async function upsertExternalRows(
   let matched = 0;
   const values: ReturnType<typeof toInsert>[] = [];
   for (const r of rows) {
-    const modelId = matchOcdRules(rules, { rawMake: r.make, rawModel: r.model, title: r.title });
+    const modelId = matchOcdRules(
+      rules,
+      { rawMake: r.make, rawModel: r.model, title: r.title, year: r.year },
+      (id) => byId.get(id)?.years,
+    );
     let generationId: string | null = null;
     if (modelId) {
       matched++;
@@ -218,23 +260,45 @@ async function pull(
   log: (s: string) => void,
   now: Date,
   fetchImpl?: typeof fetch,
-): Promise<{ rows: NormalizedLiveRow[]; budgetStopped: string | null }> {
+): Promise<{
+  rows: NormalizedLiveRow[];
+  budgetStopped: string | null;
+  /** Why no walk happened (no key); the run must not anchor the next window. */
+  skipped: string | null;
+  /** A non-budget failure mid-walk; rows already pulled are still returned. */
+  error: string | null;
+  pages: number;
+  truncated: boolean;
+}> {
   const rows: NormalizedLiveRow[] = [];
+  let walk = { pages: 0, truncated: false };
   if (!env.OCD_API_KEY) {
     log("ocd: skipped (no key)");
-    return { rows, budgetStopped: null };
+    return { rows, budgetStopped: null, skipped: "OCD_API_KEY not set", error: null, ...walk };
   }
   try {
+    // Sweeps stop at a share of the plan so on-demand report builds keep the rest.
     await withBudget(
       db,
       "ocd",
-      env.OCD_MONTHLY_BUDGET,
+      Math.floor(env.OCD_MONTHLY_BUDGET * OCD_SWEEP_SHARE),
       async (record) => {
-        const client = createOcdClient({ apiKey: env.OCD_API_KEY!, record, fetchImpl });
+        const client = createOcdClient({
+          apiKey: env.OCD_API_KEY!,
+          record,
+          fetchImpl,
+          maxPages: scope === "all" ? LIVE_SWEEP_MAX_PAGES : undefined,
+        });
         if (scope === "all") {
-          // One sweep of everything that changed since the last run (default: 36 hours back).
-          const updatedSince = new Date(now.getTime() - 36 * 3_600_000).toISOString();
-          rows.push(...(await client.live({ updatedSince }, now)));
+          // Everything that changed since the last good sweep (45 minutes to 36 hours back).
+          const updatedSince = liveUpdatedSince(await lastGoodRun(db, "live-auctions"), now);
+          log(`live: updated since ${updatedSince.toISOString()}`);
+          try {
+            // `rows` is the client's output, so pages already paid for survive a budget stop.
+            await client.live({ updatedSince: updatedSince.toISOString() }, now, rows);
+          } finally {
+            walk = client.lastWalk();
+          }
           return;
         }
         // Catalog scope: one query per distinct make + line (keywords are applied client-side).
@@ -251,13 +315,16 @@ async function pull(
       },
       log,
     );
-    return { rows, budgetStopped: null };
+    return { rows, budgetStopped: null, skipped: null, error: null, ...walk };
   } catch (e) {
     if (e instanceof BudgetExceeded) {
       log(`stop: ${e.message}`);
-      return { rows, budgetStopped: e.message };
+      return { rows, budgetStopped: e.message, skipped: null, error: null, ...walk };
     }
-    throw e;
+    // Pages already fetched were paid for and stored; hand them back with the failure.
+    const error = (e instanceof Error ? e.message : String(e)).replace(/\s+/g, " ").slice(0, 300);
+    log(`error: ${error}; keeping ${rows.length} rows already pulled`);
+    return { rows, budgetStopped: null, skipped: null, error, ...walk };
   }
 }
 
@@ -276,7 +343,8 @@ export async function syncLiveAuctions(
   try {
     const [jr] = await db
       .insert(jobRuns)
-      .values({ name: "live-auctions", dryRun })
+      // Catalog-scoped hand runs keep their own name so they never anchor the "all" sweep window.
+      .values({ name: scope === "all" ? "live-auctions" : "live-auctions:catalog", dryRun })
       .returning({ id: jobRuns.id });
     jobRunId = jr?.id ?? null;
   } catch (e) {
@@ -289,6 +357,9 @@ export async function syncLiveAuctions(
   let markedEnded = 0;
   let reconciled = 0;
   let budgetStopped: string | null = null;
+  let pages = 0;
+  let truncated = false;
+  let skipped: string | null = null;
 
   try {
     const { rules, byId } = await loadCatalog(db);
@@ -296,6 +367,14 @@ export async function syncLiveAuctions(
     if (!dryRun) {
       const res = await pull(db, scope, rules, log, now, opts.fetchImpl);
       budgetStopped = res.budgetStopped;
+      skipped = res.skipped;
+      if (res.error) errors.push(`ocd: ${res.error}`);
+      pages = res.pages;
+      truncated = res.truncated;
+      if (truncated)
+        log(
+          `page cap hit after ${pages} pages; rows beyond it are picked up when they next change or by the backfill job`,
+        );
       pulled = res.rows.length;
       // Dedupe within the pull (paging overlap) on source+sourceId, last one wins.
       const uniq = new Map<string, NormalizedLiveRow>();
@@ -369,7 +448,10 @@ export async function syncLiveAuctions(
     matchedToCatalog: matched,
     markedEnded,
     reconciled,
+    pages,
+    truncated,
     budgetStopped,
+    skipped,
     errors,
   };
   if (jobRunId) {
@@ -378,9 +460,10 @@ export async function syncLiveAuctions(
         .update(jobRuns)
         .set({
           finishedAt: new Date(),
-          ok: errors.length === 0,
+          // A budget stop or a skipped walk did not cover its window, so it must not anchor the next one.
+          ok: errors.length === 0 && budgetStopped == null && skipped == null,
           summary,
-          error: errors[0] ?? null,
+          error: errors[0] ?? budgetStopped ?? skipped ?? null,
           changed: upserted + markedEnded + reconciled,
         })
         .where(eq(jobRuns.id, jobRunId));
