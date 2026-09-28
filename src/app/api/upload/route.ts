@@ -24,6 +24,9 @@ const UPLOADS_PER_HOUR = 40;
  * short-lived token scoped to one pathname under listings/{clerkUserId}/, then
  * uploads straight to Blob storage, so the file never passes through a
  * function. Photos are attached to a listing at save time, not here.
+ * Purchase evidence under purchases/{clerkUserId}/ is uploaded with private
+ * access (the client sets it on the PUT) and read back only through
+ * /api/purchases/[id]/evidence/[slot].
  */
 export async function POST(req: Request) {
   if (!env.BLOB_READ_WRITE_TOKEN)

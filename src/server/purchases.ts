@@ -1,13 +1,13 @@
 "use server";
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/auth";
 import { db } from "@/db";
 import { inquiries, listings, purchases, users } from "@/db/schema";
 import { buildCart } from "@/lib/purchase/pricing";
-import { inquirySchema, purchaseSchema } from "./purchases-schema";
+import { inquirySchema, purchaseSchemaFor } from "./purchases-schema";
 import { type ActionResult, fail, toError } from "./result";
 
 async function loadPurchasable(listingId: string, buyerId: string) {
@@ -62,7 +62,7 @@ export async function createInquiry(raw: unknown): Promise<ActionResult<{ id: st
 export async function createPurchase(raw: unknown): Promise<ActionResult<{ id: string }>> {
   try {
     const user = await requireUser();
-    const parsed = purchaseSchema.safeParse(raw);
+    const parsed = purchaseSchemaFor(user.clerkId).safeParse(raw);
     if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Check the form.");
     const d = parsed.data;
     if (d.mode === "online" && !d.acknowledged)
@@ -103,46 +103,84 @@ const respondSchema = z.object({
   note: z.string().trim().max(2000).optional().nullable(),
 });
 
-/** Seller accepts, declines or completes a request. Completing marks the listing sold. */
+/** Thrown inside the response transaction to roll it back with a message for the seller. */
+class RespondAbort extends Error {}
+
+/**
+ * Seller accepts, declines or completes a request. Completing marks the
+ * listing sold and declines the listing's other open requests. Everything runs
+ * in one transaction with the purchase row locked, and each write is
+ * conditional on the state it expects, so two overlapping responses (or a
+ * completion on a listing that already sold) cannot leave a half-applied sale.
+ */
 export async function respondToPurchase(raw: unknown): Promise<ActionResult> {
   try {
     const user = await requireUser();
     const parsed = respondSchema.safeParse(raw);
     if (!parsed.success) return fail("Invalid request.");
     const d = parsed.data;
-    const [p] = await db
-      .select({
-        id: purchases.id,
-        listingId: purchases.listingId,
-        status: purchases.status,
-        price: purchases.price,
-      })
-      .from(purchases)
-      .where(and(eq(purchases.id, d.id), eq(purchases.sellerId, user.id)))
-      .limit(1);
-    if (!p) return fail("Request not found.");
-    if (p.status === "cancelled" || p.status === "declined" || p.status === "completed")
-      return fail("This request is already closed.");
-    await db
-      .update(purchases)
-      .set({ status: d.decision, sellerNote: d.note || null, respondedAt: new Date() })
-      .where(eq(purchases.id, d.id));
-    if (d.decision === "completed") {
-      await db
-        .update(listings)
-        .set({ status: "sold", soldPrice: p.price, closedAt: new Date() })
-        .where(and(eq(listings.id, p.listingId), eq(listings.sellerId, user.id)));
-      await db
+    const now = new Date();
+    const listingId = await db.transaction(async (tx) => {
+      const [p] = await tx
+        .select({
+          id: purchases.id,
+          listingId: purchases.listingId,
+          status: purchases.status,
+          price: purchases.price,
+        })
+        .from(purchases)
+        .where(and(eq(purchases.id, d.id), eq(purchases.sellerId, user.id)))
+        .for("update");
+      if (!p) throw new RespondAbort("Request not found.");
+      if (p.status !== "submitted" && p.status !== "accepted")
+        throw new RespondAbort("This request is already closed.");
+      const updated = await tx
         .update(purchases)
-        .set({ status: "declined", respondedAt: new Date() })
-        .where(and(eq(purchases.listingId, p.listingId), eq(purchases.status, "submitted")));
-    }
+        .set({ status: d.decision, sellerNote: d.note || null, respondedAt: now })
+        .where(
+          and(
+            eq(purchases.id, d.id),
+            eq(purchases.sellerId, user.id),
+            inArray(purchases.status, ["submitted", "accepted"]),
+          ),
+        )
+        .returning({ id: purchases.id });
+      if (updated.length === 0) throw new RespondAbort("This request is already closed.");
+      if (d.decision === "completed") {
+        // Not "active": a seller may complete an accepted request on an ended
+        // or withdrawn listing, but never on one that has already sold.
+        const sold = await tx
+          .update(listings)
+          .set({ status: "sold", soldPrice: p.price, closedAt: now })
+          .where(
+            and(
+              eq(listings.id, p.listingId),
+              eq(listings.sellerId, user.id),
+              ne(listings.status, "sold"),
+            ),
+          )
+          .returning({ id: listings.id });
+        if (sold.length === 0) throw new RespondAbort("This listing has already been sold.");
+        await tx
+          .update(purchases)
+          .set({ status: "declined", respondedAt: now })
+          .where(
+            and(
+              eq(purchases.listingId, p.listingId),
+              ne(purchases.id, d.id),
+              inArray(purchases.status, ["submitted", "accepted"]),
+            ),
+          );
+      }
+      return p.listingId;
+    });
     revalidatePath("/garage");
     revalidatePath("/listings");
-    revalidatePath(`/listings/${p.listingId}`);
+    revalidatePath(`/listings/${listingId}`);
     revalidatePath(`/purchases/${d.id}`);
     return { ok: true };
   } catch (e) {
+    if (e instanceof RespondAbort) return fail(e.message);
     return toError(e);
   }
 }

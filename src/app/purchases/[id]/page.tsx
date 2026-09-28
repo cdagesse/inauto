@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { fmtDate, mi, usd } from "@/components/account/money";
 import { requireSignedIn } from "@/components/account/require-signin";
 import { PurchaseResponse } from "@/components/listings/purchase-response";
+import { evidenceHref } from "@/lib/purchase/evidence";
 import { ADDONS, ONLINE_STEPS } from "@/lib/purchase/pricing";
 import { cancelPurchaseForm } from "@/server/forms";
 import { getPurchaseForViewer } from "@/server/queries/purchases";
@@ -149,19 +150,29 @@ export default async function PurchaseDetailPage({ params }: { params: Promise<{
               <div className="lab">Proof on file</div>
               <div className="card-actions" style={{ marginTop: 8 }}>
                 {pr.uploads.titleFront ? (
-                  <a className="btn sm" href={pr.uploads.titleFront} target="_blank" rel="noopener">
+                  <a
+                    className="btn sm"
+                    href={evidenceHref(pr.id, "title-front")}
+                    target="_blank"
+                    rel="noopener"
+                  >
                     Title, front
                   </a>
                 ) : null}
                 {pr.uploads.titleBack ? (
-                  <a className="btn sm" href={pr.uploads.titleBack} target="_blank" rel="noopener">
+                  <a
+                    className="btn sm"
+                    href={evidenceHref(pr.id, "title-back")}
+                    target="_blank"
+                    rel="noopener"
+                  >
                     Title, back
                   </a>
                 ) : null}
                 {pr.uploads.ownershipVideo ? (
                   <a
                     className="btn sm"
-                    href={pr.uploads.ownershipVideo}
+                    href={evidenceHref(pr.id, "ownership-video")}
                     target="_blank"
                     rel="noopener"
                   >

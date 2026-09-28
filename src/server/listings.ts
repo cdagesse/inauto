@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireUser } from "@/auth";
 import { db } from "@/db";
 import { bids, listings, networkMembers } from "@/db/schema";
+import { computeGuidance } from "./guidance";
 import { createListingSchema, updateListingSchema } from "./listings-schema";
 import { placeBid } from "./queries/listings";
 import { type ActionResult, fail, toError } from "./result";
@@ -40,6 +41,19 @@ export async function createListing(raw: unknown): Promise<ActionResult<{ id: st
     if (d.type !== "auction" && (d.askingPrice == null || d.askingPrice <= 0))
       return fail("Enter an asking price.");
     const photos = d.photos.map(safeUrl).filter((p): p is string => !!p);
+    // Guidance is UrCar's own read of the market, so it is computed here from
+    // the validated car and price rather than taken from the seller's payload.
+    const { guidance } = await computeGuidance({
+      make: d.make,
+      model: d.model,
+      year: d.year,
+      miles: d.miles,
+      packages: d.packages,
+      colorClass: d.colorClass,
+      condition: d.condition,
+      history: d.history,
+      askingPrice: d.type === "auction" ? (d.reservePrice ?? 0) : (d.askingPrice ?? 0),
+    });
     const [row] = await db
       .insert(listings)
       .values({
@@ -68,7 +82,7 @@ export async function createListing(raw: unknown): Promise<ActionResult<{ id: st
           d.type === "auction" && d.publish
             ? new Date(Date.now() + d.auctionDays! * 86_400_000)
             : null,
-        priceGuidance: d.priceGuidance ?? null,
+        priceGuidance: guidance,
       })
       .returning({ id: listings.id });
     revalidatePath("/listings");
