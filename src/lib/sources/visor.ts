@@ -40,6 +40,8 @@ export interface VisorClientOptions {
   maxPages?: number;
   /** Epoch ms; a page walk that reaches it throws VisorDeadline so a job can stop mid-model. */
   deadline?: number;
+  /** Page cap for active-inventory walks when it differs from maxPages (which then caps sold walks). */
+  activeMaxPages?: number;
 }
 
 /** Thrown by a page walk that hit the caller's deadline; the model stays due for the next run. */
@@ -212,7 +214,8 @@ export function createVisorClient(o: VisorClientOptions) {
     const re = q.trimPattern ? patternToRegExp(q.trimPattern) : null;
 
     let offset = 0;
-    for (let page = 0; page < maxPages; page++) {
+    const cap = mode === "active" ? (o.activeMaxPages ?? maxPages) : maxPages;
+    for (let page = 0; page < cap; page++) {
       if (o.deadline && Date.now() >= o.deadline) throw new VisorDeadline();
       const res = await call("/v1/listings", { ...params, offset });
       for (const r of rows(res.body)) {

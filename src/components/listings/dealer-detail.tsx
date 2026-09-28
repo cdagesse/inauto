@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { RecordView } from "@/components/home/recent-views";
 import { BrandLogo } from "@/components/site/brand-logo";
-import { fmtDate, mi, usd } from "@/lib/format/money";
+import { longDate } from "@/components/market/format";
+import { fmtDate, fmtDateTime, mi, usd } from "@/lib/format/money";
 import { dealerTitle } from "@/lib/listings/dealer-cursor";
 import { maskVin } from "@/lib/sources/live";
 import type { DealerDetail as DealerDetailData } from "@/server/queries/dealers";
@@ -51,7 +52,7 @@ export function DealerDetail({
 }) {
   const title = dealerTitle(l);
   const place = dealerPlace(l);
-  const carLine = [l.year, l.make, l.modelShort ?? l.model, l.trim].filter(Boolean).join(" ");
+  const carLine = dealerTitle({ ...l, year: null });
   const delta = read?.valuation ? askDelta(l.price, read.valuation.marketValue) : null;
   const dealer = l.dealerName ?? "the dealer";
   return (
@@ -93,7 +94,7 @@ export function DealerDetail({
           ) : null}
           <div className="hint">
             {l.daysOnMarket != null
-              ? `${l.daysOnMarket} days on the market`
+              ? `${l.daysOnMarket} day${l.daysOnMarket === 1 ? "" : "s"} on the market`
               : "Days on market unknown"}
             {l.listedAt ? ` · listed ${fmtDate(l.listedAt)}` : ""}
           </div>
@@ -139,8 +140,8 @@ export function DealerDetail({
                 <Row k="VIN" v={maskVin(l.vin) ?? "Not published"} mono />
                 {l.stockNumber ? <Row k="Stock number" v={l.stockNumber} mono /> : null}
                 <Row k="Listed" v={l.listedAt ? fmtDate(l.listedAt) : "Unknown"} mono />
-                <Row k="Inventory snapshot" v={fmtDate(l.snapshotDate)} mono />
-                <Row k="Last checked" v={l.fetchedAt.toLocaleString("en-US")} mono />
+                <Row k="Inventory snapshot" v={longDate(l.snapshotDate)} mono />
+                <Row k="Last checked" v={fmtDateTime(l.fetchedAt)} mono />
               </tbody>
             </table>
           </div>

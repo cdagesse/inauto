@@ -1,11 +1,12 @@
 import "server-only";
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { externalListings, featuredCars, listings } from "@/db/schema";
+import { dealerActive, externalListings, featuredCars, listings, makes, models } from "@/db/schema";
+import { dealerTitle } from "@/lib/listings/dealer-cursor";
 import { isPlatformKey } from "@/lib/sources/platforms";
 import { effectiveStatus } from "@/lib/sources/status";
 
-export type FeaturedKind = "listing" | "external";
+export type FeaturedKind = "listing" | "external" | "dealer";
 
 /** One card in the home hero rotation. */
 export interface FeaturedCar {
