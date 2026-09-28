@@ -8,7 +8,7 @@ export default function SignInPage() {
     <div className="auth-wrap">
       <div className="eyebrow">Account</div>
       <h1 className="display" style={{ fontSize: 34, margin: "6px 0 4px" }}>
-        Sign in to InAuto
+        Sign in to UrCar
       </h1>
       <p className="sub">
         Your garage, wish list, listings and private networks live behind your account.

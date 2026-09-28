@@ -88,7 +88,7 @@ export function ValuationTool({
   snapshot: MarketSnapshot;
   /** Pre-selected generation, year and mileage (from the sell picker). */
   initial?: ValuationInitial;
-  /** "sell" adds a list-with-InAuto call to action to every channel. */
+  /** "sell" adds a list-with-UrCar call to action to every channel. */
   mode?: "market" | "sell";
 }) {
   const initialGen =
@@ -333,7 +333,7 @@ export function ValuationTool({
             ) : null}
             {sell ? (
               <a className="btn sm chan-cta" href={`${listHref}&type=auction`}>
-                Run the auction on InAuto
+                Run the auction on UrCar
               </a>
             ) : null}
           </div>
@@ -388,7 +388,7 @@ export function ValuationTool({
             </div>
             {sell ? (
               <a className="btn sm primary chan-cta" href={`${listHref}&type=classified`}>
-                List it on InAuto
+                List it on UrCar
               </a>
             ) : null}
           </div>
@@ -408,7 +408,7 @@ export function ValuationTool({
 
         {sell ? (
           <div className="rec sell-pitch">
-            <b>Whichever path you pick, list it on InAuto first.</b>
+            <b>Whichever path you pick, list it on UrCar first.</b>
             <p>
               Listing is free. Your {short} is priced against the {v.basis} on this page, so buyers
               trust the number, and every buyer can order title vetting and an inspection before

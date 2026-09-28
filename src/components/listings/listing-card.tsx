@@ -57,7 +57,7 @@ export function ListingCard({ l, highlight = false }: { l: ListingCardData; high
       </div>
       <div className="lab card-meta">
         <span className="meta-main">
-          {highlight ? <span className="pill accent inauto-pill">On InAuto</span> : null}
+          {highlight ? <span className="pill accent inauto-pill">On UrCar</span> : null}
           {l.type === "auction"
             ? "Auction"
             : l.type === "private"

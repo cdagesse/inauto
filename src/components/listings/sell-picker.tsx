@@ -225,7 +225,7 @@ export function SellPicker({ makes }: { makes: SellMake[] }) {
       {error ? <p className="err">{error}</p> : null}
       <p className="hint" style={{ margin: 0 }}>
         Free, no account needed. You get a market value, what you would net at auction, from a
-        dealer, or selling it yourself, and a one-click path to list it on InAuto.
+        dealer, or selling it yourself, and a one-click path to list it on UrCar.
       </p>
     </form>
   );

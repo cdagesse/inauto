@@ -17,7 +17,7 @@ export default async function AdminFeatured({
     <div>
       <p className="hint" style={{ margin: "0 0 12px" }}>
         Cars that rotate in the home page hero, in this order. Add one from the admin bar at the
-        bottom of any InAuto listing or platform auction page. Ended or removed cars drop out of the
+        bottom of any UrCar listing or platform auction page. Ended or removed cars drop out of the
         rotation automatically but stay listed here until removed.
       </p>
       <Flash ok={sp.ok} error={sp.error} />
@@ -43,7 +43,7 @@ export default async function AdminFeatured({
                 <tr key={r.id}>
                   <td className="mono">{i + 1}</td>
                   <td>{r.href ? <Link href={r.href}>{r.title}</Link> : r.title}</td>
-                  <td>{r.kind === "listing" ? "InAuto listing" : "Platform auction"}</td>
+                  <td>{r.kind === "listing" ? "UrCar listing" : "Platform auction"}</td>
                   <td>
                     <span
                       className={`pill ${r.status === "active" || r.status === "live" ? "up" : ""}`}

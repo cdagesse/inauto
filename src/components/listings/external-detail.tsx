@@ -12,7 +12,7 @@ import { PlatformMark, SourceBadge } from "./source-badge";
 import { StickyHead } from "./sticky-head";
 import { RecordView } from "@/components/home/recent-views";
 
-export interface InAutoRead {
+export interface UrCarRead {
   valuation: ValuationResult | null;
   reportHref: string;
   modelName: string;
@@ -33,7 +33,7 @@ export function ExternalDetail({
   expandId,
 }: {
   l: ExternalDetailData;
-  read: InAutoRead | null;
+  read: UrCarRead | null;
   showPhotos: boolean;
   signedIn: boolean;
   /** Full market data section (KPIs, charts, comps), rendered under the listing details. */
@@ -213,7 +213,7 @@ export function ExternalDetail({
             </>
           ) : null}
           <p className="note external-notice">
-            Listing details are provided by the platform; InAuto is not the seller. Bid and buy on
+            Listing details are provided by the platform; UrCar is not the seller. Bid and buy on
             the platform.
           </p>
           {market}
@@ -232,12 +232,12 @@ export function ExternalDetail({
               View on {platformName} ↗
             </a>
             <p className="hint" style={{ marginTop: 8 }}>
-              Opens the original listing in a new tab. Bidding happens there, not on InAuto.
+              Opens the original listing in a new tab. Bidding happens there, not on UrCar.
             </p>
           </div>
 
           <div className="panel">
-            <div className="lab">InAuto read</div>
+            <div className="lab">UrCar read</div>
             {read?.valuation ? (
               <>
                 <h3 className="display" style={{ fontSize: 18, margin: "4px 0 6px" }}>
@@ -278,7 +278,7 @@ export function ExternalDetail({
             ) : read ? (
               <>
                 <p className="hint">
-                  No InAuto market report yet for the {read.modelName}.{" "}
+                  No UrCar market report yet for the {read.modelName}.{" "}
                   <Link href={read.reportHref}>
                     {read.pending ? "Build one now" : "Open the model page"}
                   </Link>
@@ -323,7 +323,7 @@ export function ExternalDetail({
             </div>
             <p className="hint" style={{ marginTop: 8 }}>
               {signedIn
-                ? "Independent inspectors and a title history pull, arranged by InAuto."
+                ? "Independent inspectors and a title history pull, arranged by UrCar."
                 : "Sign in on the next step to place an order."}
               {ended
                 ? " This auction has ended; orders still help if you are buying it privately."

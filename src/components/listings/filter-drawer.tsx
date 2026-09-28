@@ -255,7 +255,7 @@ export function FilterDrawer({
                 onChange={(e) => setScope((x) => ({ ...x, source: e.target.value }))}
               >
                 <option value="">All sources</option>
-                <option value="inauto">InAuto</option>
+                <option value="inauto">UrCar</option>
                 {PLATFORM_KEYS.map((k) => (
                   <option key={k} value={k}>
                     {PLATFORMS[k].name}

@@ -10,7 +10,7 @@ import { type ActionResult, fail, toError } from "./result";
 
 export type ListingFeedRow = Awaited<ReturnType<typeof listActiveListings>>["rows"][number];
 
-/** Public, read-only. Next page of active InAuto listings visible to the current viewer. */
+/** Public, read-only. Next page of active UrCar listings visible to the current viewer. */
 export async function loadMoreListings(
   raw: unknown,
 ): Promise<ActionResult<{ rows: ListingFeedRow[]; nextCursor: string | null }>> {

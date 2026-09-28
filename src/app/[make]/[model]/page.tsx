@@ -96,7 +96,7 @@ export default async function ModelPage({ params }: { params: Promise<Params> })
     url: `/${s.make.slug}/${s.model.slug}`,
     temporalCoverage: `${s.dealerSince}/${s.dataThrough}`,
     spatialCoverage: "United States",
-    creator: { "@type": "Organization", name: "InAuto" },
+    creator: { "@type": "Organization", name: "UrCar" },
     isBasedOn: ["https://visor.vin", "https://oldcarsdata.com"],
     variableMeasured: [
       "median sold price",

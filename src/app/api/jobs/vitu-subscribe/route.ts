@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
  * One-shot registration of our webhook with a Vitu Notifications product.
  * Run once per product (and again if the key or domain changes):
  *   curl -X POST -H "Authorization: Bearer $CRON_SECRET" \
- *     "https://inauto-nu.vercel.app/api/jobs/vitu-subscribe?product=mvr"
+ *     "https://ur.car/api/jobs/vitu-subscribe?product=mvr"
  * GET shows the current subscription; DELETE removes it.
  * Each Notifications product is served from its parent API's base, so only the
  * product needs to be enabled. VITU_WEBHOOK_KEY becomes the HMAC key.
@@ -49,7 +49,7 @@ async function handle(req: Request) {
     if (req.method === "DELETE") return NextResponse.json(await unsubscribe(cfg.c));
     const key = env.vituWebhookKey;
     if (!key) return NextResponse.json({ error: "VITU_WEBHOOK_KEY not set" }, { status: 503 });
-    const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "https://inauto-nu.vercel.app";
+    const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ur.car";
     const callbackUrl = `${origin.replace(/\/$/, "")}/api/webhooks/vitu?product=${cfg.product}`;
     const security = await setHmacSecurity(cfg.c, key);
     const subscription = await subscribe(cfg.c, callbackUrl);

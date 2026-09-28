@@ -6,7 +6,7 @@ import { listSellMakes } from "@/server/queries/sell-catalog";
 export const metadata: Metadata = {
   title: "Sell your car",
   description:
-    "Pick your year, make, model, trim and mileage to see what your car is worth from real dealer and auction sales, then list it on InAuto in minutes.",
+    "Pick your year, make, model, trim and mileage to see what your car is worth from real dealer and auction sales, then list it on UrCar in minutes.",
 };
 
 export const revalidate = 3600;
@@ -23,7 +23,7 @@ export default async function SellPage() {
           </h1>
           <p className="sub" style={{ maxWidth: "58ch" }}>
             Tell us the car and we will show you its market value, the three ways to sell it and
-            what you would keep from each. Then list it on InAuto: free, priced against real sales,
+            what you would keep from each. Then list it on UrCar: free, priced against real sales,
             with title vetting and inspection so buyers trust the number.
           </p>
         </div>
@@ -47,7 +47,7 @@ export default async function SellPage() {
           </p>
         </div>
         <div className="panel prop">
-          <div className="eyebrow">3 · List on InAuto</div>
+          <div className="eyebrow">3 · List on UrCar</div>
           <h3>Keep the platform fee</h3>
           <p>
             Classified or 7 to 14 day auction, free to list. Buyers see the same market data you do

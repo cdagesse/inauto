@@ -14,7 +14,7 @@ const TONE: Record<VinEvent["kind"], string> = {
   inauto_ended: "down",
 };
 
-/** The car's history by VIN: every dealer listing, auction and InAuto listing we have seen. */
+/** The car's history by VIN: every dealer listing, auction and UrCar listing we have seen. */
 export function VinTimeline({ events, vinShown }: { events: VinEvent[]; vinShown: string | null }) {
   if (events.length === 0) return null;
   const sales = events.filter((e) => e.kind.endsWith("_sold") && e.price);

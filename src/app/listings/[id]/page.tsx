@@ -113,7 +113,7 @@ export default async function ListingPage({
           currency: "USD",
           priceLabel: marketLabel,
           photo: l.photos[0] ?? null,
-          badge: "On InAuto",
+          badge: "On UrCar",
         }}
       />
       <StickyHead photo={l.photos[0] ?? null}>

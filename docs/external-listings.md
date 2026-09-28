@@ -1,6 +1,6 @@
 # External auction listings
 
-Live auctions from third-party platforms (Bring a Trailer, Cars & Bids, Sotheby's Motorsport, Hagerty, Barrett-Jackson, Bonhams, PCARMARKET, Collecting Cars) are shown on InAuto so buyers can compare them against our market data and order buyer-protection services. Bidding always happens on the platform: every external page has a prominent "View on <platform>" link that goes through `/go/{id}` (click logged, then a 302 to the platform's URL). The platform is named on every card and page (`SourceBadge`).
+Live auctions from third-party platforms (Bring a Trailer, Cars & Bids, Sotheby's Motorsport, Hagerty, Barrett-Jackson, Bonhams, PCARMARKET, Collecting Cars) are shown on UrCar so buyers can compare them against our market data and order buyer-protection services. Bidding always happens on the platform: every external page has a prominent "View on <platform>" link that goes through `/go/{id}` (click logged, then a 302 to the platform's URL). The platform is named on every card and page (`SourceBadge`).
 
 ## Flow
 
@@ -8,7 +8,7 @@ Live auctions from third-party platforms (Bring a Trailer, Cars & Bids, Sotheby'
    The live endpoint is page-based (`meta.total_pages`); the client walks every page. A one-time bulk pull is available by hand: `POST /api/jobs/backfill-auctions?part=live` (every in-progress auction) and `POST /api/jobs/backfill-auctions?part=past&days=30` (every auction that ended in the window, into `external_listing` for the Past view and into `auction_result` for catalog models). Bearer `CRON_SECRET`; one budget unit per page.
 2. Rows are matched to catalog models through `model_alias` (source `ocd`) and to a generation by model year (the placeholder `all` generation is skipped).
 3. Listings past their end time are marked `ended`. When the nightly job later imports the result into `auction_result`, the reconcile step settles the listing to `sold` / `rnm` / `withdrawn` with the final price (`reconcileDecision` in `src/lib/sources/live.ts`).
-4. `/listings` shows live external auctions after InAuto's own listings (source filter chips per platform); `/listings/ext/{source}/{sourceId}` is the detail page with an "InAuto read" (our valuation for the car's year and miles versus the current bid) and buyer-protection CTAs.
+4. `/listings` shows live external auctions after UrCar's own listings (source filter chips per platform); `/listings/ext/{source}/{sourceId}` is the detail page with an "UrCar read" (our valuation for the car's year and miles versus the current bid) and buyer-protection CTAs.
 
 Dry run (`JOBS_DRY_RUN=true`, the default) makes no API calls; only the end-time and reconcile steps run. Trigger a real pull with `?live=1` on the cron route (bearer required). `?scope=catalog` pulls per catalog alias instead of one unfiltered pull.
 
@@ -21,7 +21,7 @@ The `/auctions/live` request and row shapes are verified against `https://api.ol
 - Photos and descriptions belong to the platforms and their sellers. `EXTERNAL_PHOTOS` is off by default; external pages show a platform placeholder instead of hotlinked images until the platforms' terms (and Old Cars Data's redistribution terms) are confirmed in writing. Descriptions are shown as plain text when present; consider truncating or dropping them under the same review.
 - External pages are `noindex, nofollow` and the outbound link carries `rel="nofollow noopener noreferrer sponsored"`.
 - VINs are masked to the last 6 on our pages.
-- Every external page states: "Listing details are provided by the platform; InAuto is not the seller. Bid and buy on the platform."
+- Every external page states: "Listing details are provided by the platform; UrCar is not the seller. Bid and buy on the platform."
 
 ## Seed
 

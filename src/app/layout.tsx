@@ -27,11 +27,11 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { clerkAppearance } from "@/components/site/clerk-appearance";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://inauto-nu.vercel.app"),
-  title: { default: "InAuto", template: "%s · InAuto" },
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://ur.car"),
+  title: { default: "UrCar", template: "%s · UrCar" },
   description:
     "Collector car market data, pricing tools, and a safer way to buy and sell: classifieds, auctions, private networks, title vetting and condition reports.",
-  openGraph: { siteName: "InAuto", type: "website" },
+  openGraph: { siteName: "UrCar", type: "website" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

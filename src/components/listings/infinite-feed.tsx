@@ -13,7 +13,7 @@ type Item = { kind: "own"; row: ListingFeedRow } | { kind: "ext"; row: ExternalC
 const itemId = (i: Item) => `${i.kind}:${i.row.id}`;
 
 /**
- * One continuous feed: InAuto listings first (highlighted), then platform
+ * One continuous feed: UrCar listings first (highlighted), then platform
  * auctions. Pages append as the sentinel below the grid scrolls into view.
  * The first page of each is server-rendered by the parent, so the list works
  * without JavaScript (the noscript link keeps paginated navigation) and

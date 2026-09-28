@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
-import { ExternalDetail, type InAutoRead } from "@/components/listings/external-detail";
+import { ExternalDetail, type UrCarRead } from "@/components/listings/external-detail";
 import { ExpandedRegion } from "@/components/listings/expandable";
 import { ExternalAdminBar } from "@/components/listings/external-admin-bar";
 import { isFeatured } from "@/server/queries/featured";
@@ -59,7 +59,7 @@ export default async function ExternalListingPage({ params }: { params: Params }
     id: `${l.source}:${l.sourceId}`,
   });
 
-  let read: InAutoRead | null = null;
+  let read: UrCarRead | null = null;
   if (l.market) {
     const reportHref = `/${l.market.makeSlug}/${l.market.modelSlug}`;
     const snapshot = await getMarketSnapshot(l.market.makeSlug, l.market.modelSlug);

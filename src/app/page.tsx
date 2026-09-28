@@ -78,7 +78,7 @@ export default async function HomePage() {
               Latest listings
             </h2>
             <p className="sub" style={{ margin: "4px 0 0" }}>
-              The newest cars listed on InAuto, each priced against real dealer and auction sales.
+              The newest cars listed on UrCar, each priced against real dealer and auction sales.
             </p>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
