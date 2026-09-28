@@ -64,8 +64,7 @@ export default async function ListingsPage({
           source: source === "all" ? undefined : source,
           ...carFilter,
           cursor: xcursor,
-          includeSettled: past,
-          settledOnly: past,
+          phase: past ? "past" : "live",
           result,
           limit: source === "all" ? 12 : 24,
         })

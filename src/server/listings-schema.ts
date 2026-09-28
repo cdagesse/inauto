@@ -1,10 +1,10 @@
 import { z } from "zod";
+import { isBlobUrl } from "@/lib/listings/blob-url";
 
 export const PAGE_SIZE = 24;
 export const MAX_PHOTOS = 24;
 
-/** Public-read Blob store host, or any https URL for the paste-a-link fallback. */
-export const BLOB_HOST_SUFFIX = ".public.blob.vercel-storage.com";
+/** Photos are UrCar Blob uploads only, so a seller cannot point a listing at a host they control. */
 export const photoUrl = z
   .string()
   .trim()
@@ -16,14 +16,8 @@ export const photoUrl = z
     } catch {
       return false;
     }
-  }, "Photo links must be https.");
-export const isBlobUrl = (u: string) => {
-  try {
-    return new URL(u).hostname.endsWith(BLOB_HOST_SUFFIX);
-  } catch {
-    return false;
-  }
-};
+  }, "Photo links must be https.")
+  .refine(isBlobUrl, "Upload photos through UrCar.");
 
 export const createListingSchema = z.object({
   type: z.enum(["classified", "auction", "private"]),

@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { isBlobUrl } from "@/server/listings-schema";
 
 /** Cover image plus thumbnails; click opens a keyboard-navigable viewer. */
 export function PhotoGallery({ photos, title }: { photos: string[]; title: string }) {
@@ -112,18 +111,7 @@ function Pic({
   sizes: string;
   contain?: boolean;
 }) {
+  // Own-listing photos are always UrCar Blob uploads, so the optimizer serves them all.
   const style = { objectFit: contain ? ("contain" as const) : ("cover" as const) };
-  if (isBlobUrl(src)) {
-    return <Image src={src} alt={alt} fill sizes={sizes} priority={priority} style={style} />;
-  }
-  // External links (paste-a-URL fallback) bypass the optimizer on purpose.
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={src}
-      alt={alt}
-      loading={priority ? "eager" : "lazy"}
-      style={{ ...style, position: "absolute", inset: 0, width: "100%", height: "100%" }}
-    />
-  );
+  return <Image src={src} alt={alt} fill sizes={sizes} priority={priority} style={style} />;
 }
