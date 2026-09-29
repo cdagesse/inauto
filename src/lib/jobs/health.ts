@@ -100,7 +100,7 @@ export const JOBS: readonly JobSpec[] = [
   {
     name: "rematch-listings",
     label: "Re-match listings",
-    what: "Links platform listings that had no catalog model, after an alias or matcher change; run by hand",
+    what: "Links platform listings that had no catalog model, or with scope=all moves listings and auction results whose match changed, after an alias or catalog change; run by hand",
     every: null,
     grace: 0,
     schedule: "By hand",
@@ -354,12 +354,21 @@ export function describeRun(name: string, summary: unknown, error: string | null
     }
     case "rematch-listings": {
       const updated = num(s, "updated");
+      const auctions = num(s, "auctionsUpdated");
       parts.push(
-        `${n(num(s, "scanned"))} unmatched scanned`,
-        `${n(num(s, "matched"))} now match`,
-        `${n(updated)} linked`,
+        `${str(s, "scope") === "all" ? "every listing" : "unmatched listings"}: ${n(num(s, "scanned"))} scanned`,
+        `${n(num(s, "matched"))} placed`,
+        `${n(updated)} written`,
       );
-      changed = updated;
+      if (num(s, "auctionsScanned"))
+        parts.push(
+          `${n(num(s, "auctionsScanned"))} auction results scanned, ${n(num(s, "auctionsMatched"))} placed, ${n(auctions)} moved`,
+        );
+      if (num(s, "snapshotsRebuilt") || num(s, "snapshotsSkipped"))
+        parts.push(
+          `${n(num(s, "snapshotsRebuilt"))} snapshots rebuilt${num(s, "snapshotsSkipped") ? `, ${n(num(s, "snapshotsSkipped"))} left to the nightly` : ""}`,
+        );
+      changed = updated + auctions;
       break;
     }
     case "ended-auctions": {

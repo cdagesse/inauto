@@ -117,18 +117,69 @@ export function parseOcdAlias(a: {
   rawModel: string | null;
   rawTrimPattern: string | null;
 }): OcdAlias {
-  const raw = (a.rawTrimPattern ?? "").trim();
+  // Look for the separator before trimming: an exclude-only pattern is stored as
+  // " !~ Pista", and trimming first turned it into the keyword "!~ Pista" (so the base
+  // 488 matched only Pistas). A pattern that starts with "!~" is exclude-only either way.
+  const raw = a.rawTrimPattern ?? "";
   const i = raw.indexOf(OCD_EXCLUDE_SEP);
-  const keyword = (i >= 0 ? raw.slice(0, i) : raw).trim() || null;
-  const excludeKeyword = (i >= 0 ? raw.slice(i + OCD_EXCLUDE_SEP.length) : "").trim() || null;
+  let keyword: string | null;
+  let excludeKeyword: string | null;
+  if (i >= 0) {
+    keyword = raw.slice(0, i).trim() || null;
+    excludeKeyword = raw.slice(i + OCD_EXCLUDE_SEP.length).trim() || null;
+  } else {
+    const t = raw.trim();
+    const bare = t.match(/^!~\s*(.+)$/);
+    keyword = bare ? null : t || null;
+    excludeKeyword = bare ? bare[1]!.trim() || null : null;
+  }
   return { make: a.rawMake, model: (a.rawModel ?? "").trim(), keyword, excludeKeyword };
 }
 
 const squash = (s: string | null | undefined) => (s ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
-const hasWord = (text: string, word: string) =>
-  new RegExp(`(^|[^a-z0-9])${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`, "i").test(
-    text,
+const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+/**
+ * A one- or two-character keyword ("R", "GP", "S/T", "SL") must stand as a word. A boundary is
+ * the string edge, a non-alphanumeric character, or a digit/letter transition, so "560SL",
+ * "CLA45", "2SS", "SS396", "GT2" and "Z4M" hold their keyword while "Convertible" does not
+ * hold "R". A run of capitals before a capitalised word is split first ("SVAutobiography").
+ */
+const TRANSITION = "(?<=[0-9])(?=[a-z])|(?<=[a-z])(?=[0-9])";
+const hasShortKeyword = (text: string, word: string) =>
+  new RegExp(`(?:(?<![a-z0-9])|${TRANSITION})${esc(word)}(?:(?![a-z0-9])|${TRANSITION})`, "i").test(
+    text.replace(/([A-Z])([A-Z][a-z])/g, "$1 $2"),
   );
+
+/** Keyword alternatives ("R|SVR|R75") split on "|"; a row matches when any one does. */
+export function keywordAlternatives(keyword: string | null | undefined): string[] {
+  return (keyword ?? "")
+    .split("|")
+    .map((k) => k.trim())
+    .filter(Boolean);
+}
+
+/** Does the title carry this keyword: whole word when it squashes to one or two characters, else anywhere ignoring spacing. */
+function hasKeyword(title: string, keyword: string): boolean {
+  return keywordAlternatives(keyword).some((kw) => {
+    const k = squash(kw);
+    if (!k) return false;
+    return k.length <= 2 ? hasShortKeyword(title, kw) : squash(title).includes(k);
+  });
+}
+
+/** How specific an alias rule is, for ordering: longer keywords first, then rules that carry an exclude. */
+export function ruleSpecificity(a: {
+  rawMake: string;
+  rawModel: string | null;
+  rawTrimPattern: string | null;
+}): { keywordLength: number; hasExclude: boolean } {
+  const parsed = parseOcdAlias(a);
+  const keywordLength = Math.max(
+    0,
+    ...keywordAlternatives(parsed.keyword).map((k) => squash(k).length),
+  );
+  return { keywordLength, hasExclude: parsed.excludeKeyword != null };
+}
 
 /** Does a normalized OCD row belong to this alias? Keyword matching ignores spacing ("S 63" = "S63"). */
 export function ocdRowMatches(
@@ -144,8 +195,10 @@ export function ocdRowMatches(
   if (squash(alias.make) !== squash(row.rawMake)) return false;
   if (alias.model && squash(alias.model) !== squash(row.rawModel)) return false;
   const title = row.title ?? "";
-  if (alias.keyword && !squash(title).includes(squash(alias.keyword))) return false;
-  if (alias.excludeKeyword && hasWord(title, alias.excludeKeyword)) return false;
+  // The exclude is read the same way as a keyword, so "excluded" means "the sibling's
+  // keyword would match": "GT3RS" leaves the plain GT3 when its exclude is "GT3 RS".
+  if (alias.keyword && !hasKeyword(title, alias.keyword)) return false;
+  if (alias.excludeKeyword && hasKeyword(title, alias.excludeKeyword)) return false;
   if (years && row.year != null) {
     if (years.start != null && row.year < years.start) return false;
     if (years.end != null && row.year > years.end) return false;

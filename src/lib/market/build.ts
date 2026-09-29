@@ -5,7 +5,12 @@ import type {
   MarketSnapshot,
   MonthlyPoint,
 } from "./types";
-import { AUCTION_THIN } from "./figures";
+import {
+  AUCTION_RECENT_DAYS,
+  AUCTION_RECENT_FALLBACK,
+  AUCTION_RECENT_MIN,
+  AUCTION_THIN,
+} from "./figures";
 
 /**
  * Pure builder: plain rows (as loaded from Postgres) in, a MarketSnapshot out.
@@ -218,9 +223,20 @@ export function buildSnapshot(input: SnapshotInput): MarketSnapshot {
     const dated = rows.filter((r): r is Sale & { date: Date } => r.date != null);
     const w = window90(dated, input.now);
     const msrp = g.originalMsrp ?? 0;
+    // Newest first (auctionsAll is sorted by end). Prices rest on the last year's sales when
+    // there are enough, else on the latest few: a car that has doubled since 2021 must not
+    // read at its 2021 median.
     const hammers = auctionsSold.filter((a) => a.code === g.code);
-    const hammerPrices = hammers.map((a) => a.hammerPrice as number);
-    const hammerThin = hammers.length < AUCTION_THIN;
+    const recentHammers = hammers.filter(
+      (a) =>
+        a.ended != null && a.ended.getTime() >= input.now.getTime() - AUCTION_RECENT_DAYS * DAY,
+    );
+    const basis =
+      recentHammers.length >= AUCTION_RECENT_MIN
+        ? recentHammers
+        : hammers.slice(0, AUCTION_RECENT_FALLBACK);
+    const hammerPrices = basis.map((a) => a.hammerPrice as number);
+    const hammerThin = basis.length < AUCTION_THIN;
     const aw = window90(
       hammers
         .filter((a): a is (typeof hammers)[number] & { ended: Date } => a.ended != null)
@@ -253,7 +269,8 @@ export function buildSnapshot(input: SnapshotInput): MarketSnapshot {
       extra: g.notes,
       packages: g.packages,
       auctionSold: hammers.length,
-      auctionMedian: r0(median(hammers.map((a) => a.hammerPrice as number))),
+      auctionBasis: basis.length,
+      auctionMedian: r0(median(hammerPrices)),
       auctionLast90: r0(aw.last90 ?? 0),
       auctionPrior90: r0(aw.prior90 ?? 0),
       auctionN90: aw.n90,
@@ -272,7 +289,7 @@ export function buildSnapshot(input: SnapshotInput): MarketSnapshot {
           : percentile(hammerPrices, 0.75),
       ),
       auctionMedianMiles: r0(
-        median(hammers.map((a) => a.miles).filter((m): m is number => m != null && m > 0)),
+        median(basis.map((a) => a.miles).filter((m): m is number => m != null && m > 0)),
       ),
       auctionOffered: auctionsAll.filter(
         (a) => a.code === g.code && a.excludedReason == null && a.status !== "withdrawn",
@@ -350,6 +367,15 @@ export function buildSnapshot(input: SnapshotInput): MarketSnapshot {
   // By model year: dealer sales, or hammer prices when the model has no dealer sales yet.
   const byYearBasis: MarketSnapshot["byYearBasis"] =
     sales.length === 0 && auctionsSold.length > 0 ? "auction" : "dealer";
+  // Hammer rows use the same recent basis as the generation figures (the valuation reads
+  // the car's year row first), so a 2004 car is not priced off its 2018 sales.
+  const recentSold = auctionsSold.filter(
+    (a) => a.ended != null && a.ended.getTime() >= input.now.getTime() - AUCTION_RECENT_DAYS * DAY,
+  );
+  const yearAuctions =
+    recentSold.length >= AUCTION_RECENT_MIN
+      ? recentSold
+      : auctionsSold.slice(0, AUCTION_RECENT_FALLBACK);
   const yearRows: {
     year: number | null;
     price: number;
@@ -357,7 +383,7 @@ export function buildSnapshot(input: SnapshotInput): MarketSnapshot {
     code: string | null;
   }[] =
     byYearBasis === "auction"
-      ? auctionsSold.map((a) => ({
+      ? yearAuctions.map((a) => ({
           year: a.year,
           price: a.hammerPrice as number,
           miles: a.miles,

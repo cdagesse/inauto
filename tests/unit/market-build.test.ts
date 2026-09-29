@@ -236,6 +236,34 @@ describe("buildSnapshot", () => {
     expect(s.auctionSince).toBe("2026-09-01");
   });
 
+  it("rests hammer figures on the last year's sales, or the latest few, not all time", () => {
+    const old = Array.from({ length: 10 }, (_, i) =>
+      auction(i, 1971, 200_000 + i * 1000, "sold", new Date(Date.UTC(2021, i, 10))),
+    );
+    const recent = [
+      auction(20, 1972, 750_000, "sold", new Date("2026-03-10T00:00:00Z")),
+      auction(21, 1972, 800_000, "sold", new Date("2026-06-10T00:00:00Z")),
+      auction(22, 1973, 900_000, "sold", new Date("2026-09-10T00:00:00Z")),
+    ];
+    const s = buildSnapshot(datsun([...old, ...recent]));
+    const g = s.generations.S30;
+    expect(g.auctionSold).toBe(13);
+    expect(g.auctionBasis).toBe(3);
+    expect(g.auctionMedian).toBe(800_000);
+    expect(g.auctionLo).toBe(750_000);
+    expect(g.auctionHi).toBe(900_000);
+    // The by-year rows rest on the same recent sales.
+    expect(s.byYear.map((r) => [r.year, r.n, r.median])).toEqual([
+      [1973, 1, 900_000],
+      [1972, 2, 775_000],
+    ]);
+    // Too few in the last year: the latest five carry the figures.
+    const thin = buildSnapshot(datsun([...old, recent[0]!, recent[2]!]));
+    const t = thin.generations.S30;
+    expect(t.auctionBasis).toBe(5);
+    expect(t.auctionMedian).toBe(209_000);
+  });
+
   it("marks the oldest trend month whole when auctions cover it", () => {
     const s = buildSnapshot(
       datsun(
