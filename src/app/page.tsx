@@ -145,7 +145,7 @@ export default async function HomePage() {
           <div className="eyebrow">Pricing tool</div>
           <h3>What to list it for, and where</h3>
           <p>
-            Enter your car and get a market value with a range, an expected hammer price, a likely
+            Enter your car and get a market value with a range, a likely consignment sale, a likely
             dealer offer, and a recommendation. Listing too high or too low? We&apos;ll tell you
             before you publish.
           </p>

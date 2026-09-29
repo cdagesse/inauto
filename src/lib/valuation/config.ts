@@ -33,6 +33,15 @@ export const DEFAULT_CONFIG: ValuationConfig = {
   "auction.listing_fee": 349,
   "auction.prep": 1500,
 
+  // Step 3: virtual consignment. UrCar prepares the car (condition report, professional
+  // photos), handles logistics and lists it; one fee on the sale covers that work. Starting
+  // assumptions until the programme has its own sales to measure; override in valuation_config.
+  "consign.sale": 1.0,
+  "consign.fee_pct": 0.06,
+  "consign.fee_min": 1500,
+  "consign.days_multiple": 1.25,
+  "consign.default_days": 21,
+
   // Step 3: sell to a dealer
   "dealer.base": 0.08,
   "dealer.per_dom": 0.001,
@@ -46,9 +55,10 @@ export const DEFAULT_CONFIG: ValuationConfig = {
   "private.cost": 1000,
   "private.days_multiple": 2,
 
-  // Step 4: recommendation threshold
-  "rec.min_abs": 5000,
-  "rec.min_pct": 0.03,
+  // Step 4: recommendation threshold. Consignment's edge over a dealer is the dealer's margin
+  // less our fee, so its floor is lower than the old auction-vs-dealer one.
+  "rec.min_abs": 2000,
+  "rec.min_pct": 0.02,
 
   // Step 5: comps
   "comps.max_auction": 4,

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { fmtDate } from "@/lib/format/money";
+import { fmtDate, usd } from "@/lib/format/money";
 import { Flash } from "@/components/admin/flash";
 import { Pager } from "@/components/admin/pager";
 import { StatusPill } from "@/components/admin/status-pill";
@@ -21,7 +21,12 @@ export default async function AdminVetting({
   }>;
 }) {
   const sp = await searchParams;
-  const kind = sp.kind === "condition_report" ? "condition_report" : "title_vetting";
+  const kind =
+    sp.kind === "condition_report"
+      ? "condition_report"
+      : sp.kind === "consignment"
+        ? "consignment"
+        : "title_vetting";
   const showClosed = sp.all === "1";
   const page = parsePage(sp.page);
   const { rows, total } = await listServiceQueue(kind, showClosed, page);
@@ -41,6 +46,9 @@ export default async function AdminVetting({
           className={kind === "condition_report" ? "on" : ""}
         >
           Condition reports
+        </Link>
+        <Link href="/admin/vetting?kind=consignment" className={kind === "consignment" ? "on" : ""}>
+          Consignment
         </Link>
         <Link
           href={`${base.replace("&all=1", "")}${showClosed ? "" : "&all=1"}`}
@@ -64,7 +72,21 @@ export default async function AdminVetting({
             listingTitleVetted,
           }) => {
             const open = o.status === "requested" || o.status === "in_progress";
-            const details = (o.details ?? {}) as { notes?: string };
+            const details = (o.details ?? {}) as {
+              notes?: string;
+              year?: number;
+              make?: string;
+              model?: string;
+              trim?: string | null;
+              miles?: number;
+              location?: string;
+              phone?: string | null;
+              services?: string[];
+              estimate?: number | null;
+            };
+            const car = [details.year, details.make, details.model, details.trim]
+              .filter(Boolean)
+              .join(" ");
             return (
               <div key={o.id} className="panel admin-order">
                 <div className="admin-block-head">
@@ -81,6 +103,21 @@ export default async function AdminVetting({
                     ) : null}
                   </span>
                 </div>
+                {kind === "consignment" && car ? (
+                  <p className="sub" style={{ margin: "6px 0" }}>
+                    <b>{car}</b>
+                    {details.miles != null ? ` · ${details.miles.toLocaleString("en-US")} mi` : ""}
+                    {details.location ? ` · ${details.location}` : ""}
+                    {details.phone ? ` · ${details.phone}` : ""}
+                    {details.estimate ? ` · our value ${usd(details.estimate)}` : ""}
+                    {details.services?.length ? (
+                      <>
+                        <br />
+                        Wants: {details.services.map((k) => k.replace(/_/g, " ")).join(", ")}
+                      </>
+                    ) : null}
+                  </p>
+                ) : null}
                 {details.notes ? (
                   <p className="sub" style={{ margin: "6px 0" }}>
                     “{details.notes}”
@@ -117,7 +154,11 @@ export default async function AdminVetting({
                         value="complete"
                         type="submit"
                       >
-                        {kind === "title_vetting" ? "Mark title vetted" : "Mark complete"}
+                        {kind === "title_vetting"
+                          ? "Mark title vetted"
+                          : kind === "consignment"
+                            ? "Mark sold or closed"
+                            : "Mark complete"}
                       </button>
                       <button className="btn sm danger" name="action" value="decline" type="submit">
                         Decline

@@ -68,6 +68,11 @@ export default async function AdminHome() {
           href="/admin/vetting?kind=condition_report"
         />
         <Card
+          label="Consignment requests"
+          value={s.pendingConsignment}
+          href="/admin/vetting?kind=consignment"
+        />
+        <Card
           label="Rows to review"
           value={s.reviewCount}
           sub="flagged or excluded market rows"

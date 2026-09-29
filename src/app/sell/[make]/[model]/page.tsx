@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   const name = s ? `${s.make.name} ${s.model.name}` : c ? `${c.make} ${c.model}` : "your car";
   return {
     title: `Sell your ${name}`,
-    description: `What your ${name} is worth today from real dealer and auction sales, what you would keep at auction, from a dealer, or selling it yourself, and how to list it on UrCar.`,
+    description: `What your ${name} is worth today from real dealer and auction sales, what you would keep on virtual consignment, from a dealer, or selling it yourself, and how to sell it on UrCar.`,
     robots: { index: false, follow: true },
   };
 }
@@ -112,8 +112,11 @@ export default async function SellModelPage({
             inspection before they commit.
           </p>
           <div className="pitch-ctas">
-            <Link href={listHref} className="btn primary">
-              List it on UrCar
+            <Link href={listHref.replace("/sell/list?", "/sell/consign?")} className="btn primary">
+              Virtual consignment
+            </Link>
+            <Link href={listHref} className="btn">
+              List it myself
             </Link>
             <Link href="/sell" className="btn">
               Pick a different car
@@ -235,10 +238,12 @@ export default async function SellModelPage({
           </div>
           <div className="kpi kpi-cta">
             <div className="l">Ready to sell?</div>
-            <Link href={listHref} className="btn primary">
-              List it on UrCar
+            <Link href={listHref.replace("/sell/list?", "/sell/consign?")} className="btn primary">
+              Virtual consignment
             </Link>
-            <div className="s">Free · title vetting · inspection</div>
+            <div className="s">
+              Or <Link href={listHref}>list it yourself</Link>, free
+            </div>
           </div>
         </div>
 
@@ -246,7 +251,7 @@ export default async function SellModelPage({
           <h2 className="sec">What is my {short} worth?</h2>
           <p className="sub">
             Adjust anything below. The estimate, the three ways to sell and what you would keep
-            update instantly, and every path can be listed on UrCar in one click.
+            update instantly; consign it or list it yourself in one click.
           </p>
           <ValuationTool
             snapshot={s}
@@ -268,11 +273,12 @@ export default async function SellModelPage({
               </p>
             </div>
             <div className="panel prop">
-              <div className="eyebrow">Your format</div>
-              <h3>Classified or auction, free to list</h3>
+              <div className="eyebrow">Your way</div>
+              <h3>List it yourself, or hand it to us</h3>
               <p>
-                Set a price and field offers, or run a 7 or 14 day auction with a reserve. No
-                listing fee, so you keep what the big platforms would charge.
+                A marketplace listing is free: set a price and field offers. Virtual consignment
+                adds our condition report, professional photos, logistics and a spot at our
+                facility, for one fee on the sale.
               </p>
             </div>
             <div className="panel prop">

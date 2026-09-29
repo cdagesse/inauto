@@ -67,6 +67,7 @@ export async function dashboardStats() {
     >,
     pendingTitle: pending("title_vetting"),
     pendingCondition: pending("condition_report"),
+    pendingConsignment: pending("consignment"),
     reviewCount: Number(reviewDealer[0]?.n ?? 0) + Number(reviewAuction[0]?.n ?? 0),
     models: Object.fromEntries(modelRows.map((r) => [r.status, Number(r.n)])) as Record<
       string,
@@ -344,11 +345,9 @@ export async function listReviewRows(f: ReviewFilter) {
 
 /* ---------------- service orders ---------------- */
 
-export async function listServiceQueue(
-  kind: "title_vetting" | "condition_report",
-  showClosed: boolean,
-  page: number,
-) {
+export type QueueKind = "title_vetting" | "condition_report" | "consignment";
+
+export async function listServiceQueue(kind: QueueKind, showClosed: boolean, page: number) {
   await requireAdmin();
   const where = showClosed
     ? eq(serviceOrders.kind, kind)

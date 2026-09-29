@@ -216,8 +216,21 @@ export function valuate(
   const likelySale = marketValue * cfg["private.sale"];
   const privateNet = likelySale - cfg["private.cost"];
 
-  /* Step 4: recommendation */
-  const diff = auctionNet - offer;
+  const consignSale = marketValue * cfg["consign.sale"];
+  // The minimum fee binds on cheap cars, so the effective rate is what the seller is told.
+  const consignFee = Math.min(
+    consignSale,
+    Math.max(cfg["consign.fee_min"], consignSale * cfg["consign.fee_pct"]),
+  );
+  const consignNet = consignSale - consignFee;
+  const consignRate = consignSale > 0 ? Math.round((consignFee / consignSale) * 100) : 0;
+  const consignDays =
+    gen.daysToSell > 0
+      ? Math.max(1, Math.round(gen.daysToSell * cfg["consign.days_multiple"]))
+      : cfg["consign.default_days"];
+
+  /* Step 4: recommendation: virtual consignment against a dealer offer */
+  const diff = consignNet - offer;
   const threshold = Math.max(cfg["rec.min_abs"], cfg["rec.min_pct"] * marketValue);
   const issues = inputs.history === "acc" || inputs.condition === "fair";
   let recommendation: Omit<ValuationResult["recommendation"], "edgeOverDealer">;
@@ -226,19 +239,19 @@ export function valuate(
       channel: "dealer",
       title: "Sell to a dealer",
       reason:
-        "Auction bidders pick apart condition issues and accident history in the comments, which tends to push hammer prices down further than a dealer's offer. A dealer sale is the cleaner path; get two or three written offers.",
+        "A car with condition issues or an accident on its history sells cleanest to a dealer: buyers discount those further than a dealer will. Get two or three written offers.",
     };
   } else if (diff > threshold) {
     recommendation = {
-      channel: "auction",
-      title: "Auction it",
-      reason: `An online auction should net you about ${usd(round500(diff))} more than a dealer offer. Set the reserve near ${usd(round500(hammer * cfg["auction.reserve_pct"]))} and expect bidding to finish around ${usd(round500(hammer))}.`,
+      channel: "consignment",
+      title: "Consign it with UrCar",
+      reason: `Virtual consignment should net you about ${usd(round500(diff))} more than a dealer offer. We prepare the car with a condition report and professional photos, handle the logistics, and list it at ${usd(round500(consignSale))}; you keep ${usd(round500(consignNet))} after the ${consignRate}% fee.`,
     };
   } else {
     recommendation = {
       channel: "dealer",
       title: "Sell to a dealer",
-      reason: `An auction would net only about ${usd(round500(Math.max(0, diff)))} more than a dealer offer, which isn't worth the weeks of waiting and the risk of a no-sale. Take the dealer's money.`,
+      reason: `Consignment would net only about ${usd(round500(Math.max(0, diff)))} more than a dealer offer, which isn't worth the wait. Take the dealer's money.`,
     };
   }
 
@@ -272,6 +285,15 @@ export function valuate(
       },
       net: round500(offer),
       timeToCash: "a day or two",
+    },
+    consignment: {
+      salePrice: round500(consignSale),
+      feePct: cfg["consign.fee_pct"],
+      fee: Math.round(consignFee),
+      feeRate: consignRate,
+      net: round500(consignNet),
+      minDays: consignDays,
+      timeToCash: `about ${consignDays} to ${consignDays + 10} days`,
     },
     privateSale: {
       asking: round500(asking),
