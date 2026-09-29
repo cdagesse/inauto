@@ -41,18 +41,19 @@ export default async function SellPage() {
         </div>
         <div className="panel prop">
           <div className="eyebrow">2 · Choose</div>
-          <h3>Auction, dealer, or list it yourself</h3>
+          <h3>Consign it, sell to a dealer, or list it yourself</h3>
           <p>
-            We show the expected hammer price, a likely dealer offer and a suggested asking price,
+            We show a likely consignment sale, a likely dealer offer and a suggested asking price,
             with fees and what you actually keep, side by side.
           </p>
         </div>
         <div className="panel prop">
-          <div className="eyebrow">3 · List on UrCar</div>
-          <h3>Keep the platform fee</h3>
+          <div className="eyebrow">3 · Sell your way</div>
+          <h3>Marketplace listing or virtual consignment</h3>
           <p>
-            Classified or 7 to 14 day auction, free to list. Buyers see the same market data you do
-            and can order title vetting and an inspection before they commit.
+            List it yourself for free, or hand it to us: condition report, professional photos,
+            logistics, even a spot at our facility, for one fee on the sale. Buyers see the same
+            market data you do.
           </p>
         </div>
       </section>

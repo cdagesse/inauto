@@ -28,7 +28,7 @@ export interface CompRow {
   packages?: string[];
 }
 
-export type Channel = "auction" | "dealer" | "private";
+export type Channel = "auction" | "dealer" | "private" | "consignment";
 
 export interface ValuationResult {
   inputs: ValuationInputs;
@@ -58,6 +58,17 @@ export interface ValuationResult {
     net: number;
     timeToCash: string;
   };
+  /** Virtual consignment: UrCar prepares, photographs, lists and moves the car for one fee. */
+  consignment: {
+    salePrice: number;
+    /** The configured rate; feeRate is what the seller actually pays once the minimum applies. */
+    feePct: number;
+    feeRate: number;
+    fee: number;
+    net: number;
+    minDays: number;
+    timeToCash: string;
+  };
   privateSale: {
     asking: number;
     likelySale: number;
@@ -69,7 +80,7 @@ export interface ValuationResult {
     channel: Channel;
     title: string;
     reason: string;
-    /** Auction net minus dealer net, computed before rounding, then rounded to $500. */
+    /** Consignment net minus dealer net, computed before rounding, then rounded to $500. */
     edgeOverDealer: number;
   };
   comps: CompRow[];

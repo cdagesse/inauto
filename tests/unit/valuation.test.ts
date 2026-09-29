@@ -66,10 +66,52 @@ describe("worked example (prototype data as of Sep 19, 2026)", () => {
     expect(v.privateSale.likelySale).toBe(482_000);
     expect(v.privateSale.net).toBe(481_000);
   });
-  it("recommends auction, about $30,500 over dealer", () => {
-    expect(v.recommendation.channel).toBe("auction");
-    expect(v.recommendation.edgeOverDealer).toBe(30_500);
-    expect(v.recommendation.reason).toContain("$30,500");
+  it("prices virtual consignment: market value less a fee that covers prep and photos", () => {
+    expect(v.consignment.salePrice).toBe(v.marketValue);
+    // The fee is taken from the unrounded market value, so allow the rounding.
+    const fee = Math.max(
+      DEFAULT_CONFIG["consign.fee_min"]!,
+      v.marketValue * DEFAULT_CONFIG["consign.fee_pct"]!,
+    );
+    expect(Math.abs(v.consignment.fee - fee)).toBeLessThanOrEqual(30);
+    expect(v.consignment.feeRate).toBe(
+      Math.round((v.consignment.fee / v.consignment.salePrice) * 100),
+    );
+    // The minimum fee never exceeds the sale, and the seller is told the rate they pay.
+    const cheap = valuate(snapshot, car992, { "consign.fee_min": 10_000_000 });
+    // The fee is capped at the unrounded sale; the sale price shown is rounded to $500.
+    expect(Math.abs(cheap.consignment.fee - cheap.consignment.salePrice)).toBeLessThanOrEqual(500);
+    expect(cheap.consignment.net).toBe(0);
+    expect(cheap.consignment.feeRate).toBe(100);
+    expect(v.consignment.timeToCash).toContain(String(v.consignment.minDays));
+    expect(Math.abs(v.consignment.net - (v.marketValue - v.consignment.fee))).toBeLessThanOrEqual(
+      500,
+    );
+    expect(v.consignment.minDays).toBeGreaterThan(0);
+    // No dealer days-to-sell read: the programme default, not "1 days".
+    const code = snapshot.order[0]!;
+    const noDays = valuate(
+      {
+        ...snapshot,
+        generations: {
+          ...snapshot.generations,
+          [code]: { ...snapshot.generations[code]!, daysToSell: 0 },
+        },
+      },
+      car992,
+    );
+    expect(noDays.consignment.minDays).toBe(DEFAULT_CONFIG["consign.default_days"]);
+  });
+
+  it("recommends consignment when it clears a dealer offer by enough", () => {
+    expect(v.recommendation.channel).toBe("consignment");
+    expect(v.recommendation.title).toBe("Consign it with UrCar");
+    expect(
+      Math.abs(v.recommendation.edgeOverDealer - (v.consignment.net - v.dealer.offer)),
+    ).toBeLessThanOrEqual(500);
+    expect(v.recommendation.reason).toContain("consignment");
+    // The auction read is still computed for the listing pages' expected hammer.
+    expect(v.auction.expectedHammer).toBeGreaterThan(0);
     expect(v.disclaimer).toBe(DISCLAIMER);
   });
   it("comps: up to 7, sorted by miles, auctions link out", () => {
@@ -224,16 +266,13 @@ describe("recommendation branches", () => {
     expect(v.recommendation.channel).toBe("dealer");
     expect(v.recommendation.reason).toMatch(/condition issues/);
   });
-  it("auction when the edge beats max($5k, 3%)", () => {
+  it("consignment when its edge beats max($5k, 3%)", () => {
     const v = valuate(snapshot, car992);
-    expect(v.auction.net - v.dealer.net).toBeGreaterThan(Math.max(5000, 0.03 * v.marketValue));
-    expect(v.recommendation.channel).toBe("auction");
+    expect(v.consignment.net - v.dealer.net).toBeGreaterThan(Math.max(5000, 0.03 * v.marketValue));
+    expect(v.recommendation.channel).toBe("consignment");
   });
-  it("dealer when the auction edge is small", () => {
-    const v = valuate(snapshot, car992, {
-      "auction.gap_default": -0.2,
-      "auction.gap_min_sales": 99,
-    });
+  it("dealer when the consignment edge is small", () => {
+    const v = valuate(snapshot, car992, { "consign.fee_pct": 0.2, "consign.fee_min": 50_000 });
     expect(v.recommendation.channel).toBe("dealer");
     expect(v.recommendation.reason).toMatch(/would net only/);
   });

@@ -169,13 +169,6 @@ export function ValuationTool({
 
   const override = yearOverride(gen, form.year);
   const best = v.recommendation.channel;
-  const gapTxt = v.auction.gapEstimated
-    ? `${
-        G.sold === 0 && v.auction.gapSampleSize > 0
-          ? `no ${G.name} dealer sales to measure the gap against`
-          : `no recent ${G.name} auctions to measure against`
-      }, so we assume ${Math.round(-v.auction.gap * 100)}% under dealer`
-    : `${G.name} auctions have run ${Math.abs(Math.round(v.auction.gap * 100))}% ${v.auction.gap < 0 ? "under" : "over"} dealer prices (${v.auction.gapSampleSize} sales)`;
   const conf = v.thin
     ? `Only a handful of recent ${G.name} sales, so treat this as a starting point and get an appraisal.`
     : `Half of comparable sales at this spec land between ${usd(v.range.lo)} and ${usd(v.range.hi)}.`;
@@ -193,6 +186,8 @@ export function ValuationTool({
     condition: form.condition,
     history: form.history,
   });
+  // The consignment intake takes the same car, plus the numbers the seller just saw.
+  const consignHref = `${listHref.replace("/sell/list?", "/sell/consign?")}&value=${v.marketValue}&keep=${v.consignment.net}`;
 
   return (
     <div className="val">
@@ -304,41 +299,33 @@ export function ValuationTool({
         </div>
 
         <div className="chans">
-          <div className={`chan${best === "auction" ? " best" : ""}`}>
+          <div className={`chan${best === "consignment" ? " best" : ""}`}>
             <h3>
-              Online auction
-              {best === "auction" ? <span className="pill">Best net</span> : null}
+              Virtual consignment
+              {best === "consignment" ? <span className="pill">Recommended</span> : null}
             </h3>
-            <div className="cap">Expected hammer price</div>
-            <div className="big">{usd(v.auction.expectedHammer)}</div>
+            <div className="cap">Expected sale price</div>
+            <div className="big">{usd(v.consignment.salePrice)}</div>
             <div className="cap">
-              Likely range {usdK(v.auction.range.lo)} to {usdK(v.auction.range.hi)}. Suggested
-              reserve {usd(v.auction.suggestedReserve)}.
+              UrCar takes it from here: condition report, professional photos, logistics and the
+              listing. We can pick the car up or bring it to our facility.
             </div>
             <dl>
-              <dt>Hammer price</dt>
-              <dd>{usd(v.auction.expectedHammer)}</dd>
-              <dt>Listing fee (BaT Plus)</dt>
-              <dd>−{usd(v.auction.listingFee)}</dd>
-              <dt>Detail, photos, inspection</dt>
-              <dd>−{usd(v.auction.prep)}</dd>
+              <dt>Sale price</dt>
+              <dd>{usd(v.consignment.salePrice)}</dd>
+              <dt>UrCar fee ({v.consignment.feeRate}%, covers prep and photos)</dt>
+              <dd>−{usd(v.consignment.fee)}</dd>
               <span className="rule" />
               <dt className="tot">You keep</dt>
-              <dd className="tot">{usd(v.auction.net)}</dd>
+              <dd className="tot">{usd(v.consignment.net)}</dd>
             </dl>
             <div className="cap">
-              Buyer also pays a {usd(v.auction.buyerFee)} fee on top. About 3 to 6 weeks from
-              submission to payment. {gapTxt}.
+              Nothing out of pocket. Plan on about {v.consignment.minDays} days to sell, with
+              payment within days of the sale.
             </div>
-            {sell && venues?.best ? (
-              <div className="cap venue-hint">
-                Best venue for your miles: <b>{venues.best.platform}</b>
-                {venues.runnerUp ? ` over ${venues.runnerUp.platform}` : ""}. Details below.
-              </div>
-            ) : null}
             {sell ? (
-              <a className="btn sm chan-cta" href={`${listHref}&type=auction`}>
-                Run the auction on UrCar
+              <a className="btn sm primary chan-cta" href={consignHref}>
+                Start virtual consignment
               </a>
             ) : null}
           </div>
@@ -374,7 +361,7 @@ export function ValuationTool({
           </div>
 
           <div className="chan">
-            <h3>List it yourself</h3>
+            <h3>Marketplace listing</h3>
             <div className="cap">Suggested asking price</div>
             <div className="big">{usd(v.privateSale.asking)}</div>
             <div className="cap">Expect to settle near {usd(v.privateSale.likelySale)}.</div>
@@ -388,12 +375,14 @@ export function ValuationTool({
               <dd className="tot">{usd(v.privateSale.net)}</dd>
             </dl>
             <div className="cap">
-              Most money on paper, but plan on {v.privateSale.minDays} or more days, strangers at
-              your house, and handling payment and title yourself.
+              Most money on paper and free to list, but plan on{" "}
+              {v.privateSale.minDays > 0 ? `${v.privateSale.minDays} or more days` : "weeks"},
+              showing the car yourself, and handling payment and title. Buyers can still order title
+              vetting and an inspection on UrCar.
             </div>
             {sell ? (
-              <a className="btn sm primary chan-cta" href={`${listHref}&type=classified`}>
-                List it on UrCar
+              <a className="btn sm chan-cta" href={`${listHref}&type=classified`}>
+                List it yourself on UrCar
               </a>
             ) : null}
           </div>
@@ -402,10 +391,11 @@ export function ValuationTool({
         {sell && venues ? (
           <div className="venue-fit">
             <h3 className="sec" style={{ fontSize: 18 }}>
-              Which auction house for your {form.year} {short}?
+              If you take it to an auction house instead
             </h3>
             <p className="sub" style={{ margin: "4px 0 10px" }}>
-              {G.name} results by venue, narrowed to cars near {mi(inputs.miles)} miles.
+              {G.name} results by venue, narrowed to cars near {mi(inputs.miles)} miles. Expected
+              hammer for yours: {usd(v.auction.expectedHammer)}, before the venue&apos;s fees.
             </p>
             <VenueTable comparison={venues} short={short} compact />
           </div>
@@ -413,16 +403,19 @@ export function ValuationTool({
 
         {sell ? (
           <div className="rec sell-pitch">
-            <b>Whichever path you pick, list it on UrCar first.</b>
+            <b>Two ways to sell it on UrCar.</b>
             <p>
-              Listing is free. Your {short} is priced against the {v.basis} on this page, so buyers
-              trust the number, and every buyer can order title vetting and an inspection before
-              they commit. Run it as a classified or a 7 or 14 day auction, and keep the{" "}
-              {usd(v.auction.listingFee)} platform fee.
+              List it yourself for free, priced against the {v.basis} on this page so buyers trust
+              the number. Or hand it to us on virtual consignment: we do the condition report,
+              professional photos, logistics and the listing, and can even keep the car at our
+              facility, for one fee on the sale.
             </p>
             <div className="pitch-ctas">
-              <a className="btn primary" href={listHref}>
-                List my {form.year} {short}
+              <a className="btn primary" href={consignHref}>
+                Consign my {form.year} {short}
+              </a>
+              <a className="btn" href={listHref}>
+                List it myself
               </a>
               <a className="btn" href={`/${snapshot.make.slug}/${snapshot.model.slug}`}>
                 Full {short} market report

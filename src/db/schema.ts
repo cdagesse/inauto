@@ -731,7 +731,12 @@ export const garageCars = pgTable(
 /* Buyer protection services                                           */
 /* ------------------------------------------------------------------ */
 
-export const serviceKind = pgEnum("service_kind", ["title_vetting", "condition_report", "escrow"]);
+export const serviceKind = pgEnum("service_kind", [
+  "title_vetting",
+  "condition_report",
+  "escrow",
+  "consignment",
+]);
 export const serviceStatus = pgEnum("service_status", [
   "requested",
   "in_progress",

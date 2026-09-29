@@ -15,6 +15,7 @@ export const metadata: Metadata = {
 const KIND_LABEL = {
   title_vetting: "Title vetting",
   condition_report: "Condition report",
+  consignment: "Virtual consignment",
   escrow: "Escrow",
 } as const;
 
