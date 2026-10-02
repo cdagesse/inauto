@@ -22,6 +22,7 @@ const plexMono = IBM_Plex_Mono({
   display: "swap",
 });
 import { SiteHeader } from "@/components/site/header";
+import { MarketTicker } from "@/components/site/market-ticker";
 import { SiteFooter } from "@/components/site/footer";
 import { ClerkProvider } from "@clerk/nextjs";
 import { clerkAppearance } from "@/components/site/clerk-appearance";
@@ -54,6 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Inside <body> so the root layout stays static; Clerk does not force dynamic rendering. */}
         <ClerkProvider appearance={clerkAppearance} signInUrl="/signin" signUpUrl="/signup">
           <SiteHeader />
+          <MarketTicker />
           <main className="wrap" style={{ paddingBlock: "0 48px" }}>
             {children}
           </main>
