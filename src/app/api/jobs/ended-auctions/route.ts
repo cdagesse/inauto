@@ -31,7 +31,10 @@ async function handle(req: Request) {
         error: s.errors[0] ?? s.budgetStopped ?? (s.skipped === "dry run" ? null : s.skipped),
       }),
     );
-    if (summary.upserted + summary.auctionResultsInserted > 0) revalidatePath("/listings");
+    if (summary.upserted + summary.auctionResultsInserted > 0) {
+      revalidatePath("/listings");
+      revalidatePath("/api/ticker");
+    }
     return NextResponse.json(summary, { status: summary.errors.length ? 500 : 200 });
   } catch (e) {
     return NextResponse.json(

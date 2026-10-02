@@ -16,8 +16,10 @@ async function handle(req: Request) {
   const scope = url.searchParams.get("scope") === "catalog" ? "catalog" : "all";
   try {
     const summary = await syncLiveAuctions({ dryRun: live ? false : env.jobsDryRun, scope });
-    if (summary.upserted + summary.markedEnded + summary.reconciled > 0)
+    if (summary.upserted + summary.markedEnded + summary.reconciled > 0) {
       revalidatePath("/listings");
+      revalidatePath("/api/ticker");
+    }
     return NextResponse.json(summary, { status: summary.errors.length ? 500 : 200 });
   } catch (e) {
     return NextResponse.json(
