@@ -3142,7 +3142,9 @@ table.compare td.down {
 /* Market ticker: a thin strip of market news under the header. */
 .ticker {
   height: 30px;
-  overflow: hidden;
+  /* clip, not hidden: a clipped box is not a scroll container, so focusing a link that is
+     translated off-screen cannot shift the strip out of alignment. */
+  overflow: clip;
   border-bottom: 1px solid var(--rule);
   background: var(--card);
   font-family: var(--mono);
@@ -3157,9 +3159,22 @@ table.compare td.down {
   animation: ticker-scroll linear infinite;
   will-change: transform;
 }
-.ticker:hover .ticker-track,
-.ticker:focus-within .ticker-track {
+.ticker:hover .ticker-track {
   animation-play-state: paused;
+}
+/* With keyboard focus inside, the strip stands still and scrolls like any other, so every
+   item can be tabbed to and seen. */
+.ticker:focus-within {
+  height: auto;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.ticker:focus-within .ticker-track {
+  animation: none;
+  transform: none;
+}
+.ticker:focus-within .ticker-row[aria-hidden="true"] {
+  display: none;
 }
 .ticker-row {
   display: flex;
@@ -3206,7 +3221,10 @@ table.compare td.down {
 }
 @media (prefers-reduced-motion: reduce) {
   .ticker {
+    /* height: auto so a classic scrollbar adds height instead of eating the text's. */
+    height: auto;
     overflow-x: auto;
+    scrollbar-width: thin;
   }
   .ticker-track {
     animation: none;

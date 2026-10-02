@@ -103,9 +103,10 @@ describe("market ticker", () => {
   const items = buildTickerItems({ tree, national: stats({ change90: 0.031 }), sales });
 
   it("leads with the index, then weaves segments, movers and sales", () => {
+    // The index point is the last complete month, not the in-progress one.
     expect(items[0]).toMatchObject({
       kind: "index",
-      value: "103.4",
+      value: "101.2",
       change: 0.031,
       href: "/markets",
     });
@@ -130,19 +131,28 @@ describe("market ticker", () => {
     });
   });
 
-  it("puts catalogued sales first, keeps cheap uncatalogued cars off, truncates long titles", () => {
+  it("shows the priciest qualifying sales, keeps cheap uncatalogued cars off, truncates titles", () => {
     const sold = items.filter((i) => i.kind === "sale");
     expect(sold).toHaveLength(2);
-    expect(sold[0]!.label.startsWith("Sold · 41k-Mile 2000 Porsche 911 Carrera")).toBe(true);
-    expect(sold[0]!.label.endsWith("…")).toBe(true);
-    expect(sold[0]).toMatchObject({ value: "$37,500", change: null, note: "Bring a Trailer" });
-    expect(sold[1]!.label).toBe("Sold · 1967 Volkswagen T2 Bus");
+    expect(sold[0]).toMatchObject({ label: "Sold · 1967 Volkswagen T2 Bus", value: "$41,000" });
+    expect(sold[1]!.label.startsWith("Sold · 41k-Mile 2000 Porsche 911 Carrera")).toBe(true);
+    expect(sold[1]!.label.endsWith("…")).toBe(true);
+    expect(sold[1]).toMatchObject({ value: "$37,500", change: null, note: "Bring a Trailer" });
   });
 
   it("formats changes with an arrow and one decimal", () => {
     expect(fmtChange(0.0412)).toBe("▲ 4.1%");
     expect(fmtChange(-0.023)).toBe("▼ 2.3%");
     expect(fmtChange(0)).toBe("▲ 0.0%");
+  });
+
+  it("falls back to the in-progress month when it is the only point", () => {
+    const only = buildTickerItems({
+      tree: { segments: [], months: ["2026-09"], dataThrough: null },
+      national: stats({ trend: [{ month: "2026-09", partial: true, n: 2, index: 99.5 }] }),
+      sales: [],
+    });
+    expect(only[0]).toMatchObject({ kind: "index", value: "99.5" });
   });
 
   it("copes with no data at all", () => {

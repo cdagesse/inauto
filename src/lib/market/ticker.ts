@@ -30,6 +30,7 @@ export const TICKER_MOVERS = 8;
 export const TICKER_SALES = 8;
 /** A sale below this only makes the strip when the car is a catalogued collector model. */
 export const TICKER_SALE_FLOOR = 25_000;
+/** Among the sales that qualify, the strip shows the priciest: the ones worth a glance. */
 
 const usd = (v: number) => "$" + Math.round(v).toLocaleString("en-US");
 
@@ -38,17 +39,18 @@ export function fmtChange(change: number): string {
   return `${change >= 0 ? "▲" : "▼"} ${Math.abs(change * 100).toFixed(1)}%`;
 }
 
+/** The latest complete month's index; the in-progress month only when nothing else has one. */
 function latestIndex(stats: NodeStats): number | null {
-  for (let i = stats.trend.length - 1; i >= 0; i--) {
-    const v = stats.trend[i]!.index;
-    if (v != null) return v;
-  }
-  return null;
+  const complete = [...stats.trend].reverse().find((t) => !t.partial && t.index != null);
+  if (complete) return complete.index;
+  const any = [...stats.trend].reverse().find((t) => t.index != null);
+  return any?.index ?? null;
 }
 
 /**
  * The strip's entries, in display order: the UrCar index, then segments, the biggest model
- * movers and the latest sales woven together so the eye never sees three of a kind in a row.
+ * movers and the most notable recent sales woven together so the eye never sees three of a
+ * kind in a row.
  */
 export function buildTickerItems(input: {
   tree: MarketTree;
@@ -99,7 +101,7 @@ export function buildTickerItems(input: {
 
   const sold: TickerItem[] = sales
     .filter((s) => s.catalogued || s.price >= TICKER_SALE_FLOOR)
-    .sort((a, b) => Number(b.catalogued) - Number(a.catalogued))
+    .sort((a, b) => b.price - a.price)
     .slice(0, TICKER_SALES)
     .map((s) => ({
       kind: "sale" as const,

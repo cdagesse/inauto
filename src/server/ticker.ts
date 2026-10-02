@@ -16,7 +16,10 @@ export async function buildTicker(): Promise<{ items: TickerItem[]; dataThrough:
   const [snapshots, catalog, soldRows] = await Promise.all([
     loadStoredSummaries()
       .then(async (s) => (s.length ? s : listMarketSnapshots()))
-      .catch(() => listMarketSnapshots()),
+      .catch((err) => {
+        console.warn("ticker: summaries unavailable", (err as Error).message);
+        return listMarketSnapshots();
+      }),
     countModelsByMake().catch((): CatalogMakeCount[] => []),
     db
       .select({
@@ -41,7 +44,10 @@ export async function buildTicker(): Promise<{ items: TickerItem[]; dataThrough:
       )
       .orderBy(desc(externalListings.endsAt))
       .limit(40)
-      .catch((): never[] => []),
+      .catch((err): never[] => {
+        console.warn("ticker: sold auctions unavailable", (err as Error).message);
+        return [];
+      }),
   ]);
   const tree = buildMarketTree(snapshots, catalog);
   const national = aggregate(snapshots, tree.months);
